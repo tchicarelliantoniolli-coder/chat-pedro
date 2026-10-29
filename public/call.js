@@ -62,11 +62,12 @@
   // ---------- audio local ----------
   async function startMic() {
     if (micRaw) micRaw.getTracks().forEach((t) => t.stop());
-    micRaw = await navigator.mediaDevices.getUserMedia({
-      audio: prefs.simple
-        ? { deviceId: prefs.micId ? { ideal: prefs.micId } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-        : { deviceId: prefs.micId ? { ideal: prefs.micId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
+    const filters = !prefs.simple;
+    const want = (id) => ({ audio: { deviceId: id ? { exact: id } : undefined, echoCancellation: filters, noiseSuppression: filters, autoGainControl: filters } });
+    // usa exatamente o microfone escolhido (antes o navegador podia pegar outro, como o DroidCam);
+    // se ele sumiu, cai no padrao
+    try { micRaw = await navigator.mediaDevices.getUserMedia(want(prefs.micId)); }
+    catch (e) { if (!prefs.micId || e.name === "NotAllowedError") throw e; micRaw = await navigator.mediaDevices.getUserMedia(want("")); }
     if (micSource) micSource.disconnect();
     micSource = ctx.createMediaStreamSource(micRaw);
     micSource.connect(micGain);
@@ -341,7 +342,14 @@
       if (!list.length) { const o = document.createElement("option"); o.textContent = "nenhum encontrado"; sel.append(o); }
       if (current && list.some((d) => d.deviceId === current)) sel.value = current;
     };
-    fill($("micSelect"), "audioinput", micRaw && micRaw.getAudioTracks()[0].getSettings().deviceId || prefs.micId, "Microfone");
+    // mostra na lista o microfone que esta sendo usado de verdade (procura tambem pelo nome)
+    let micNow = micRaw && micRaw.getAudioTracks()[0];
+    let micId = micNow ? micNow.getSettings().deviceId : prefs.micId;
+    if (micNow && !devices.some((d) => d.kind === "audioinput" && d.deviceId === micId)) {
+      const byName = devices.find((d) => d.kind === "audioinput" && d.label === micNow.label && d.deviceId !== "default" && d.deviceId !== "communications");
+      if (byName) micId = byName.deviceId;
+    }
+    fill($("micSelect"), "audioinput", micId, "Microfone");
     fill($("camSelect"), "videoinput", camStream && camStream.getVideoTracks()[0].getSettings().deviceId || prefs.camId, "Câmera");
     fill($("outSelect"), "audiooutput", prefs.outId || "default", "Saída");
     $("outSelect").hidden = !canPickOutput;
@@ -660,14 +668,17 @@
     show();
     const tests = [
       ["1. Padrão do Windows, sem filtros", { audio: true }],
-      ["2. Microfone escolhido, sem filtros", { audio: { deviceId: prefs.micId ? { exact: prefs.micId } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false } }],
-      ["3. Microfone escolhido, com filtros", { audio: { deviceId: prefs.micId ? { exact: prefs.micId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }],
+      ["2. Microfone escolhido, sem filtros", { audio: { deviceId: ($("micSelect").value || prefs.micId) ? { exact: $("micSelect").value || prefs.micId } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false } }],
+      ["3. Microfone escolhido, com filtros", { audio: { deviceId: ($("micSelect").value || prefs.micId) ? { exact: $("micSelect").value || prefs.micId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }],
     ];
     const res = [];
+    const chosenId = $("micSelect").value || prefs.micId;
+    let chosenLabel = "";
     for (const [name, c] of tests) {
       try {
         const st = await navigator.mediaDevices.getUserMedia(c);
         const tr = st.getAudioTracks()[0];
+        if (c === tests[1][1]) chosenLabel = tr.label;
         const m = await measureStream(st, 3000);
         lines.push(name + ": " + (m.max > 0.01 ? "OUVIU (" + pct(m.max) + ")" : "SILÊNCIO (" + pct(m.max) + ")") + " | " + tr.label + (tr.muted ? " | mudo pelo sistema" : ""));
         res.push(m.max > 0.01);
@@ -690,6 +701,10 @@
     }
     lines.push("");
     if (!res.some(Boolean)) lines.push("RESULTADO: o navegador não recebe som de nenhum jeito. O problema está no fone, no Windows ou na permissão do navegador, não no site. Teste em outro navegador (Chrome) ou em outro site de teste de microfone.");
+    else if (res[1] && t && chosenLabel && t.label !== chosenLabel) {
+      lines.push("RESULTADO: a call estava usando \"" + t.label + "\", mas quem funciona é \"" + chosenLabel + "\". Troquei para ele. Fale de novo e veja a barra.");
+      try { prefs.micId = chosenId; store.set("cp-mic", chosenId); await startMic(); syncMicTrack(); fillDevices(); } catch {}
+    }
     else if (res[1] && !res[2]) { lines.push("RESULTADO: o microfone funciona SEM filtros. Liguei a opção \"Microfone sem filtros\" para você."); if (!prefs.simple) $("simpleMic").click(); }
     else if (res[0] && !res[1]) lines.push("RESULTADO: o padrão do Windows funciona, mas o microfone escolhido não. Escolha \"Padrão\" na lista de entrada.");
     else lines.push("RESULTADO: o microfone chega no navegador. Se mesmo assim ninguém te ouve, me mande um print deste texto.");
