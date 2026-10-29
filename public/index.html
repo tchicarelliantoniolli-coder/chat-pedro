@@ -320,7 +320,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   white-space: nowrap; font-size: 0.95em; border: 2px solid #000; z-index: 5; animation: pop 0.25s steps(3);
 }
 .tr-seat .bubble.sig { background: #ffd84d; }
-.tr-played { position: absolute; transform: translate(-50%, -50%); --tw: clamp(26px, 9.5cqw, 54px); }
+.tr-played { position: absolute; transform: translate(-50%, -50%); --tw: clamp(26px, 9.5cqw, 54px); z-index: 3; }
 /* pulinho: toda carta da mesa pula quando alguem joga, em onda (usa translate para nao brigar com o transform) */
 .tcard.hop { animation: hop 0.5s steps(6) both; animation-delay: calc(var(--i, 0) * 45ms); }
 .tcard.hop.new { animation: drop 0.25s steps(3), hop 0.5s steps(6) 0.2s both; }

@@ -117,7 +117,7 @@
       return;
     }
     const SEAT = [39, 39]; // mesa redonda: todo mundo na mesma distancia do centro
-    const PLAY = [26, 26];
+    const PLAY = [23, 23];
     // centro: vira e manilha
     const center = el("div", "tr-center");
     if (st.vira && !["lobby"].includes(st.stage)) {
