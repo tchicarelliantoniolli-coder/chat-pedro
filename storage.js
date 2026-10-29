@@ -1,50 +1,68 @@
-// Guarda o chat no Upstash Redis (plano gratis) para nada sumir quando o Render dorme ou reinicia.
-// So liga se UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN estiverem configuradas no Render;
+// Guarda o chat no Supabase (plano gratis) para nada sumir quando o Render dorme ou reinicia.
+// So liga se SUPABASE_URL e SUPABASE_SECRET_KEY estiverem configuradas no Render;
 // sem elas, o site funciona como antes, so na memoria.
-const MEDIA_TTL = 30 * 24 * 3600; // fotos e audios ficam guardados por 30 dias
+//
+// Tudo fica numa tabela simples de chave/valor (chat_kv). A tabela tem RLS ligado e nenhuma
+// regra de acesso publico: so o servidor, com a chave secreta, consegue ler e escrever.
+const TABLE = "chat_kv";
+const MEDIA_TTL_DAYS = 30; // fotos e audios ficam guardados por 30 dias
 
 function createStorage() {
-  const url = (process.env.UPSTASH_REDIS_REST_URL || "").replace(/\/+$/, "");
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || "";
-  if (!url || !token) return null;
+  const base = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!base || !key) return null;
+  const endpoint = base + "/rest/v1/" + TABLE;
+  const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
 
-  async function call(path, body) {
-    const r = await fetch(url + path, {
-      method: "POST",
-      headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+  async function req(method, query, body, extra) {
+    const r = await fetch(endpoint + (query ? "?" + query : ""), {
+      method, headers: { ...headers, ...extra }, body: body === undefined ? undefined : JSON.stringify(body),
     });
-    if (!r.ok) throw new Error("Upstash respondeu " + r.status);
-    return r.json();
+    const text = await r.text();
+    if (!r.ok) throw new Error("Supabase respondeu " + r.status + ": " + text.slice(0, 200));
+    return text ? JSON.parse(text) : null; // gravar e apagar respondem sem conteudo
   }
-  const cmd = async (...args) => (await call("", args)).result;
-  const pipeline = (cmds) => call("/pipeline", cmds);
+  const inList = (keys) => "in.(" + keys.map((k) => '"' + k + '"').join(",") + ")";
+  // Le varias chaves de uma vez; ignora o que ja venceu
+  async function getMany(keys) {
+    if (!keys.length) return {};
+    const rows = await req("GET", "select=key,value,expires_at&key=" + encodeURIComponent(inList(keys)));
+    const now = Date.now();
+    const out = {};
+    for (const row of rows) if (!row.expires_at || Date.parse(row.expires_at) > now) out[row.key] = row.value;
+    return out;
+  }
+  // Grava (ou substitui) varias chaves de uma vez
+  const upsert = (rows) => req("POST", "on_conflict=key", rows, { Prefer: "resolution=merge-duplicates,return=minimal" });
+  const remove = (keys) => req("DELETE", "key=" + encodeURIComponent(inList(keys)), undefined, { Prefer: "return=minimal" });
   const isMedia = (m) => m.type === "img" || m.type === "audio";
 
   let pending = null, timer = null, saving = Promise.resolve();
+  const queue = (fn, what) => { saving = saving.then(fn).catch((e) => console.error("Nao deu para " + what + ":", e.message)); };
 
   return {
     // Le tudo na hora que o servidor liga
     async load() {
-      const [hist, avatars, profiles, nextId] = await Promise.all([
-        cmd("GET", "chat:history"), cmd("GET", "chat:avatars"), cmd("GET", "chat:profiles"), cmd("GET", "chat:nextid"),
-      ]);
-      let history = hist ? JSON.parse(hist) : [];
+      const got = await getMany(["chat:history", "chat:avatars", "chat:profiles", "chat:nextid"]);
+      let history = got["chat:history"] ? JSON.parse(got["chat:history"]) : [];
       const media = history.filter(isMedia);
       if (media.length) {
-        const srcs = await cmd("MGET", ...media.map((m) => "chat:media:" + m.id));
-        media.forEach((m, i) => { m.src = srcs[i]; });
-        history = history.filter((m) => !isMedia(m) || m.src); // midia que expirou some da lista
+        const srcs = await getMany(media.map((m) => "chat:media:" + m.id));
+        media.forEach((m) => { m.src = srcs["chat:media:" + m.id]; });
+        history = history.filter((m) => !isMedia(m) || m.src); // midia que venceu some da lista
       }
+      // faxina: apaga fotos e audios vencidos
+      req("DELETE", "expires_at=lt." + encodeURIComponent(new Date().toISOString()), undefined, { Prefer: "return=minimal" })
+        .catch((e) => console.error("Nao deu para apagar midias vencidas:", e.message));
       return {
         history,
-        avatars: avatars ? JSON.parse(avatars) : {},
-        profiles: profiles ? JSON.parse(profiles) : {},
-        nextId: Number(nextId) || 1,
+        avatars: got["chat:avatars"] ? JSON.parse(got["chat:avatars"]) : {},
+        profiles: got["chat:profiles"] ? JSON.parse(got["chat:profiles"]) : {},
+        nextId: Number(got["chat:nextid"]) || 1,
       };
     },
 
-    // Salva a lista de mensagens (sem as fotos e audios, que vao em chaves proprias) logo depois de mudar
+    // Salva a lista de mensagens (sem as fotos e audios, que vao em linhas proprias) logo depois de mudar
     saveSoon(state) {
       pending = state;
       if (timer) return;
@@ -52,24 +70,22 @@ function createStorage() {
         timer = null;
         const s = pending;
         const slim = s.history.map((m) => (isMedia(m) ? { ...m, src: undefined } : m));
-        saving = saving.then(() => pipeline([
-          ["SET", "chat:history", JSON.stringify(slim)],
-          ["SET", "chat:avatars", JSON.stringify(s.avatars)],
-          ["SET", "chat:profiles", JSON.stringify(s.profiles)],
-          ["SET", "chat:nextid", String(s.nextId)],
-        ])).catch((e) => console.error("Nao deu para salvar o chat:", e.message));
+        queue(() => upsert([
+          { key: "chat:history", value: JSON.stringify(slim), expires_at: null },
+          { key: "chat:avatars", value: JSON.stringify(s.avatars), expires_at: null },
+          { key: "chat:profiles", value: JSON.stringify(s.profiles), expires_at: null },
+          { key: "chat:nextid", value: String(s.nextId), expires_at: null },
+        ]), "salvar o chat");
       }, 1500);
     },
 
     saveMedia(id, src) {
-      saving = saving.then(() => cmd("SET", "chat:media:" + id, src, "EX", MEDIA_TTL))
-        .catch((e) => console.error("Nao deu para salvar a midia:", e.message));
+      const expires = new Date(Date.now() + MEDIA_TTL_DAYS * 86400000).toISOString();
+      queue(() => upsert([{ key: "chat:media:" + id, value: src, expires_at: expires }]), "salvar a midia");
     },
 
     deleteMedia(ids) {
-      if (!ids.length) return;
-      saving = saving.then(() => cmd("DEL", ...ids.map((id) => "chat:media:" + id)))
-        .catch((e) => console.error("Nao deu para apagar a midia:", e.message));
+      if (ids.length) queue(() => remove(ids.map((id) => "chat:media:" + id)), "apagar a midia");
     },
   };
 }

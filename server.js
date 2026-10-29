@@ -482,12 +482,12 @@ async function start() {
       avatars = saved.avatars;
       profiles = saved.profiles;
       nextId = Math.max(saved.nextId, ...history.map((m) => m.id + 1), 1);
-      console.log(`Chat carregado do Upstash: ${history.length} mensagens`);
+      console.log(`Chat carregado do Supabase: ${history.length} mensagens`);
     } catch (e) {
       console.error("Nao deu para carregar o chat salvo (seguindo so na memoria):", e.message);
     }
   } else {
-    console.log("Sem UPSTASH_REDIS_REST_URL/TOKEN: o chat fica so na memoria");
+    console.log("Sem SUPABASE_URL/SUPABASE_SECRET_KEY: o chat fica so na memoria");
   }
   server.listen(PORT, () => console.log(`Chat Pedro rodando na porta ${PORT}`));
 }

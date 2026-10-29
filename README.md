@@ -40,11 +40,14 @@ No site, clique em `[ADM]` no canto de cima e digite a senha. Depois de 5 senhas
 
 ## Guardar o chat (para nao sumir quando o servidor reinicia)
 
-Usa o Upstash Redis, que tem plano gratis.
+Usa o Supabase (projeto `chat-pedro`, regiao Sao Paulo). A tabela `chat_kv` ja esta criada, com RLS ligado e sem regras publicas: so o servidor acessa, com a chave secreta.
 
-1. Crie uma conta em https://upstash.com e clique em **Create Database** (tipo Redis, plano Free, regiao mais perto).
-2. Na pagina do banco, procure a parte **REST API** e copie `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`.
-3. No Render, em **Environment**, adicione essas duas variaveis com os valores copiados e salve.
+No Render, em **Environment**, adicione:
+
+- `SUPABASE_URL`: `https://yvdlkwdmhlvpjmesmkye.supabase.co`
+- `SUPABASE_SECRET_KEY`: a chave secreta do projeto (Supabase > Project Settings > API Keys > Secret keys, a que comeca com `sb_secret_`)
+
+Nunca coloque a chave secreta no codigo nem mande para ninguem: ela da acesso total ao banco.
 
 Ficam guardados: mensagens, reacoes, fotos e audios (30 dias), fotos de perfil e cores dos nomes. As fichas do poker e o truco continuam so na memoria.
 
