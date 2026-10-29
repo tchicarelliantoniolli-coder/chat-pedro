@@ -116,9 +116,8 @@
       felt.append(c);
       return;
     }
-    const narrow = felt.clientWidth < 520;
-    const SEAT = narrow ? [36, 43] : [40, 41];
-    const PLAY = narrow ? [17, 21] : [19, 22];
+    const SEAT = [39, 39]; // mesa redonda: todo mundo na mesma distancia do centro
+    const PLAY = [26, 26];
     // centro: vira e manilha
     const center = el("div", "tr-center");
     if (st.vira && !["lobby"].includes(st.stage)) {

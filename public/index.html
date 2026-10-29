@@ -278,11 +278,18 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .tr-score .rounds i.them { background: #ffb000; border-color: #ffb000; }
 .tr-score .rounds i.tie { background: repeating-linear-gradient(45deg, var(--fg) 0 3px, #ffb000 3px 6px); }
 .tr-score .games { color: var(--dim); margin-left: auto; }
-.tr-felt { position: relative; width: 100%; aspect-ratio: 2 / 1; max-height: 46vh; margin: 0 auto; --tw: clamp(30px, 6.2cqw, 62px); }
+/* mesa redonda: um quadrado com o feltro em circulo; os tamanhos seguem a largura da propria mesa */
+.tr-felt {
+  position: relative; width: min(100%, 560px, 62vh); aspect-ratio: 1 / 1; margin: 0 auto;
+  container-type: inline-size; --tw: clamp(30px, 10cqw, 60px);
+}
 .tr-felt::before {
-  content: ""; position: absolute; inset: 9% 12%; border-radius: 50%;
-  background: radial-gradient(ellipse at center, #1d7a3e 0%, #11592b 60%, #0a3d1c 100%);
-  border: clamp(6px, 1.4cqw, 14px) solid #3b2412; box-shadow: 0 0 0 2px var(--dim), inset 0 0 30px rgba(0,0,0,0.6);
+  content: ""; position: absolute; inset: 11%; border-radius: 50%;
+  background: radial-gradient(circle at center, #1d7a3e 0%, #11592b 62%, #0a3d1c 100%);
+  border: clamp(8px, 2.6cqw, 16px) solid #3b2412; box-shadow: 0 0 0 2px var(--dim), inset 0 0 40px rgba(0,0,0,0.65);
+}
+.tr-felt::after { /* um aro fino de madeira por dentro, para parecer mesa de bar */
+  content: ""; position: absolute; inset: 15%; border-radius: 50%; border: 1px dashed rgba(244, 244, 236, 0.18); pointer-events: none;
 }
 .tcard {
   width: var(--tw); height: calc(var(--tw) * 1.45); background: #f4f4ec; color: #111; border-radius: 5px; border: 1px solid #000;
@@ -296,24 +303,24 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .tcard.mani::after { content: "\2605"; position: absolute; top: 1px; right: 3px; font-size: 0.4em; color: #b8860b; }
 .tcard.win { box-shadow: 0 0 0 3px var(--fg), 0 0 18px var(--fg); }
 .tr-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 10px; }
-.tr-center .lbl { color: var(--bright); font-size: clamp(14px, 2cqw, 19px); text-align: center; background: rgba(0,0,0,0.55); padding: 0 6px; }
-.tr-seat { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; width: clamp(80px, 16cqw, 150px); font-size: clamp(14px, 2cqw, 19px); }
+.tr-center .lbl { color: var(--bright); font-size: clamp(13px, 3.4cqw, 19px); text-align: center; background: rgba(0,0,0,0.55); padding: 0 6px; }
+.tr-seat { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; width: clamp(70px, 22cqw, 130px); font-size: clamp(13px, 3.4cqw, 19px); z-index: 2; }
 .tr-seat .box { width: 100%; background: #000; border: 2px solid var(--fg); padding: 3px 5px; box-sizing: border-box; display: flex; align-items: center; gap: 5px; }
 .tr-seat.them .box { border-color: #ffb000; }
 .tr-seat .box .av { margin: 0; width: clamp(18px, 3cqw, 28px); height: clamp(18px, 3cqw, 28px); }
 .tr-seat .nm { color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .tr-seat.empty .nm { color: var(--dim); }
 .tr-seat.turn .box { box-shadow: 0 0 0 3px #ffd84d; border-color: #ffd84d; }
-.tr-seat .backs { display: flex; gap: 2px; --tw: clamp(14px, 2.4cqw, 22px); }
+.tr-seat .backs { display: flex; gap: 2px; --tw: clamp(12px, 4cqw, 22px); }
 .tr-seat .backs .tcard { font-size: 0; }
-.tr-seat .partner { display: flex; gap: 2px; --tw: clamp(22px, 3.6cqw, 36px); }
+.tr-seat .partner { display: flex; gap: 2px; --tw: clamp(20px, 6.4cqw, 36px); }
 .tr-seat .tag { color: var(--dim); font-size: 0.8em; }
 .tr-seat .bubble {
   position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #f4f4ec; color: #000; padding: 1px 8px;
   white-space: nowrap; font-size: 0.95em; border: 2px solid #000; z-index: 5; animation: pop 0.25s steps(3);
 }
 .tr-seat .bubble.sig { background: #ffd84d; }
-.tr-played { position: absolute; transform: translate(-50%, -50%); --tw: clamp(28px, 5.4cqw, 54px); }
+.tr-played { position: absolute; transform: translate(-50%, -50%); --tw: clamp(26px, 9.5cqw, 54px); }
 /* pulinho: toda carta da mesa pula quando alguem joga, em onda (usa translate para nao brigar com o transform) */
 .tcard.hop { animation: hop 0.5s steps(6) both; animation-delay: calc(var(--i, 0) * 45ms); }
 .tcard.hop.new { animation: drop 0.25s steps(3), hop 0.5s steps(6) 0.2s both; }
@@ -331,7 +338,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 @keyframes pop { from { transform: translateX(-50%) scale(0.6); } to { transform: translateX(-50%) scale(1); } }
 .tr-shout {
   position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 8; pointer-events: none; text-align: center;
-  font-family: var(--pixel); font-size: clamp(20px, 5.6cqw, 54px); line-height: 1.15; color: #ffd84d; text-shadow: 4px 4px 0 #000, -2px -2px 0 #000;
+  font-family: var(--pixel); font-size: clamp(18px, 8.5cqw, 48px); line-height: 1.15; color: #ffd84d; text-shadow: 4px 4px 0 #000, -2px -2px 0 #000;
   width: 92%; text-wrap: balance; animation: shout 1.6s steps(8) forwards;
 }
 .tr-shout small { display: block; font-family: var(--mono); font-size: 0.32em; color: #fff; text-shadow: 2px 2px 0 #000; margin-top: 6px; }
@@ -386,10 +393,6 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 #actList li, #trList li { display: flex; gap: 8px; align-items: center; color: var(--dim); flex-wrap: wrap; justify-content: space-between; }
 
 @container (max-width: 520px) {
-  .tr-felt { aspect-ratio: 1 / 1.15; max-height: none; --tw: clamp(26px, 9cqw, 44px); }
-  .tr-felt::before { inset: 10% 14%; }
-  .tr-seat { width: clamp(70px, 24cqw, 110px); font-size: 15px; }
-  .tr-played { --tw: clamp(26px, 9cqw, 42px); }
   .felt::before { inset: 9% 12%; }
   .felt { aspect-ratio: 1 / 1.25; max-height: none; --card-w: clamp(24px, 8.5cqw, 40px); }
   .seat { width: clamp(64px, 22cqw, 100px); font-size: 15px; }
