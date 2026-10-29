@@ -125,8 +125,16 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
   display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;
 }
 .tile.speaking { border-color: var(--fg); box-shadow: 0 0 0 2px var(--fg); }
-.tile.focus { grid-column: 1 / -1; aspect-ratio: auto; height: min(52vh, 56vw); }
+/* Modo palco: o quadro ampliado vai para cima e cabe na area da call; os outros viram miniaturas */
+.tile.focus { grid-column: 1 / -1; order: -1; aspect-ratio: auto; height: clamp(140px, 30vh, 560px); }
 .tile.focus video { object-fit: contain; }
+#tiles:has(.tile.focus) { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+#tiles:has(.tile.focus) .tile:not(.focus) { max-height: 64px; width: auto; }
+#tiles:has(.tile.focus) .tile:not(.focus) { aspect-ratio: 16 / 9; }
+#tiles:has(.tile.focus) .tile:not(.focus) .av.big { width: 32px; height: 32px; font-size: 12px; }
+#tiles:has(.tile.focus) .tile:not(.focus) .label { font-size: 15px; bottom: 3px; left: 3px; }
+#tiles:has(.tile.focus) .tile:not(.focus) .label .flag { display: none; }
+#tiles:has(.tile.focus) .tile:not(.focus) .full, #tiles:has(.tile.focus) .tile:not(.focus) .vol { display: none; }
 /* Controles do quadro, cada um no seu canto: nome embaixo a esquerda, tela cheia embaixo a direita,
    volume em cima a direita (so ao passar o mouse ou tocar no quadro) */
 .tile .full {
@@ -419,7 +427,8 @@ body.gaming #activity, body.gaming #truco {
 }
 body.gaming #activity > *, body.gaming #truco > * { flex: none; }
 body.gaming #activity > .table-wrap, body.gaming #truco > .table-wrap { flex: 1 1 0; } /* so a mesa cresce e encolhe */
-body.gaming #call { grid-area: call; max-height: 45vh; }
+body.gaming #call { grid-area: call; max-height: 50vh; }
+body.gaming .tile.focus { height: clamp(110px, 22vh, 400px); } /* palco menor ao lado do jogo */
 body.gaming main { grid-area: log; }
 body.gaming footer { grid-area: input; }
 /* a mesa usa o espaco que sobra e encolhe para caber na altura */
