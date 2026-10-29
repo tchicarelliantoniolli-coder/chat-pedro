@@ -4,7 +4,9 @@
   const $ = (id) => document.getElementById(id);
   const app = window.ChatPedro;
   const { socket, avatar, setNote, store } = app;
-  const ICE = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
+  // STUN padrao; se o servidor tiver TURN configurado (variaveis TURN_* no Render), ele manda a lista completa
+  const ICE_DEFAULT = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
+  const iceConfig = () => ({ iceServers: app.ice && app.ice.length ? app.ice : ICE_DEFAULT });
   const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
   let members = [];        // quem esta na chamada (vem do servidor)
@@ -22,6 +24,7 @@
     micId: store.get("cp-mic") || "",
     camId: store.get("cp-cam") || "",
     micGain: Number(store.get("cp-micgain") || 100),
+    ptt: store.get("cp-ptt") === "on",
     master: Number(store.get("cp-master") || 100),
   };
   const volumeOf = (nick) => Number(store.get("cp-vol-" + nick.toLowerCase()) || 100);
@@ -35,6 +38,8 @@
     btn("camBtn", camStream ? "[CAM ON]" : "[CAM]", false);
     btn("screenBtn", screenStream ? "[TELA ON]" : "[TELA]", false);
     $("screenBtn").hidden = !canShareScreen;
+    $("pttBtn").hidden = !(inCall && prefs.ptt);
+    $("micBtn").textContent = !micOn ? "[MIC OFF]" : prefs.ptt ? "[MIC: SEGURAR]" : "[MIC]";
     $("minBtn").textContent = $("call").classList.contains("min") ? "[+]" : "[-]";
     $("minBtn").title = $("call").classList.contains("min") ? "Mostrar os videos" : "Esconder os videos";
     const n = members.length;
@@ -86,7 +91,7 @@
   function getPeer(id) {
     let p = peers.get(id);
     if (p) return p;
-    const pc = new RTCPeerConnection(ICE);
+    const pc = new RTCPeerConnection(iceConfig());
     p = { pc, polite: socket.id < id, makingOffer: false, ignoreOffer: false, streams: {}, audio: null, senders: new Map(), analyser: null };
     peers.set(id, p);
     for (const [track, stream] of localTracks()) p.senders.set(track.id, pc.addTrack(track, stream));
@@ -183,10 +188,12 @@
     buildAudioGraph();
     try { await startMic(); }
     catch { micOn = false; setNote("Sem acesso ao microfone. Voce entrou mudo; libere o microfone no navegador para falar.", true); }
-    if (micTrack()) micTrack().enabled = micOn;
+    applyMic();
     socket.emit("call:join", myState(), (res) => {
       if (!res || !res.ok) { setNote("ERRO: nao deu para entrar na chamada.", true); cleanup(); return; }
       inCall = true;
+      applyMic();
+      syncWatch();
       $("call").hidden = false;
       $("call").classList.remove("min");
       for (const id of res.others) getPeer(id); // quem entra chama quem ja esta
@@ -197,6 +204,9 @@
   }
 
   function cleanup() {
+    setPtt(false);
+    $("sfxBar").hidden = true; $("watchForm").hidden = true;
+    setTimeout(syncWatch, 0); // inCall ja vai estar falso: esconde o video
     for (const id of [...peers.keys()]) closePeer(id);
     for (const s of [micRaw, camStream, screenStream]) if (s) s.getTracks().forEach((t) => t.stop());
     micRaw = camStream = screenStream = null;
@@ -259,12 +269,12 @@
     micOn = !micOn;
     if (!micOn && deaf) {} // mutar nao mexe no fone
     if (micOn && deaf) { deaf = false; for (const id of peers.keys()) applyVolume(id); } // como no Discord: ligar o mic tira o modo surdo
-    micTrack().enabled = micOn;
+    applyMic();
     sendState(); refreshButtons(); renderTiles();
   }
   function toggleDeaf() {
     deaf = !deaf;
-    if (deaf && micOn && micTrack()) { micOn = false; micTrack().enabled = false; } // como no Discord: surdo tambem muta
+    if (deaf && micOn) { micOn = false; applyMic(); } // como no Discord: surdo tambem muta
     for (const id of peers.keys()) applyVolume(id);
     sendState(); refreshButtons(); renderTiles();
   }
@@ -291,7 +301,7 @@
   $("micSelect").addEventListener("change", async (e) => {
     prefs.micId = e.target.value; store.set("cp-mic", prefs.micId);
     if (!inCall) return;
-    try { await startMic(); micTrack().enabled = micOn; } // o som enviado passa pelo mesmo ganho, sem renegociar
+    try { await startMic(); applyMic(); } // o som enviado passa pelo mesmo ganho, sem renegociar
     catch { setNote("ERRO: nao deu para usar esse microfone.", true); }
   });
   $("camSelect").addEventListener("change", async (e) => {
@@ -471,12 +481,157 @@
   setInterval(() => {
     if (!inCall) return;
     const speaking = new Set();
-    if (micAnalyser && micOn && level(micAnalyser) * (prefs.micGain / 100) > 0.04) speaking.add(socket.id);
+    if (micAnalyser && micLive() && level(micAnalyser) * (prefs.micGain / 100) > 0.04) speaking.add(socket.id);
     for (const [id, p] of peers) if (p.analyser && level(p.analyser) > 0.04) speaking.add(id);
     document.querySelectorAll("#tiles .tile").forEach((el) => el.classList.toggle("speaking", !el.classList.contains("screen") && speaking.has(el.dataset.member)));
     document.querySelectorAll("#callPeople li").forEach((li) => li.classList.toggle("speaking", speaking.has(li.dataset.member)));
     if (!$("settings").hidden && micAnalyser) $("micMeter").style.width = Math.min(100, level(micAnalyser) * 400 * (prefs.micGain / 100)) + "%";
   }, 120);
+
+  // ---------- apertar para falar ----------
+  let pttHeld = false;
+  const micLive = () => micOn && (!prefs.ptt || pttHeld);
+  function applyMic() { if (micTrack()) micTrack().enabled = micLive(); }
+  function setPtt(held) {
+    if (pttHeld === held) return;
+    pttHeld = held;
+    $("pttBtn").classList.toggle("held", held);
+    applyMic();
+  }
+  const typingTarget = (t) => t && (t.closest("input, textarea, select, [contenteditable]") !== null);
+  document.addEventListener("keydown", (e) => {
+    if (!inCall || !prefs.ptt || e.code !== "Space" || typingTarget(e.target)) return;
+    e.preventDefault();
+    setPtt(true);
+  });
+  document.addEventListener("keyup", (e) => { if (e.code === "Space") setPtt(false); });
+  window.addEventListener("blur", () => setPtt(false));
+  const ptt = $("pttBtn");
+  ptt.addEventListener("pointerdown", (e) => { e.preventDefault(); ptt.setPointerCapture(e.pointerId); setPtt(true); });
+  for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) ptt.addEventListener(ev, () => setPtt(false));
+  $("pttCheck").checked = prefs.ptt;
+  $("pttCheck").addEventListener("change", (e) => {
+    prefs.ptt = e.target.checked; store.set("cp-ptt", prefs.ptt ? "on" : "off");
+    setPtt(false); applyMic(); refreshButtons();
+  });
+
+  // ---------- soundboard: sons 8-bit feitos na hora, tocam para todo mundo da call ----------
+  const SFX_LABEL = { buzina: "[BUZINA]", ihhh: "[IHHH]", risada: "[RISADA]", aplausos: "[APLAUSOS]", tambor: "[BA DUM TSS]", erro: "[ERRO]" };
+  $("sfxBar").replaceChildren(...Object.entries(SFX_LABEL).map(([k, label]) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "cmd"; b.textContent = label;
+    b.addEventListener("click", () => socket.emit("call:sfx", k));
+    return b;
+  }));
+  $("sfxBtn").addEventListener("click", () => { $("sfxBar").hidden = !$("sfxBar").hidden; });
+  function playSfx(name) {
+    if (!ctx || deaf) return;
+    const out = ctx.createGain();
+    out.gain.value = 0.18 * (prefs.master / 100);
+    out.connect(ctx.destination);
+    const t0 = ctx.currentTime;
+    const tone = (type, f0, f1, start, dur, vol = 1) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0, t0 + start);
+      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t0 + start + dur);
+      g.gain.setValueAtTime(vol, t0 + start); g.gain.exponentialRampToValueAtTime(0.001, t0 + start + dur);
+      o.connect(g).connect(out); o.start(t0 + start); o.stop(t0 + start + dur + 0.02);
+    };
+    const noise = (start, dur, vol = 1, hp = 0) => {
+      const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = buf;
+      g.gain.setValueAtTime(vol, t0 + start); g.gain.exponentialRampToValueAtTime(0.001, t0 + start + dur);
+      let node = src;
+      if (hp) { const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = hp; node.connect(f); node = f; }
+      node.connect(g).connect(out); src.start(t0 + start);
+    };
+    if (name === "buzina") { tone("sawtooth", 440, 440, 0, 0.35); tone("sawtooth", 554, 554, 0, 0.35); tone("sawtooth", 440, 440, 0.4, 0.5); tone("sawtooth", 554, 554, 0.4, 0.5); }
+    else if (name === "ihhh") tone("square", 950, 260, 0, 0.9, 0.8);
+    else if (name === "risada") for (let i = 0; i < 6; i++) tone("square", 620 - i * 30, 480 - i * 30, i * 0.14, 0.11, 0.8);
+    else if (name === "aplausos") for (let i = 0; i < 14; i++) noise(i * 0.09 + Math.random() * 0.04, 0.08, 0.5, 1200);
+    else if (name === "tambor") { tone("sine", 160, 60, 0, 0.18); tone("sine", 120, 50, 0.22, 0.2); noise(0.45, 0.5, 0.6, 6000); }
+    else if (name === "erro") { tone("square", 330, 330, 0, 0.18, 0.7); tone("square", 220, 220, 0.2, 0.35, 0.7); }
+  }
+  socket.on("call:sfx", ({ name, nick }) => {
+    if (!inCall) return;
+    playSfx(name);
+    setNote("♪ " + nick + " tocou " + (SFX_LABEL[name] || name));
+  });
+
+  // ---------- assistir junto (YouTube sincronizado) ----------
+  let watchState = null, player = null, playerVid = null, suppressUntil = 0, ytReady = null;
+  const watchOffset = () => (watchState ? watchState.localOffset : 0);
+  const expectedPos = () => !watchState ? 0 : watchState.playing ? watchState.pos + (Date.now() - watchOffset() - watchState.at) / 1000 : watchState.pos;
+  function loadYT() {
+    if (ytReady) return ytReady;
+    ytReady = new Promise((ok) => {
+      if (window.YT && window.YT.Player) return ok();
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => { if (prev) prev(); ok(); };
+      const sc = document.createElement("script"); sc.src = "https://www.youtube.com/iframe_api"; document.head.append(sc);
+    });
+    return ytReady;
+  }
+  socket.on("watch:state", (w) => {
+    watchState = w ? { ...w, localOffset: Date.now() - w.now } : null;
+    syncWatch();
+  });
+  async function syncWatch() {
+    const box = $("watch");
+    if (!inCall || !watchState) { box.hidden = true; if (player) { try { player.destroy(); } catch {} player = null; playerVid = null; $("ytBox").replaceChildren(Object.assign(document.createElement("div"), { id: "ytPlayer" })); } return; }
+    box.hidden = false;
+    $("watchInfo").textContent = (watchState.playing ? "assistindo junto" : "pausado") + " | colocado por " + watchState.by;
+    $("watchToggle").textContent = watchState.playing ? "[PAUSAR]" : "[TOCAR]";
+    await loadYT();
+    if (!watchState) return;
+    if (!player) {
+      playerVid = watchState.id;
+      suppressUntil = Date.now() + 2500;
+      player = new YT.Player("ytPlayer", {
+        videoId: watchState.id,
+        playerVars: { autoplay: 1, playsinline: 1, rel: 0, start: Math.floor(expectedPos()) },
+        events: { onReady: applyWatch, onStateChange: onLocalChange },
+      });
+      return;
+    }
+    if (playerVid !== watchState.id) { playerVid = watchState.id; suppressUntil = Date.now() + 2500; player.loadVideoById(watchState.id, expectedPos()); }
+    applyWatch();
+  }
+  function applyWatch() {
+    if (!player || !player.getCurrentTime || !watchState) return;
+    suppressUntil = Date.now() + 1200;
+    const want = expectedPos();
+    if (Math.abs(player.getCurrentTime() - want) > 1.5) player.seekTo(want, true);
+    if (watchState.playing) player.playVideo(); else player.pauseVideo();
+    player.setVolume(prefs.master);
+    if (deaf) player.mute(); else player.unMute();
+  }
+  // a pessoa mexeu no proprio player (play, pause ou pulou): avisa todo mundo
+  function onLocalChange(e) {
+    if (!watchState || Date.now() < suppressUntil) return;
+    const cur = player.getCurrentTime();
+    if (e.data === YT.PlayerState.PLAYING && (!watchState.playing || Math.abs(cur - expectedPos()) > 2)) socket.emit("watch:control", { action: "play", pos: cur });
+    else if (e.data === YT.PlayerState.PAUSED && watchState.playing) socket.emit("watch:control", { action: "pause", pos: cur });
+  }
+  setInterval(() => { // corrige quem atrasou ou adiantou
+    if (player && watchState && watchState.playing && player.getCurrentTime && Math.abs(player.getCurrentTime() - expectedPos()) > 2.5) applyWatch();
+  }, 3000);
+  $("watchBtn").addEventListener("click", () => { $("watchForm").hidden = !$("watchForm").hidden; if (!$("watchForm").hidden) $("watchUrl").focus(); });
+  $("watchForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const url = $("watchUrl").value.trim();
+    if (!url) return;
+    socket.emit("watch:set", url);
+    $("watchUrl").value = ""; $("watchForm").hidden = true;
+  });
+  $("watchToggle").addEventListener("click", () => {
+    if (!watchState) return;
+    const pos = player && player.getCurrentTime ? player.getCurrentTime() : expectedPos();
+    socket.emit("watch:control", { action: watchState.playing ? "pause" : "play", pos });
+  });
+  $("watchStop").addEventListener("click", () => socket.emit("watch:stop"));
 
   $("callBtn").addEventListener("click", () => {
     if (!inCall) return join();

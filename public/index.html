@@ -16,8 +16,19 @@
   --err: #ff5555;
   --pixel: "Press Start 2P", "Courier New", monospace;
   --mono: "VT323", "Courier New", monospace;
+  --box: #000000;     /* fundo de caixinhas (lugares, convites, campos) */
+  --stage: #020d05;   /* fundo das areas de jogo e call */
+  --gold: #ffd84d;
   color-scheme: dark;
 }
+/* Temas escolhidos no MEU PERFIL */
+body[data-tema="ambar"] { --fg: #ffb000; --dim: #9a6a00; --bright: #ffe3a3; --panel: #170f00; --stage: #0c0700; }
+body[data-tema="azul"] { --fg: #5fd7ff; --dim: #2b7c99; --bright: #d3f5ff; --panel: #03121c; --stage: #020a10; }
+body[data-tema="win95"] {
+  --bg: #c0c0c0; --panel: #d4d0c8; --stage: #b9b9b9; --box: #ffffff; --fg: #000000; --dim: #4a4a4a;
+  --bright: #000080; --err: #b00000; --gold: #806000; color-scheme: light;
+}
+body[data-tema="win95"] h1, body[data-tema="win95"] .act-head h2 { color: #000080; }
 html, body { height: 100%; margin: 0; }
 [hidden] { display: none !important; }
 body {
@@ -83,6 +94,75 @@ textarea::placeholder { color: var(--dim); }
 }
 .pic img:hover { border-color: var(--fg); }
 
+/* Mensagens: citacao da resposta, reacoes e acoes (aparecem ao passar o mouse) */
+.line { position: relative; padding: 1px 4px; margin: 0 -4px; }
+.line:hover, .line.show { background: rgba(127, 127, 127, 0.08); }
+.line .quote { display: block; color: var(--dim); font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.line .quote:hover { color: var(--fg); }
+.line.flash { animation: flash 1.2s steps(4); }
+@keyframes flash { 0%, 60% { background: rgba(255, 216, 77, 0.25); } }
+.line.mentioned { background: rgba(255, 216, 77, 0.08); box-shadow: inset 3px 0 0 var(--gold); }
+.mention { color: var(--gold); }
+.mention.me { background: var(--gold); color: #000; padding: 0 2px; }
+.reacts { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 2px 0; white-space: normal; }
+.reacts:empty { display: none; }
+.rx {
+  all: unset; cursor: pointer; border: 1px solid var(--dim); padding: 0 6px; font-size: 16px; line-height: 1.4;
+  display: inline-flex; gap: 4px; align-items: center; color: var(--fg);
+}
+.rx.mine { border-color: var(--fg); background: rgba(127, 127, 127, 0.15); }
+.rx:hover, .rx:focus-visible { border-color: var(--bright); }
+.acts {
+  position: absolute; top: -4px; right: 4px; display: none; gap: 10px; background: var(--box); border: 1px solid var(--dim);
+  padding: 0 8px; font-size: 17px; z-index: 3; white-space: nowrap;
+}
+.line:hover .acts, .line.show .acts, .line:focus-within .acts { display: flex; }
+.acts button { all: unset; cursor: pointer; color: var(--dim); }
+.acts button:hover, .acts button:focus-visible { color: var(--bright); }
+.acts button.del:hover, .acts button.del:focus-visible { color: var(--err); }
+.picker { position: absolute; right: 4px; top: 22px; z-index: 4; display: flex; gap: 2px; background: var(--box); border: 1px solid var(--fg); padding: 2px 4px; }
+.picker button { all: unset; cursor: pointer; font-size: 20px; padding: 0 3px; }
+.picker button:hover, .picker button:focus-visible { background: rgba(127, 127, 127, 0.25); }
+.line audio { display: block; height: 34px; width: min(300px, 100%); margin: 4px 0; }
+@media (hover: none) { .acts { position: static; display: none; margin-top: 2px; width: max-content; } .line.show .acts { display: flex; } }
+/* barra de "respondendo a", "digitando..." e sugestoes de @ em cima do campo */
+.replying { display: flex; gap: 10px; align-items: baseline; color: var(--dim); margin-bottom: 4px; min-width: 0; }
+.replying span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+#typing { color: var(--dim); font-size: 17px; min-height: 0; margin: 0 0 2px; }
+#typing:empty { display: none; }
+#mentionBox { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 4px; }
+#mentionBox:empty { display: none; }
+#mentionBox button { all: unset; cursor: pointer; color: var(--bright); border: 1px solid var(--dim); padding: 0 6px; }
+#mentionBox button:hover, #mentionBox button:focus-visible, #mentionBox button.sel { border-color: var(--fg); background: rgba(127, 127, 127, 0.2); }
+.rec { color: var(--err); }
+/* status no ponto de presenca */
+.pres.ausente::after { background: #ffb000; }
+.pres.ocupado::after { background: var(--err); }
+/* MEU PERFIL */
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatches button { all: unset; cursor: pointer; width: 26px; height: 26px; border: 2px solid var(--dim); }
+.swatches button[aria-pressed="true"] { border-color: var(--bright); box-shadow: 0 0 0 2px var(--box), 0 0 0 4px var(--bright); }
+.opts { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.opts .cmd[aria-pressed="true"] { color: var(--bg); background: var(--fg); }
+.modal .sect { display: flex; flex-direction: column; gap: 6px; }
+.modal .sect > b { color: var(--dim); font-weight: 400; }
+/* painel de moderacao do ADM */
+.modlist { display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; }
+.modlist .row { justify-content: flex-start; flex-wrap: wrap; gap: 4px 12px; }
+.modlist .nm { color: var(--bright); min-width: 8ch; }
+/* call: assistir junto, soundboard e apertar para falar */
+#watch { flex: none; padding: 8px 16px 0; display: flex; flex-direction: column; gap: 4px; }
+#ytBox { width: min(100%, 640px, calc(34vh * 16 / 9)); aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--dim); }
+#ytBox iframe, #ytPlayer { width: 100%; height: 100%; display: block; border: 0; }
+.watch-bar { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+#watchInfo { color: var(--dim); min-width: 0; }
+#watchUrl { font: inherit; color: var(--fg); background: var(--box); border: 1px solid var(--dim); padding: 0 6px; flex: 1 1 200px; min-width: 0; }
+#pttBtn.held { background: var(--fg); color: var(--bg); }
+.modal label.check { flex-direction: row; align-items: flex-start; gap: 8px; }
+.modal label.check input { accent-color: var(--fg); margin-top: 4px; }
+body.gaming #ytBox { width: 100%; }
+body.gaming #watch { padding: 6px 8px 0; }
+
 aside {
   width: 220px; flex: none; border-left: 1px solid var(--dim); background: var(--panel);
   display: flex; flex-direction: column; min-height: 0;
@@ -113,7 +193,7 @@ aside h2 {
 body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
 
 /* Chamada estilo Discord: grade de videos em cima do chat, barra de controles embaixo */
-#call { flex: 0 0 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: #020d05; max-height: 62%; min-height: 0; }
+#call { flex: 0 0 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: var(--stage); max-height: 62%; min-height: 0; }
 #call.min #tiles { display: none; }
 #tiles {
   flex: 1; min-height: 0; overflow-y: auto; padding: 10px 16px; display: grid; gap: 10px;
@@ -201,16 +281,16 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .modal label { display: flex; flex-direction: column; gap: 4px; color: var(--dim); }
 .modal label b { color: var(--bright); font-weight: 400; }
 .modal select {
-  font: inherit; color: var(--fg); background: #000; border: 1px solid var(--dim); padding: 2px 4px; max-width: 100%;
+  font: inherit; color: var(--fg); background: var(--box); border: 1px solid var(--dim); padding: 2px 4px; max-width: 100%;
 }
 .modal input[type=range] { accent-color: var(--fg); width: 100%; }
-.meter { height: 10px; border: 1px solid var(--dim); background: #000; }
+.meter { height: 10px; border: 1px solid var(--dim); background: var(--box); }
 .meter i { display: block; height: 100%; width: 0; background: var(--fg); }
 .modal .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .modal .close { font-size: 26px; padding: 0 4px; }
 
 /* Atividade: mesa de poker no estilo PokerStars, com o verde do terminal */
-#activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: #020d05; max-height: 78%; min-height: 0; overflow-y: auto; }
+#activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: var(--stage); max-height: 78%; min-height: 0; overflow-y: auto; }
 .act-head { display: flex; align-items: center; gap: 12px; padding: 8px 16px 0; }
 .act-head .info { color: var(--dim); }
 .act-head h2 { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--bright); margin: 0; flex: 1; }
@@ -227,7 +307,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 60%; }
 .board { display: flex; gap: 4px; justify-content: center; min-height: calc(var(--card-w) * 1.4); }
 .pot { background: rgba(0,0,0,0.65); color: var(--bright); padding: 0 8px; font-size: clamp(15px, 2.4cqw, 22px); white-space: nowrap; }
-.banner { background: #000; border: 2px solid var(--fg); color: var(--bright); padding: 2px 8px; text-align: center; font-size: clamp(14px, 2.2cqw, 20px); max-width: 100%; }
+.banner { background: var(--box); border: 2px solid var(--fg); color: var(--bright); padding: 2px 8px; text-align: center; font-size: clamp(14px, 2.2cqw, 20px); max-width: 100%; }
 .card {
   width: var(--card-w); height: calc(var(--card-w) * 1.4); background: #f4f4ec; color: #111; border-radius: 4px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; flex: none;
@@ -246,7 +326,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .seat .cards { display: flex; gap: 2px; margin-bottom: -10px; z-index: 1; }
 .seat .cards .card { --card-w: clamp(22px, 4.2cqw, 44px); width: var(--card-w); height: calc(var(--card-w) * 1.4); font-size: calc(var(--card-w) * 0.62); }
 .seat .box {
-  width: 100%; background: #000; border: 2px solid var(--dim); padding: 3px 4px; box-sizing: border-box;
+  width: 100%; background: var(--box); border: 2px solid var(--dim); padding: 3px 4px; box-sizing: border-box;
   display: flex; align-items: center; gap: 5px; position: relative; z-index: 2;
 }
 .seat .box .av { margin: 0; width: clamp(18px, 3cqw, 28px); height: clamp(18px, 3cqw, 28px); }
@@ -273,7 +353,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .actions .big:disabled { opacity: 0.4; cursor: default; background: none; }
 .sizing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; flex: 1 1 260px; min-width: 0; }
 .sizing input[type=range] { flex: 1 1 120px; min-width: 100px; accent-color: var(--fg); }
-.sizing input[type=number] { width: 6ch; font: inherit; color: var(--fg); background: #000; border: 1px solid var(--dim); padding: 0 4px; }
+.sizing input[type=number] { width: 6ch; font: inherit; color: var(--fg); background: var(--box); border: 1px solid var(--dim); padding: 0 4px; }
 .sizing .cmd { color: var(--dim); }
 .tablebar { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 6px 16px 10px; color: var(--dim); }
 .tablebar .spacer { flex: 1; }
@@ -282,7 +362,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .dealerlog { margin: 0 16px 10px; padding: 4px 8px; border: 1px solid var(--dim); max-height: 6.2em; overflow-y: auto; color: var(--dim); font-size: 18px; }
 #actList { list-style: none; margin: 0; padding: 0 14px 6px; }
 /* Truco: mesa verde, cartas grandes, gritos animados */
-#truco { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: #020d05; max-height: 82%; min-height: 0; overflow-y: auto; }
+#truco { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: var(--stage); max-height: 82%; min-height: 0; overflow-y: auto; }
 .tr-score { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 6px 16px 0; }
 .tr-score .pts { font-family: var(--pixel); font-size: clamp(11px, 1.6vw, 15px); }
 .tr-score .us { color: var(--fg); }
@@ -321,7 +401,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .tr-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 10px; }
 .tr-center .lbl { color: var(--bright); font-size: clamp(13px, 3.4cqw, 19px); text-align: center; background: rgba(0,0,0,0.55); padding: 0 6px; }
 .tr-seat { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; width: clamp(70px, 22cqw, 130px); font-size: clamp(13px, 3.4cqw, 19px); z-index: 2; }
-.tr-seat .box { width: 100%; background: #000; border: 2px solid var(--fg); padding: 3px 5px; box-sizing: border-box; display: flex; align-items: center; gap: 5px; }
+.tr-seat .box { width: 100%; background: var(--box); border: 2px solid var(--fg); padding: 3px 5px; box-sizing: border-box; display: flex; align-items: center; gap: 5px; }
 .tr-seat.them .box { border-color: #ffb000; }
 .tr-seat .box .av { margin: 0; width: clamp(18px, 3cqw, 28px); height: clamp(18px, 3cqw, 28px); }
 .tr-seat .nm { color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
@@ -385,7 +465,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   position: fixed; z-index: 25; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(96px, calc(env(safe-area-inset-bottom, 0px) + 96px));
   display: flex; flex-direction: column; gap: 8px; width: min(320px, calc(100vw - 32px));
 }
-.invite { background: #000; border: 2px solid #ffd84d; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 0 rgba(0,0,0,0.6); }
+.invite { background: var(--box); border: 2px solid #ffd84d; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 0 rgba(0,0,0,0.6); }
 .invite .t { color: var(--bright); }
 .invite .t small { display: block; color: var(--dim); font-size: 17px; }
 .invite .row { display: flex; gap: 16px; }
@@ -404,7 +484,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 @media (prefers-reduced-motion: reduce) { #fodeu.go span { animation: none; } }
 #admBtn { color: var(--dim); }
 #admBtn.on { color: #ffd84d; }
-.modal input[type=password] { font: inherit; color: var(--fg); background: #000; border: 1px solid var(--dim); padding: 2px 6px; }
+.modal input[type=password], .modal input[type=text] { font: inherit; color: var(--fg); background: var(--box); border: 1px solid var(--dim); padding: 2px 6px; }
 #trList { list-style: none; margin: 0; padding: 0 14px 6px; }
 #actList li, #trList li { display: flex; gap: 8px; align-items: center; color: var(--dim); flex-wrap: wrap; justify-content: space-between; }
 
@@ -515,6 +595,10 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       <div class="dealerlog" id="trLog" hidden></div>
     </section>
     <section id="call" aria-label="Chamada" hidden>
+      <div id="watch" hidden>
+        <div id="ytBox"><div id="ytPlayer"></div></div>
+        <div class="watch-bar"><span id="watchInfo"></span><button type="button" class="cmd" id="watchToggle">[PAUSAR]</button><button type="button" class="cmd danger" id="watchStop">[FECHAR VIDEO]</button></div>
+      </div>
       <div id="tiles"></div>
       <div class="controls">
         <button type="button" class="cmd" id="micBtn" title="Ligar ou desligar seu microfone">[MIC]</button>
@@ -522,17 +606,30 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
         <button type="button" class="cmd" id="camBtn" title="Ligar ou desligar sua camera">[CAM]</button>
         <button type="button" class="cmd" id="screenBtn" title="Compartilhar sua tela">[TELA]</button>
         <button type="button" class="cmd" id="setBtn" title="Configuracoes de audio e video">[CONFIG]</button>
+        <button type="button" class="cmd" id="pttBtn" title="Segure para falar (ou segure ESPACO)" hidden>[SEGURE P/ FALAR]</button>
+        <button type="button" class="cmd" id="sfxBtn" title="Sons para todo mundo da call">[SONS]</button>
+        <button type="button" class="cmd" id="watchBtn" title="Assistir um video do YouTube junto">[YOUTUBE]</button>
         <button type="button" class="cmd" id="minBtn" title="Esconder ou mostrar os videos">[-]</button>
         <span class="spacer"></span>
         <button type="button" class="cmd danger" id="leaveBtn">[SAIR]</button>
       </div>
+      <div class="controls" id="sfxBar" hidden></div>
+      <form class="controls" id="watchForm" hidden>
+        <input type="text" id="watchUrl" placeholder="cole o link do YouTube" aria-label="Link do YouTube" autocomplete="off">
+        <button type="submit" class="cmd">[ASSISTIR JUNTO]</button>
+      </form>
     </section>
     <main id="scroller"><div class="pad"><div id="log"></div></div></main>
     <footer class="pad">
       <button type="button" id="chatPeek" aria-controls="scroller"><span class="lbl">[CHAT]</span><span id="peekText">sem mensagens</span></button>
+      <div id="typing" aria-live="polite"></div>
+      <div id="mentionBox"></div>
+      <div class="replying" id="replying" hidden><span id="replyText"></span><button type="button" class="cmd" id="replyCancel" title="Cancelar resposta">[X]</button></div>
+      <div class="replying rec" id="recBar" hidden><span id="recText">gravando...</span><button type="button" class="cmd" id="recSend">[ENVIAR]</button><button type="button" class="cmd danger" id="recCancel">[CANCELAR]</button></div>
       <form id="form">
         <span class="ps1" id="ps1">apelido: </span>
         <textarea id="input" rows="1" placeholder="seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
+        <button type="button" class="cmd" id="audioBtn" title="Gravar mensagem de audio (ate 1 minuto)" hidden>[AUDIO]</button>
         <button type="button" class="cmd" id="photoBtn" title="Enviar foto" hidden>[FOTO]</button>
         <input type="file" id="file" accept="image/*" hidden>
       </form>
@@ -551,7 +648,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     <ul id="callPeople"></ul>
     <div class="callbox"><button type="button" class="cmd" id="joinBtn" hidden>[ENTRAR]</button></div>
     <div class="profile" id="profile" hidden>
-      <button type="button" class="cmd" id="avatarBtn">[MUDAR FOTO DE PERFIL]</button>
+      <button type="button" class="cmd" id="profileBtn">[MEU PERFIL]</button>
       <input type="file" id="avatarFile" accept="image/*" hidden>
     </div>
   </aside>
@@ -568,10 +665,32 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
         <input type="password" id="admPass" autocomplete="current-password" inputmode="numeric">
       </label>
     </div>
-    <div id="admOut" hidden style="color: var(--dim)">Voce e o ADM: controla a mesa de poker (trancar, aceitar quem entra e quem quer fichas novas).</div>
+    <div id="admOut" hidden class="sect">
+      <span style="color: var(--dim)">Voce e o ADM: modera o chat e controla a mesa de poker.</span>
+      <label>Tempo do castigo
+        <select id="modMinutes"><option value="5">5 minutos</option><option value="15" selected>15 minutos</option><option value="60">1 hora</option><option value="1440">1 dia</option></select>
+      </label>
+      <b style="color: var(--dim); font-weight: 400">Quem esta online</b>
+      <div class="modlist" id="modUsers"></div>
+      <b style="color: var(--dim); font-weight: 400" id="modPunishedTitle">Castigos ativos</b>
+      <div class="modlist" id="modPunished"></div>
+      <div class="row"><span style="color: var(--dim)">Passe o mouse numa mensagem e clique em [APAGAR] para tirar ela do chat.</span></div>
+      <div class="row"><button type="button" class="cmd danger" id="modClear">[LIMPAR O CHAT TODO]</button><span id="modClearConfirm"></span></div>
+    </div>
     <p id="admMsg" style="margin: 0; color: var(--err)"></p>
     <div class="row"><span></span><button type="submit" class="cmd" id="admGo">[ENTRAR]</button></div>
   </form>
+</div>
+
+<div class="modal" id="profileModal" hidden>
+  <div class="box" role="dialog" aria-labelledby="profTitle">
+    <div class="row"><h3 id="profTitle">MEU PERFIL</h3><button type="button" class="cmd close" id="profClose" aria-label="Fechar">[X]</button></div>
+    <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">[TROCAR FOTO DE PERFIL]</button></div></div>
+    <div class="sect"><b>Cor do nome</b><div class="swatches" id="colorPick"></div></div>
+    <div class="sect"><b>Status</b><div class="opts" id="statusPick"></div><span style="color: var(--dim)">Ocupado: sem sons nem notificacoes, so as mencoes com @.</span></div>
+    <div class="sect"><b>Tema</b><div class="opts" id="themePick"></div></div>
+    <div class="sect"><b>Notificacoes</b><div class="opts"><button type="button" class="cmd" id="notifBtn">[ATIVAR NOTIFICACOES]</button></div><span style="color: var(--dim)" id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</span></div>
+  </div>
 </div>
 
 <div class="modal" id="settings" hidden>
@@ -587,6 +706,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     <label>Camera
       <select id="camSelect"></select>
     </label>
+    <label class="check"><input type="checkbox" id="pttCheck"> Apertar para falar: o microfone so liga enquanto voce segura ESPACO (fora do campo de texto) ou o botao [SEGURE P/ FALAR]</label>
     <label><span>Volume geral da chamada: <b id="masterVal">100%</b></span>
       <input type="range" id="master" min="0" max="100" step="5" value="100">
     </label>
@@ -644,29 +764,214 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     return el;
   }
 
-  function addLine(m) {
+  // ---------- mensagens ----------
+  const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "❤️", "\u{1F62E}"];
+  const lineById = new Map(); // id -> { el, m }
+  let profiles = {};          // apelido(minusculo) -> { color, status }
+  let replyTo = null;         // mensagem que esta sendo respondida
+  const keyOf = (n) => (n || "").toLowerCase();
+
+  function whoSpan(n) {
+    const w = span("who", n + "> ");
+    w.dataset.nick = keyOf(n);
+    const p = profiles[keyOf(n)];
+    if (p && p.color) w.style.color = p.color;
+    return w;
+  }
+
+  // Texto com as @mencoes destacadas (os apelidos podem ter espaco, entao procura pelos nomes conhecidos)
+  function knownNames() {
+    const set = new Set(users);
+    for (const { m } of lineById.values()) if (m.nick) set.add(m.nick);
+    return [...set].sort((a, b) => b.length - a.length);
+  }
+  function renderText(text, el) {
+    const names = knownNames();
+    let rest = text;
+    while (rest) {
+      const low = rest.toLowerCase();
+      let at = -1, who = null;
+      for (const n of names) {
+        const i = low.indexOf("@" + n.toLowerCase());
+        if (i >= 0 && (at < 0 || i < at)) { at = i; who = n; }
+      }
+      if (at < 0) { el.append(rest); break; }
+      el.append(rest.slice(0, at));
+      el.append(span("mention" + (keyOf(who) === keyOf(nick) ? " me" : ""), rest.slice(at, at + who.length + 1)));
+      rest = rest.slice(at + who.length + 1);
+    }
+  }
+  const mentionsMe = (text) => !!nick && (text || "").toLowerCase().includes("@" + keyOf(nick));
+
+  function renderReacts(box, m) {
+    box.replaceChildren();
+    for (const [emoji, who] of Object.entries(m.reactions || {})) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "rx" + (who.includes(nick) ? " mine" : "");
+      b.textContent = emoji + " " + who.length;
+      b.title = who.join(", ");
+      b.addEventListener("click", () => socket.emit("react", { id: m.id, emoji }));
+      box.append(b);
+    }
+  }
+
+  function actionsFor(m, l) {
+    const acts = span("acts", "");
+    const btn = (text, fn, cls) => { const b = document.createElement("button"); b.type = "button"; b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); acts.append(b); return b; };
+    btn("[RESPONDER]", () => setReply(m));
+    btn("[REAGIR]", () => {
+      const open = l.querySelector(".picker");
+      document.querySelectorAll(".picker").forEach((x) => x.remove());
+      if (open) return;
+      const pk = span("picker", "");
+      for (const emoji of REACTIONS) {
+        const b = document.createElement("button"); b.type = "button"; b.textContent = emoji; b.title = "Reagir com " + emoji;
+        b.addEventListener("click", (e) => { e.stopPropagation(); socket.emit("react", { id: m.id, emoji }); pk.remove(); });
+        pk.append(b);
+      }
+      l.append(pk);
+    });
+    const del = btn("[APAGAR]", () => socket.emit("delete", m.id), "del");
+    del.hidden = !(isAdmin || (nick && keyOf(m.nick) === keyOf(nick)));
+    return acts;
+  }
+
+  function addLine(m, fromHistory) {
     const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
     const empty = $("empty");
     if (empty) empty.remove();
     const l = document.createElement("div");
     l.className = "line";
-    l.append(span("time", "[" + fmtTime(m.ts) + "] "));
-    if (m.type === "sys") l.append(span("sys", "*** " + m.text));
-    else if (m.type === "img") {
-      const box = document.createElement("span");
-      box.className = "pic";
-      const img = document.createElement("img");
-      img.alt = "Foto de " + m.nick;
-      img.src = m.src;
-      img.addEventListener("load", () => { if (atBottom) scroller.scrollTop = scroller.scrollHeight; });
-      img.addEventListener("click", () => openViewer(m.src));
-      box.append(img);
-      l.append(avatar(m.nick), span("who", m.nick + "> "), box);
+    if (m.id) { l.dataset.id = m.id; lineById.set(m.id, { el: l, m }); }
+    if (m.type === "sys") {
+      l.append(span("time", "[" + fmtTime(m.ts) + "] "), span("sys", "*** " + m.text));
+    } else {
+      if (m.reply) {
+        const q = span("quote", "↳ " + m.reply.nick + ": " + m.reply.text);
+        q.title = "Ir para a mensagem respondida";
+        q.addEventListener("click", () => jumpTo(m.reply.id));
+        l.append(q);
+      }
+      l.append(span("time", "[" + fmtTime(m.ts) + "] "), avatar(m.nick), whoSpan(m.nick));
+      if (m.type === "img") {
+        const box = span("pic", "");
+        const img = document.createElement("img");
+        img.alt = "Foto de " + m.nick;
+        img.src = m.src;
+        img.addEventListener("load", () => { if (atBottom) scroller.scrollTop = scroller.scrollHeight; });
+        img.addEventListener("click", () => openViewer(m.src));
+        box.append(img);
+        l.append(box);
+      } else if (m.type === "audio") {
+        const a = document.createElement("audio");
+        a.controls = true; a.preload = "metadata"; a.src = m.src;
+        l.append(a);
+      } else {
+        const t = document.createElement("span");
+        renderText(m.text, t);
+        l.append(t);
+        if (mentionsMe(m.text) && m.nick !== nick) l.classList.add("mentioned");
+      }
+      const rx = span("reacts", "");
+      renderReacts(rx, m);
+      l.append(rx, actionsFor(m, l));
+      // no celular nao tem mouse: tocar na mensagem mostra as acoes
+      l.addEventListener("click", (e) => {
+        if (!matchMedia("(hover: none)").matches || e.target.closest("button, audio, img, .quote")) return;
+        document.querySelectorAll(".line.show").forEach((x) => { if (x !== l) x.classList.remove("show"); });
+        l.classList.toggle("show");
+      });
     }
-    else l.append(avatar(m.nick), span("who", m.nick + "> "), document.createTextNode(m.text));
     log.append(l);
     if (atBottom) scroller.scrollTop = scroller.scrollHeight;
     peek(m);
+    if (!fromHistory) alertFor(m);
+    if (m.nick) { typers.delete(m.nick); renderTyping(); }
+  }
+
+  function jumpTo(id) {
+    const it = lineById.get(id);
+    if (!it) { setNote("Essa mensagem nao esta mais no chat."); return; }
+    it.el.scrollIntoView({ block: "center", behavior: "smooth" });
+    it.el.classList.remove("flash"); void it.el.offsetWidth; it.el.classList.add("flash");
+  }
+
+  function setReply(m) {
+    replyTo = m;
+    const what = m.type === "img" ? "[foto]" : m.type === "audio" ? "[audio]" : m.text;
+    $("replyText").textContent = "respondendo " + m.nick + ": " + what;
+    $("replying").hidden = !m;
+    input.focus();
+  }
+  function clearReply() { replyTo = null; $("replying").hidden = true; }
+  $("replyCancel").addEventListener("click", clearReply);
+
+  // ---------- sons, mencoes e notificacoes ----------
+  let actx = null;
+  function ding(freqs) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      let t = actx.currentTime;
+      for (const f of freqs) {
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = "square"; o.frequency.value = f;
+        g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.15); t += 0.12;
+      }
+    } catch {}
+  }
+  let notifOn = store.get("chatpedro-notif") === "on";
+  function alertFor(m) {
+    if (!nick || !m.nick || m.nick === nick || m.type === "sys") return;
+    const mentioned = m.type === "msg" && mentionsMe(m.text);
+    if (myStatus === "ocupado" && !mentioned) return;
+    if (mentioned) ding([880, 1320, 1760]);
+    if (notifOn && document.hidden && "Notification" in window && Notification.permission === "granted") {
+      const body = m.type === "img" ? "[foto]" : m.type === "audio" ? "[audio]" : m.text;
+      try { new Notification(mentioned ? m.nick + " mencionou voce" : m.nick, { body: body.slice(0, 140), tag: "chatpedro", icon: avatars[keyOf(m.nick)] || undefined }); } catch {}
+    }
+  }
+
+  // ---------- digitando... ----------
+  const typers = new Map(); // apelido -> quando digitou
+  function renderTyping() {
+    const now = Date.now();
+    for (const [n, t] of typers) if (now - t > 3500) typers.delete(n);
+    const names = [...typers.keys()];
+    $("typing").textContent = !names.length ? "" : names.length === 1 ? names[0] + " esta digitando..."
+      : names.length === 2 ? names[0] + " e " + names[1] + " estao digitando..." : "varias pessoas estao digitando...";
+  }
+  setInterval(renderTyping, 1000);
+  socket.on("typing", (n) => { if (n !== nick) { typers.set(n, Date.now()); renderTyping(); } });
+  let lastTypingSent = 0;
+  input.addEventListener("input", () => {
+    const v = input.value.trim();
+    if (nick && v && !v.startsWith("/") && Date.now() - lastTypingSent > 1500) { lastTypingSent = Date.now(); socket.emit("typing"); }
+    mentionSuggest();
+  });
+
+  // ---------- sugestoes de @mencao ----------
+  let mentionList = [];
+  function mentionSuggest() {
+    const box = $("mentionBox");
+    const before = input.value.slice(0, input.selectionStart);
+    const mt = nick && before.match(/@([^@\n]{0,20})$/);
+    mentionList = mt ? users.filter((u) => u !== nick && u.toLowerCase().startsWith(mt[1].toLowerCase())).slice(0, 6) : [];
+    box.replaceChildren(...mentionList.map((u, i) => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = "@" + u;
+      if (i === 0) b.className = "sel";
+      b.addEventListener("click", () => pickMention(u));
+      return b;
+    }));
+  }
+  function pickMention(u) {
+    const pos = input.selectionStart;
+    const before = input.value.slice(0, pos).replace(/@([^@\n]{0,20})$/, "@" + u + " ");
+    input.value = before + input.value.slice(pos);
+    input.setSelectionRange(before.length, before.length);
+    input.focus();
+    mentionSuggest();
   }
 
   // Jogo aberto: a pagina troca para o layout com o chat ao lado (ou recolhido no celular)
@@ -708,14 +1013,17 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     for (const u of sorted) {
       const li = document.createElement("li");
       const pres = document.createElement("span");
-      pres.className = "pres";
+      const st = (profiles[keyOf(u)] || {}).status;
+      pres.className = "pres" + (st === "ausente" || st === "ocupado" ? " " + st : "");
       pres.append(avatar(u, true));
       const name = span("name", u);
+      const pc = (profiles[keyOf(u)] || {}).color;
+      if (pc) name.style.color = pc;
       if (u === nick) name.append(span("me", " (voce)"));
       if (window.ChatPedro.callNicks.has(u)) name.append(span("tag", "\u266A"));
       if (window.ChatPedro.pokerNicks.has(u.toLowerCase())) name.append(span("tag", "\u2660"));
       if (window.ChatPedro.trucoNicks.has(u.toLowerCase())) name.append(span("tag", "\u2663"));
-      name.title = u + (window.ChatPedro.callNicks.has(u) ? " - na call" : "") + (window.ChatPedro.pokerNicks.has(u.toLowerCase()) ? " - no poker" : "") + (window.ChatPedro.trucoNicks.has(u.toLowerCase()) ? " - no truco" : "");
+      name.title = u + (window.ChatPedro.callNicks.has(u) ? " - na call" : "") + (window.ChatPedro.pokerNicks.has(u.toLowerCase()) ? " - no poker" : "") + (window.ChatPedro.trucoNicks.has(u.toLowerCase()) ? " - no truco" : "") + (st === "ausente" ? " - ausente" : st === "ocupado" ? " - ocupado" : "");
       li.append(pres, name);
       ul.append(li);
     }
@@ -733,6 +1041,10 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       store.set("chatpedro-nick", nick);
       ps1.textContent = nick + "> ";
       $("photoBtn").hidden = false;
+      $("audioBtn").hidden = !window.MediaRecorder;
+      // agora que sei quem sou, mostro o [APAGAR] nas minhas mensagens antigas
+      for (const { el, m } of lineById.values()) { const d = el.querySelector(".acts .del"); if (d) d.hidden = !(isAdmin || keyOf(m.nick) === keyOf(nick)); }
+      socket.emit("profile", { color: myColor || undefined, status: myStatus });
       $("profile").hidden = false;
       window.ChatPedro.onJoin();
       input.placeholder = "mensagem_   (/ajuda)";
@@ -757,7 +1069,8 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     if (text === "/perfil") return $("avatarFile").click();
     if (text === "/limpar") { log.replaceChildren(); return; }
     if (text === "/ajuda") { localSys(HELP); return; }
-    socket.emit("message", text);
+    socket.emit("message", replyTo ? { text, replyTo: replyTo.id } : text);
+    clearReply();
   }
 
   socket.on("connect", () => { updateStatus(); if (nick) join(nick); else if (saved) join(saved); });
@@ -769,7 +1082,8 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   });
   socket.on("history", (msgs) => {
     log.replaceChildren();
-    msgs.forEach(addLine);
+    lineById.clear();
+    msgs.forEach((m) => addLine(m, true));
     if (!msgs.length) {
       const e = span("line sys", "Nenhuma mensagem ainda. Seja o primeiro!");
       e.id = "empty"; e.style.display = "block";
@@ -777,8 +1091,30 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     }
     scroller.scrollTop = scroller.scrollHeight;
   });
-  socket.on("message", addLine);
-  socket.on("users", (list) => { users = list; renderPeople(); });
+  socket.on("message", (m) => addLine(m, false));
+  socket.on("message:update", (u) => {
+    const it = lineById.get(u.id);
+    if (!it) return;
+    it.m.reactions = u.reactions;
+    renderReacts(it.el.querySelector(".reacts"), it.m);
+  });
+  socket.on("message:delete", (id) => {
+    const it = lineById.get(id);
+    if (it) { it.el.remove(); lineById.delete(id); }
+    if (replyTo && replyTo.id === id) clearReply();
+  });
+  socket.on("notice", (text) => setNote(text, true));
+  socket.on("ice", (list) => { window.ChatPedro.ice = list; });
+  socket.on("kicked", (min) => {
+    localSys("Voce foi expulso pelo ADM por " + min + " min.");
+    setNote("Voce foi expulso pelo ADM por " + min + " min.", true);
+  });
+  socket.on("profiles", (map) => {
+    profiles = map || {};
+    document.querySelectorAll(".who[data-nick]").forEach((w) => { const p = profiles[w.dataset.nick]; w.style.color = p && p.color ? p.color : ""; });
+    renderPeople();
+  });
+  socket.on("users", (list) => { users = list; renderPeople(); if (isAdmin) renderMod(); });
 
   // Fotos: reduz para no maximo 1280px e converte para JPEG antes de enviar.
   // GIFs pequenos vao como estao para manter a animacao.
@@ -832,7 +1168,8 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     if (!canSend(file)) return;
     setNote("enviando foto...");
     try {
-      socket.emit("image", await prepareImage(file));
+      socket.emit("image", await prepareImage(file), replyTo ? replyTo.id : undefined);
+      clearReply();
       setNote("");
     } catch {
       setNote("ERRO: nao deu para enviar essa foto. Tente outra.", true);
@@ -877,7 +1214,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
   viewer.addEventListener("click", () => { viewer.hidden = true; });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { viewer.hidden = true; $("settings").hidden = true; $("admModal").hidden = true; document.body.classList.remove("drawer"); }
+    if (e.key === "Escape") { viewer.hidden = true; $("settings").hidden = true; $("admModal").hidden = true; $("profileModal").hidden = true; document.body.classList.remove("drawer"); }
   });
 
   // ADM: a senha so e conferida no servidor; fica guardada aqui para reconectar sozinho
@@ -888,6 +1225,9 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     $("admBtn").classList.toggle("on", isAdmin);
     $("admIn").hidden = isAdmin; $("admOut").hidden = !isAdmin;
     $("admGo").textContent = isAdmin ? "[SAIR DO ADM]" : "[ENTRAR]";
+    // ADM ve o [APAGAR] em todas as mensagens
+    for (const { el, m } of lineById.values()) { const d = el.querySelector(".acts .del"); if (d) d.hidden = !(isAdmin || (nick && keyOf(m.nick) === keyOf(nick))); }
+    renderMod();
   }
   function admLogin(pass, quiet) {
     socket.emit("admin:login", pass, (r) => {
@@ -921,6 +1261,122 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   });
   admUI();
 
+  // ---------- moderacao (painel do ADM) ----------
+  let punished = { muted: [], banned: [] };
+  let clearArmed = false;
+  socket.on("admin:moderation", (data) => { punished = data || punished; renderMod(); });
+  function renderMod() {
+    if (!isAdmin) return;
+    const minutes = () => Number($("modMinutes").value);
+    const btn = (text, fn, cls) => { const b = document.createElement("button"); b.type = "button"; b.className = "cmd" + (cls ? " " + cls : ""); b.textContent = text; b.addEventListener("click", fn); return b; };
+    const row = (name, ...buttons) => { const r = document.createElement("div"); r.className = "row"; r.append(span("nm", name), ...buttons); return r; };
+    const others = users.filter((u) => u !== nick);
+    $("modUsers").replaceChildren(...(others.length ? others.map((u) => row(u,
+      btn("[SILENCIAR]", () => socket.emit("admin:mute", { nick: u, minutes: minutes() })),
+      btn("[EXPULSAR]", () => socket.emit("admin:kick", { nick: u, minutes: minutes() }), "danger"),
+    )) : [span("", "ninguem alem de voce")]));
+    const list = [
+      ...punished.muted.map((p) => row(p.key + " (silenciado, " + p.min + " min)", btn("[LIBERAR]", () => socket.emit("admin:mute", { nick: p.key, minutes: 0 })))),
+      ...punished.banned.map((p) => row(p.key + " (expulso, " + p.min + " min)", btn("[LIBERAR]", () => socket.emit("admin:unban", p.key)))),
+    ];
+    $("modPunishedTitle").hidden = !list.length;
+    $("modPunished").replaceChildren(...list);
+  }
+  $("modClear").addEventListener("click", () => {
+    if (!clearArmed) {
+      clearArmed = true;
+      $("modClear").textContent = "[TEM CERTEZA? CLIQUE DE NOVO]";
+      setTimeout(() => { clearArmed = false; $("modClear").textContent = "[LIMPAR O CHAT TODO]"; }, 4000);
+      return;
+    }
+    clearArmed = false;
+    $("modClear").textContent = "[LIMPAR O CHAT TODO]";
+    socket.emit("admin:clear");
+  });
+
+  // ---------- MEU PERFIL: cor do nome, status, tema e notificacoes ----------
+  const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
+  const STATUS = { online: "[ONLINE]", ausente: "[AUSENTE]", ocupado: "[OCUPADO]" };
+  const THEMES = { verde: "[VERDE]", ambar: "[AMBAR]", azul: "[AZUL]", win95: "[WINDOWS 95]" };
+  let myColor = store.get("chatpedro-cor") || "";
+  let myStatus = store.get("chatpedro-status") || "online";
+  let myTheme = store.get("chatpedro-tema") || "verde";
+  const applyTheme = () => { if (myTheme === "verde") delete document.body.dataset.tema; else document.body.dataset.tema = myTheme; };
+  applyTheme();
+  function sendProfile() { if (nick) socket.emit("profile", { color: myColor || undefined, status: myStatus }); }
+  function renderProfile() {
+    $("colorPick").replaceChildren(...NAME_COLORS.map((c) => {
+      const b = document.createElement("button"); b.type = "button"; b.style.background = c;
+      b.setAttribute("aria-label", "Cor " + c); b.setAttribute("aria-pressed", String(c === myColor));
+      b.addEventListener("click", () => { myColor = c; store.set("chatpedro-cor", c); sendProfile(); renderProfile(); });
+      return b;
+    }));
+    const opts = (box, map, cur, fn) => $(box).replaceChildren(...Object.entries(map).map(([k, label]) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "cmd"; b.textContent = label;
+      b.setAttribute("aria-pressed", String(k === cur));
+      b.addEventListener("click", () => { fn(k); renderProfile(); });
+      return b;
+    }));
+    opts("statusPick", STATUS, myStatus, (k) => { myStatus = k; store.set("chatpedro-status", k); sendProfile(); });
+    opts("themePick", THEMES, myTheme, (k) => { myTheme = k; store.set("chatpedro-tema", k); applyTheme(); });
+    const supported = "Notification" in window;
+    $("notifBtn").hidden = !supported;
+    $("notifBtn").textContent = notifOn ? "[DESATIVAR NOTIFICACOES]" : "[ATIVAR NOTIFICACOES]";
+    if (!supported) $("notifHint").textContent = "Seu navegador nao suporta notificacoes.";
+    else if (Notification.permission === "denied") $("notifHint").textContent = "As notificacoes estao bloqueadas no navegador: libere no cadeado ao lado do endereco.";
+  }
+  $("notifBtn").addEventListener("click", async () => {
+    if (notifOn) { notifOn = false; store.set("chatpedro-notif", "off"); return renderProfile(); }
+    let perm = Notification.permission;
+    if (perm === "default") { try { perm = await Notification.requestPermission(); } catch { perm = "denied"; } }
+    notifOn = perm === "granted";
+    store.set("chatpedro-notif", notifOn ? "on" : "off");
+    renderProfile();
+  });
+  $("profileBtn").addEventListener("click", () => { renderProfile(); $("profileModal").hidden = false; });
+  $("profClose").addEventListener("click", () => { $("profileModal").hidden = true; });
+  $("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").hidden = true; });
+
+  // ---------- mensagem de audio ----------
+  let rec = null;
+  async function startRecording() {
+    if (rec) return;
+    if (!nick) { setNote("Escolha um apelido antes.", true); return; }
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    catch { setNote("Sem acesso ao microfone. Libere o microfone no navegador.", true); return; }
+    const type = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+    const mr = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 32000 } : undefined);
+    const chunks = [];
+    rec = { mr, stream, send: true, started: Date.now(), reply: replyTo };
+    mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    mr.onstop = async () => {
+      const r = rec; rec = null;
+      stream.getTracks().forEach((t) => t.stop());
+      clearInterval(r.tick);
+      $("recBar").hidden = true; $("form").hidden = false;
+      if (!r.send || !chunks.length) return;
+      if (Date.now() - r.started < 700) { setNote("Audio muito curto."); return; }
+      const blob = new Blob(chunks, { type: mr.mimeType || type || "audio/webm" });
+      const data = await readAsDataURL(blob);
+      if (data.length > 1.5 * 1024 * 1024) { setNote("Audio grande demais.", true); return; }
+      socket.emit("audio", data, r.reply ? r.reply.id : undefined);
+      clearReply();
+    };
+    mr.start();
+    $("form").hidden = true; $("recBar").hidden = false;
+    const tick = () => {
+      const sec = Math.floor((Date.now() - rec.started) / 1000);
+      $("recText").textContent = "● gravando " + Math.floor(sec / 60) + ":" + pad(sec % 60) + " (max 1:00)";
+      if (sec >= 60) mr.stop(); // chegou no limite: envia
+    };
+    tick();
+    rec.tick = setInterval(tick, 250);
+  }
+  $("audioBtn").addEventListener("click", startRecording);
+  $("recSend").addEventListener("click", () => { if (rec) rec.mr.stop(); });
+  $("recCancel").addEventListener("click", () => { if (rec) { rec.send = false; rec.mr.stop(); } });
+
   window.ChatPedro = {
     socket, avatar, setNote, store, renderPeople,
     get nick() { return nick; },
@@ -933,6 +1389,8 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   function autosize() { input.style.height = "auto"; input.style.height = input.scrollHeight + "px"; }
   input.addEventListener("input", autosize);
   input.addEventListener("keydown", (e) => {
+    if (e.key === "Tab" && mentionList.length) { e.preventDefault(); pickMention(mentionList[0]); return; }
+    if (e.key === "Escape" && replyTo) { clearReply(); return; }
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
   });
   $("form").addEventListener("submit", (e) => { e.preventDefault(); submit(); });
