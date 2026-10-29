@@ -496,6 +496,49 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   .center { width: 80%; }
 }
 
+/* Barra de servidores (como no Discord) */
+#rail {
+  width: 64px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;
+  border-right: 1px solid var(--dim); background: var(--panel); overflow-y: auto;
+}
+#railList { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.srv {
+  all: unset; box-sizing: border-box; width: 44px; height: 44px; flex: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: var(--pixel); font-size: 12px; color: #000; border: 2px solid transparent; position: relative;
+}
+.srv:hover, .srv:focus-visible { border-color: var(--fg); }
+.srv.on { border-color: var(--bright); box-shadow: -8px 0 0 -3px var(--fg); }
+.srv.add { border: 2px dashed var(--dim); color: var(--fg); font-family: var(--mono); font-size: 28px; }
+#railBtn { display: none; }
+/* telas de entrada: login, sem servidor e convite */
+#gate {
+  position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+body.ready #gate { display: none; }
+body.ready.gate #gate { display: flex; }
+.gbox { width: min(420px, 100%); border: 2px solid var(--fg); background: var(--panel); padding: 22px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; }
+.gtitle { font-size: 18px; text-align: center; }
+.gform { display: flex; flex-direction: column; gap: 10px; }
+.gform + .gform { border-top: 1px dashed var(--dim); padding-top: 14px; }
+.gform label, .modal label.inline { display: flex; flex-direction: column; gap: 4px; color: var(--dim); }
+.modal label.inline { flex-direction: row; align-items: center; gap: 8px; }
+.gform input, .modal input[type=text]:not(#watchUrl), .modal input[type=email] {
+  font: inherit; color: var(--fg); background: var(--box); border: 1px solid var(--dim); padding: 4px 8px; min-width: 0;
+}
+.gform input:focus-visible, .modal input:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
+button.cmd.big { border: 2px solid var(--fg); padding: 4px 12px; text-align: center; }
+button.cmd.small { color: var(--dim); font-size: 17px; align-self: flex-start; }
+.tabs .cmd[aria-pressed="true"] { color: var(--bg); background: var(--fg); }
+.err { color: var(--err); margin: 0; min-height: 0; }
+.err:empty { display: none; }
+.lbl2 { color: var(--dim); font-weight: 400; margin: 0; }
+.invname { font-family: var(--pixel); font-size: 15px; color: var(--bright); margin: 0; overflow-wrap: anywhere; }
+#invLink { flex: 1 1 200px; }
+.role { color: var(--gold); margin-left: 6px; font-size: 0.85em; }
+#people li.off { opacity: 0.45; }
+.offTitle { font-family: var(--pixel); font-size: 10px; color: var(--dim); padding: 10px 0 2px; }
+
 /* Celular: a lista de online vira uma gaveta que abre pelo botao [ONLINE n] */
 /* Jogo aberto: o jogo ocupa a area toda, sem rolar; o chat vira uma coluna ao lado (como atividade no Discord) */
 body.gaming .chat {
@@ -535,6 +578,10 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   body.gaming #chatPeek #peekText { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
   #onlineBtn { display: inline; }
+  #railBtn { display: inline; }
+  #rail { position: fixed; top: 0; bottom: 0; left: 0; z-index: 12; transform: translateX(-100%); transition: transform 0.15s steps(4); padding-top: max(10px, env(safe-area-inset-top, 0px)); }
+  body.railopen #rail { transform: none; }
+  body.railopen::after { content: ""; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 11; }
   header { gap: 4px 12px; }
   header .title { flex-basis: auto; }
   .sub { font-size: 0; } /* no celular fica so o quadradinho de online */
@@ -554,18 +601,23 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 </head>
 <body>
 <header>
+  <button type="button" class="cmd" id="railBtn" aria-controls="rail" title="Seus servidores">[#]</button>
   <div class="title">
-    <h1>CHAT PEDRO</h1>
+    <h1 id="serverName">CHAT PEDRO</h1>
     <span class="sub" id="status">conectando</span>
   </div>
   <button type="button" class="cmd" id="pokerBtn" hidden>[POKER]</button>
   <button type="button" class="cmd" id="trucoBtn" hidden>[TRUCO]</button>
   <button type="button" class="cmd" id="callBtn" hidden>[CALL]</button>
   <button type="button" class="cmd" id="onlineBtn" aria-controls="sidebar">[ONLINE 0]</button>
-  <button type="button" class="cmd" id="admBtn" title="Area do ADM">[ADM]</button>
+  <button type="button" class="cmd" id="srvBtn" title="Convidar, moderar e mais">[SERVIDOR]</button>
 </header>
 
 <div class="app">
+  <nav id="rail" aria-label="Seus servidores">
+    <div id="railList"></div>
+    <button type="button" class="srv add" id="railAdd" title="Criar servidor ou entrar com convite">+</button>
+  </nav>
   <div class="chat">
     <section id="activity" aria-label="Poker" hidden>
       <div class="act-head">
@@ -658,38 +710,65 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 <div id="fodeu" hidden role="alert"><span>SE FODEU</span></div>
 
 <div class="modal" id="admModal" hidden>
-  <form class="box" id="admForm" role="dialog" aria-labelledby="admTitle">
-    <div class="row"><h3 id="admTitle">ADM</h3><button type="button" class="cmd close" id="admClose" aria-label="Fechar">[X]</button></div>
-    <div id="admIn">
-      <label>Senha
-        <input type="password" id="admPass" autocomplete="current-password" inputmode="numeric">
-      </label>
-    </div>
-    <div id="admOut" hidden class="sect">
-      <span style="color: var(--dim)">Voce e o ADM: modera o chat e controla a mesa de poker.</span>
-      <label>Tempo do castigo
+  <div class="box" role="dialog" aria-labelledby="admTitle">
+    <div class="row"><h3 id="admTitle">MODERAR</h3><button type="button" class="cmd close" id="admClose" aria-label="Fechar">[X]</button></div>
+    <div class="row">
+      <label>Silenciar por
         <select id="modMinutes"><option value="5">5 minutos</option><option value="15" selected>15 minutos</option><option value="60">1 hora</option><option value="1440">1 dia</option></select>
       </label>
-      <b style="color: var(--dim); font-weight: 400">Quem esta online</b>
-      <div class="modlist" id="modUsers"></div>
-      <b style="color: var(--dim); font-weight: 400" id="modPunishedTitle">Castigos ativos</b>
-      <div class="modlist" id="modPunished"></div>
-      <div class="row"><span style="color: var(--dim)">Passe o mouse numa mensagem e clique em [APAGAR] para tirar ela do chat.</span></div>
-      <div class="row"><button type="button" class="cmd danger" id="modClear">[LIMPAR O CHAT TODO]</button><span id="modClearConfirm"></span></div>
+      <label>Banir por
+        <select id="banMinutes"><option value="60">1 hora</option><option value="1440" selected>1 dia</option><option value="10080">7 dias</option><option value="0">para sempre</option></select>
+      </label>
     </div>
-    <p id="admMsg" style="margin: 0; color: var(--err)"></p>
-    <div class="row"><span></span><button type="submit" class="cmd" id="admGo">[ENTRAR]</button></div>
-  </form>
+    <b class="lbl2">Membros do servidor</b>
+    <div class="modlist" id="modUsers"></div>
+    <b class="lbl2" id="modPunishedTitle">Silenciados</b>
+    <div class="modlist" id="modPunished"></div>
+    <b class="lbl2" id="modBansTitle">Banidos</b>
+    <div class="modlist" id="modBans"></div>
+    <span class="lbl2">Expulsar tira do servidor (volta so com convite novo). Banir tira e impede de voltar. Para apagar uma mensagem, passe o mouse nela e clique em [APAGAR].</span>
+    <div class="row"><button type="button" class="cmd danger" id="modClear">[LIMPAR O CHAT TODO]</button></div>
+  </div>
+</div>
+
+<div class="modal" id="srvModal" hidden>
+  <div class="box" role="dialog" aria-labelledby="srvTitle">
+    <div class="row"><h3 id="srvTitle">SERVIDOR</h3><button type="button" class="cmd close" id="srvClose" aria-label="Fechar">[X]</button></div>
+    <div class="sect"><b>Convidar pessoas</b>
+      <div class="opts">
+        <label class="inline">Link vale por
+          <select id="invHours"><option value="1">1 hora</option><option value="24" selected>1 dia</option><option value="168">7 dias</option><option value="0">sempre</option></select>
+        </label>
+        <button type="button" class="cmd" id="invMake">[GERAR LINK]</button>
+      </div>
+      <div class="opts" id="invOut" hidden><input type="text" id="invLink" readonly aria-label="Link do convite"><button type="button" class="cmd" id="invCopy">[COPIAR]</button></div>
+      <span class="lbl2">Quem abrir o link precisa ter conta (ou criar uma) e entra direto neste servidor.</span>
+    </div>
+    <div class="sect" id="srvRenameBox"><b>Nome do servidor</b>
+      <form class="opts" id="srvRename"><input type="text" id="srvNameInput" maxlength="40" aria-label="Nome do servidor"><button type="submit" class="cmd">[SALVAR]</button></form>
+    </div>
+    <div class="opts">
+      <button type="button" class="cmd" id="srvMod">[MODERAR]</button>
+      <button type="button" class="cmd danger" id="srvLeave">[SAIR DO SERVIDOR]</button>
+      <button type="button" class="cmd danger" id="srvDelete">[APAGAR SERVIDOR]</button>
+    </div>
+    <p class="err" id="srvMsg"></p>
+  </div>
 </div>
 
 <div class="modal" id="profileModal" hidden>
   <div class="box" role="dialog" aria-labelledby="profTitle">
     <div class="row"><h3 id="profTitle">MEU PERFIL</h3><button type="button" class="cmd close" id="profClose" aria-label="Fechar">[X]</button></div>
+    <div class="sect"><b>Conta</b><span id="profEmail" class="lbl2"></span>
+      <form class="opts" id="nickForm"><label class="inline">Apelido <input type="text" id="nickInput" maxlength="20"></label><button type="submit" class="cmd">[SALVAR]</button></form>
+    </div>
     <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">[TROCAR FOTO DE PERFIL]</button></div></div>
     <div class="sect"><b>Cor do nome</b><div class="swatches" id="colorPick"></div></div>
     <div class="sect"><b>Status</b><div class="opts" id="statusPick"></div><span style="color: var(--dim)">Ocupado: sem sons nem notificacoes, so as mencoes com @.</span></div>
     <div class="sect"><b>Tema</b><div class="opts" id="themePick"></div></div>
     <div class="sect"><b>Notificacoes</b><div class="opts"><button type="button" class="cmd" id="notifBtn">[ATIVAR NOTIFICACOES]</button></div><span style="color: var(--dim)" id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</span></div>
+    <p class="err" id="profMsg"></p>
+    <div class="row"><span></span><button type="button" class="cmd danger" id="logoutBtn">[SAIR DA CONTA]</button></div>
   </div>
 </div>
 
@@ -714,14 +793,45 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   </div>
 </div>
 
+<div id="gate">
+  <div class="gbox">
+    <h1 class="gtitle">CHAT PEDRO</h1>
+    <div id="gAuth" hidden>
+      <div class="opts tabs"><button type="button" class="cmd" id="tabLogin" aria-pressed="true">[ENTRAR]</button><button type="button" class="cmd" id="tabSignup" aria-pressed="false">[CRIAR CONTA]</button></div>
+      <form id="authForm" class="gform">
+        <label>E-mail <input type="email" id="authEmail" autocomplete="email" required></label>
+        <label id="nickRow" hidden>Apelido (como vao te ver) <input type="text" id="authNick" maxlength="20" autocomplete="nickname"></label>
+        <label>Senha <input type="password" id="authPass" autocomplete="current-password" minlength="6" required></label>
+        <button type="submit" class="cmd big" id="authGo">[ENTRAR]</button>
+        <button type="button" class="cmd small" id="forgotBtn">esqueci a senha</button>
+      </form>
+    </div>
+    <div id="gHome" hidden>
+      <p class="lbl2">Voce ainda nao esta em nenhum servidor. Crie o seu ou cole um convite que recebeu.</p>
+      <form id="createForm" class="gform"><label>Nome do servidor novo <input type="text" id="createName" maxlength="40" placeholder="ex.: Galera do Pedro"></label><button type="submit" class="cmd big">[CRIAR SERVIDOR]</button></form>
+      <form id="joinForm" class="gform"><label>Link ou codigo do convite <input type="text" id="joinCode" placeholder="https://.../convite/AbC123"></label><button type="submit" class="cmd big">[ENTRAR COM CONVITE]</button></form>
+      <div class="opts"><button type="button" class="cmd" id="homeBack" hidden>[VOLTAR]</button><button type="button" class="cmd danger" id="homeLogout">[SAIR DA CONTA]</button></div>
+    </div>
+    <div id="gInvite" hidden>
+      <p class="lbl2">Voce foi convidado para</p>
+      <p class="invname" id="invName"></p>
+      <p class="lbl2" id="invInfo"></p>
+      <div class="opts"><button type="button" class="cmd big" id="invAccept">[ENTRAR NO SERVIDOR]</button><button type="button" class="cmd" id="invSkip">[AGORA NAO]</button></div>
+    </div>
+    <p class="err" id="gMsg" aria-live="polite"></p>
+  </div>
+</div>
+
 <div id="viewer" hidden><img alt="Foto em tamanho grande"></div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/vendor/supabase/supabase.js"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const log = $("log"), scroller = $("scroller"), input = $("input"), note = $("note"), ps1 = $("ps1");
-  const socket = io();
+  // a conexao so liga depois do login e de escolher o servidor (boot.js); leva o token e o servidor
+  const socket = io({ autoConnect: false, auth: (cb) => cb(window.ChatPedroAuth ? window.ChatPedroAuth.handshake() : {}) });
   let nick = null, users = [], avatars = {};
 
   const HELP = "ENTER envia | SHIFT+ENTER nova linha | [FOTO] ou cole/arraste uma imagem | /nick NOVO muda o apelido | /perfil troca a foto de perfil | /limpar limpa a tela";
@@ -739,7 +849,6 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
-  const saved = store.get("chatpedro-nick");
 
   // Avatar: foto de perfil, ou a inicial do apelido num quadrado com cor fixa por pessoa
   function hue(name) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
@@ -765,6 +874,9 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   }
 
   // ---------- mensagens ----------
+  let myUid = null, myRole = "member", isAdmin = false, members = [];
+  const canDelete = (m) => isAdmin || (m.uid ? m.uid === myUid : !!nick && keyOf(m.nick) === keyOf(nick));
+  const refreshDel = () => { for (const { el, m } of lineById.values()) { const d = el.querySelector(".acts .del"); if (d) d.hidden = !canDelete(m); } };
   const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "❤️", "\u{1F62E}"];
   const lineById = new Map(); // id -> { el, m }
   let profiles = {};          // apelido(minusculo) -> { color, status }
@@ -833,7 +945,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       l.append(pk);
     });
     const del = btn("[APAGAR]", () => socket.emit("delete", m.id), "del");
-    del.hidden = !(isAdmin || (nick && keyOf(m.nick) === keyOf(nick)));
+    del.hidden = !canDelete(m);
     return acts;
   }
 
@@ -1024,8 +1136,22 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       if (window.ChatPedro.pokerNicks.has(u.toLowerCase())) name.append(span("tag", "\u2660"));
       if (window.ChatPedro.trucoNicks.has(u.toLowerCase())) name.append(span("tag", "\u2663"));
       name.title = u + (window.ChatPedro.callNicks.has(u) ? " - na call" : "") + (window.ChatPedro.pokerNicks.has(u.toLowerCase()) ? " - no poker" : "") + (window.ChatPedro.trucoNicks.has(u.toLowerCase()) ? " - no truco" : "") + (st === "ausente" ? " - ausente" : st === "ocupado" ? " - ocupado" : "");
+      const mem = members.find((x) => keyOf(x.nick) === keyOf(u));
+      if (mem && mem.role !== "member") name.append(span("role", mem.role === "owner" ? "\u2605 dono" : "adm"));
       li.append(pres, name);
       ul.append(li);
+    }
+    // membros que nao estao online agora
+    const off = members.filter((m) => !users.some((u) => keyOf(u) === keyOf(m.nick))).sort((a, b) => a.nick.localeCompare(b.nick));
+    if (off.length) {
+      ul.append(span("offTitle", "OFFLINE " + off.length));
+      for (const m of off) {
+        const li = document.createElement("li"); li.className = "off";
+        const pres = span("pres-off", ""); pres.append(avatar(m.nick, true));
+        const name = span("name", m.nick);
+        if (m.role !== "member") name.append(span("role", m.role === "owner" ? "\u2605 dono" : "adm"));
+        li.append(pres, name); ul.append(li);
+      }
     }
   }
 
@@ -1034,28 +1160,29 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     $("status").classList.toggle("on", socket.connected);
   }
 
-  function join(name) {
-    socket.emit("join", name, (res) => {
-      if (!res.ok) { setNote("ERRO: " + res.error, true); return; }
-      nick = res.nick;
-      store.set("chatpedro-nick", nick);
-      ps1.textContent = nick + "> ";
-      $("photoBtn").hidden = false;
-      $("audioBtn").hidden = !window.MediaRecorder;
-      // agora que sei quem sou, mostro o [APAGAR] nas minhas mensagens antigas
-      for (const { el, m } of lineById.values()) { const d = el.querySelector(".acts .del"); if (d) d.hidden = !(isAdmin || keyOf(m.nick) === keyOf(nick)); }
-      socket.emit("profile", { color: myColor || undefined, status: myStatus });
-      $("profile").hidden = false;
-      window.ChatPedro.onJoin();
-      input.placeholder = "mensagem_   (/ajuda)";
+  // O servidor diz quem eu sou e em que servidor estou (o apelido vem da conta)
+  let firstMe = true;
+  socket.on("me", (me) => {
+    nick = me.nick; myUid = me.uid; myRole = me.role; isAdmin = me.role === "owner" || me.role === "admin";
+    $("serverName").textContent = me.server.name;
+    document.title = me.server.name + " | Chat Pedro";
+    ps1.textContent = nick + "> ";
+    $("photoBtn").hidden = false;
+    $("audioBtn").hidden = !window.MediaRecorder;
+    $("profile").hidden = false;
+    input.placeholder = "mensagem_   (/ajuda)";
+    refreshDel();
+    updateStatus();
+    renderPeople();
+    renderMod();
+    if (window.ChatPedroAuth) window.ChatPedroAuth.onMe(me);
+    if (firstMe) {
+      firstMe = false;
       setNote("");
-      updateStatus();
-      renderPeople();
-      // o servidor esquece tudo quando reinicia, entao a foto de perfil vai de novo a cada entrada
-      const myAvatar = store.get("chatpedro-avatar");
-      if (myAvatar) socket.emit("avatar", myAvatar);
-    });
-  }
+      socket.emit("profile", { status: myStatus });
+      window.ChatPedro.onJoin();
+    }
+  });
 
   const localSys = (text) => addLine({ type: "sys", text, ts: Date.now() });
 
@@ -1064,8 +1191,8 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     if (!text) return;
     if (!socket.connected) { setNote("ERRO: sem conexao. Espere reconectar.", true); return; }
     input.value = ""; autosize();
-    if (!nick) return join(text);
-    if (text.startsWith("/nick ")) return join(text.slice(6));
+    if (!nick) return;
+    if (text.startsWith("/nick ")) { window.ChatPedroAuth.updateProfile({ nick: text.slice(6) }).catch((e) => setNote("ERRO: " + e.message, true)); return; }
     if (text === "/perfil") return $("avatarFile").click();
     if (text === "/limpar") { log.replaceChildren(); return; }
     if (text === "/ajuda") { localSys(HELP); return; }
@@ -1073,9 +1200,12 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     clearReply();
   }
 
-  socket.on("connect", () => { updateStatus(); if (nick) join(nick); else if (saved) join(saved); });
+  socket.on("connect", updateStatus);
   socket.on("disconnect", updateStatus);
-  socket.on("avatars", (map) => { avatars = map || {}; });
+  socket.on("avatars", (map) => {
+    avatars = map || {};
+    document.querySelectorAll(".av[data-nick]").forEach((el) => fillAvatar(el, el.dataset.name)); // alguem trocou a foto
+  });
   socket.on("avatar", ({ nick: key, src }) => {
     avatars[key] = src;
     document.querySelectorAll('.av[data-nick="' + CSS.escape(key) + '"]').forEach((el) => fillAvatar(el, el.dataset.name));
@@ -1105,10 +1235,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   });
   socket.on("notice", (text) => setNote(text, true));
   socket.on("ice", (list) => { window.ChatPedro.ice = list; });
-  socket.on("kicked", (min) => {
-    localSys("Voce foi expulso pelo ADM por " + min + " min.");
-    setNote("Voce foi expulso pelo ADM por " + min + " min.", true);
-  });
+  socket.on("members", (list) => { members = list || []; renderPeople(); renderMod(); });
   socket.on("profiles", (map) => {
     profiles = map || {};
     document.querySelectorAll(".who[data-nick]").forEach((w) => { const p = profiles[w.dataset.nick]; w.style.color = p && p.color ? p.color : ""; });
@@ -1180,8 +1307,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     if (!canSend(file)) return;
     try {
       const data = await prepareAvatar(file);
-      store.set("chatpedro-avatar", data);
-      socket.emit("avatar", data);
+      await window.ChatPedroAuth.updateProfile({ avatar: data }); // fica salva na conta
       setNote("Foto de perfil atualizada.");
     } catch {
       setNote("ERRO: nao deu para usar essa foto. Tente outra.", true);
@@ -1214,101 +1340,68 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
   viewer.addEventListener("click", () => { viewer.hidden = true; });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { viewer.hidden = true; $("settings").hidden = true; $("admModal").hidden = true; $("profileModal").hidden = true; document.body.classList.remove("drawer"); }
+    if (e.key === "Escape") { viewer.hidden = true; for (const id of ["settings", "admModal", "profileModal", "srvModal"]) $(id).hidden = true; document.body.classList.remove("drawer", "railopen"); }
   });
 
-  // ADM: a senha so e conferida no servidor; fica guardada aqui para reconectar sozinho
-  let admPass = store.get("chatpedro-adm");
-  let isAdmin = false;
-  function admUI() {
-    $("admBtn").textContent = isAdmin ? "[ADM \u2605]" : "[ADM]";
-    $("admBtn").classList.toggle("on", isAdmin);
-    $("admIn").hidden = isAdmin; $("admOut").hidden = !isAdmin;
-    $("admGo").textContent = isAdmin ? "[SAIR DO ADM]" : "[ENTRAR]";
-    // ADM ve o [APAGAR] em todas as mensagens
-    for (const { el, m } of lineById.values()) { const d = el.querySelector(".acts .del"); if (d) d.hidden = !(isAdmin || (nick && keyOf(m.nick) === keyOf(nick))); }
-    renderMod();
-  }
-  function admLogin(pass, quiet) {
-    socket.emit("admin:login", pass, (r) => {
-      if (r && r.ok) {
-        isAdmin = true; admPass = pass; store.set("chatpedro-adm", pass);
-        $("admModal").hidden = true; $("admMsg").textContent = "";
-        if (!quiet) setNote("Voce entrou como ADM.");
-      } else {
-        isAdmin = false;
-        if (quiet) { admPass = null; store.set("chatpedro-adm", ""); }
-        else $("admMsg").textContent = (r && r.error) || "Nao deu para entrar.";
-      }
-      admUI();
-    });
-  }
-  socket.on("connect", () => { if (admPass) admLogin(admPass, true); });
-  $("admBtn").addEventListener("click", () => {
-    $("admModal").hidden = false; $("admMsg").textContent = ""; $("admPass").value = "";
-    if (!isAdmin) setTimeout(() => $("admPass").focus(), 0);
-  });
+  // ---------- moderacao: dono e ADMs do servidor ----------
+  let muted = [], bans = [];
+  socket.on("admin:moderation", (data) => { muted = (data && data.muted) || []; renderMod(); });
+  socket.on("admin:bans", (list) => { bans = list || []; renderMod(); });
   $("admClose").addEventListener("click", () => { $("admModal").hidden = true; });
   $("admModal").addEventListener("click", (e) => { if (e.target === $("admModal")) $("admModal").hidden = true; }); // clicar fora fecha
-  $("admForm").addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (isAdmin) {
-      socket.emit("admin:logout"); isAdmin = false; admPass = null; store.set("chatpedro-adm", "");
-      $("admModal").hidden = true; admUI(); return;
-    }
-    const pass = $("admPass").value.trim();
-    if (pass) admLogin(pass, false);
-  });
-  admUI();
-
-  // ---------- moderacao (painel do ADM) ----------
-  let punished = { muted: [], banned: [] };
-  let clearArmed = false;
-  socket.on("admin:moderation", (data) => { punished = data || punished; renderMod(); });
-  function renderMod() {
-    if (!isAdmin) return;
-    const minutes = () => Number($("modMinutes").value);
-    const btn = (text, fn, cls) => { const b = document.createElement("button"); b.type = "button"; b.className = "cmd" + (cls ? " " + cls : ""); b.textContent = text; b.addEventListener("click", fn); return b; };
-    const row = (name, ...buttons) => { const r = document.createElement("div"); r.className = "row"; r.append(span("nm", name), ...buttons); return r; };
-    const others = users.filter((u) => u !== nick);
-    $("modUsers").replaceChildren(...(others.length ? others.map((u) => row(u,
-      btn("[SILENCIAR]", () => socket.emit("admin:mute", { nick: u, minutes: minutes() })),
-      btn("[EXPULSAR]", () => socket.emit("admin:kick", { nick: u, minutes: minutes() }), "danger"),
-    )) : [span("", "ninguem alem de voce")]));
-    const list = [
-      ...punished.muted.map((p) => row(p.key + " (silenciado, " + p.min + " min)", btn("[LIBERAR]", () => socket.emit("admin:mute", { nick: p.key, minutes: 0 })))),
-      ...punished.banned.map((p) => row(p.key + " (expulso, " + p.min + " min)", btn("[LIBERAR]", () => socket.emit("admin:unban", p.key)))),
-    ];
-    $("modPunishedTitle").hidden = !list.length;
-    $("modPunished").replaceChildren(...list);
+  function openMod() { if (!isAdmin) return; socket.emit("admin:bans"); renderMod(); $("admModal").hidden = false; }
+  // botao que pede um segundo clique antes de fazer algo serio
+  function confirmBtn(text, fn) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "cmd danger"; b.textContent = text;
+    let armed = false;
+    b.addEventListener("click", () => {
+      if (!armed) { armed = true; b.textContent = "[CERTEZA?]"; setTimeout(() => { armed = false; b.textContent = text; }, 3000); return; }
+      fn();
+    });
+    return b;
   }
-  $("modClear").addEventListener("click", () => {
-    if (!clearArmed) {
-      clearArmed = true;
-      $("modClear").textContent = "[TEM CERTEZA? CLIQUE DE NOVO]";
-      setTimeout(() => { clearArmed = false; $("modClear").textContent = "[LIMPAR O CHAT TODO]"; }, 4000);
-      return;
-    }
-    clearArmed = false;
-    $("modClear").textContent = "[LIMPAR O CHAT TODO]";
-    socket.emit("admin:clear");
-  });
+  function renderMod() {
+    if (!isAdmin) { $("admModal").hidden = true; return; }
+    const btn = (text, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "cmd"; b.textContent = text; b.addEventListener("click", fn); return b; };
+    const row = (label, ...buttons) => { const r = document.createElement("div"); r.className = "row"; r.append(label, ...buttons); return r; };
+    const nameOf = (m) => { const n = span("nm", m.nick); if (m.role !== "member") n.append(span("role", m.role === "owner" ? "\u2605 dono" : "adm")); if (!m.online) n.append(span("tag", "offline")); return n; };
+    const others = members.filter((m) => m.id !== myUid);
+    $("modUsers").replaceChildren(...(others.length ? others.map((m) => {
+      // ADM nao mexe no dono nem em outro ADM; o dono mexe em todo mundo
+      const can = m.role !== "owner" && (myRole === "owner" || m.role === "member");
+      const buttons = [];
+      if (can) buttons.push(
+        btn("[SILENCIAR]", () => socket.emit("admin:mute", { id: m.id, minutes: Number($("modMinutes").value) })),
+        confirmBtn("[EXPULSAR]", () => socket.emit("admin:kick", { id: m.id })),
+        confirmBtn("[BANIR]", () => socket.emit("admin:ban", { id: m.id, minutes: Number($("banMinutes").value) })),
+      );
+      if (myRole === "owner" && m.role !== "owner") buttons.push(btn(m.role === "admin" ? "[TIRAR ADM]" : "[TORNAR ADM]", () => socket.emit("admin:role", { id: m.id, role: m.role === "admin" ? "member" : "admin" })));
+      return row(nameOf(m), ...buttons);
+    }) : [span("lbl2", "so tem voce aqui. Chame a galera em [SERVIDOR] > [GERAR LINK].")]));
+    $("modPunishedTitle").hidden = !muted.length;
+    $("modPunished").replaceChildren(...muted.map((p) => row(span("nm", p.nick + " (" + p.min + " min)"), btn("[LIBERAR]", () => socket.emit("admin:mute", { id: p.id, minutes: 0 })))));
+    $("modBansTitle").hidden = !bans.length;
+    $("modBans").replaceChildren(...bans.map((b) => row(span("nm", b.nick + " (" + (b.until ? "ate " + new Date(b.until).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "para sempre") + ")"), btn("[DESBANIR]", () => socket.emit("admin:unban", b.id)))));
+  }
+  $("modClear").replaceWith(confirmBtn("[LIMPAR O CHAT TODO]", () => socket.emit("admin:clear")));
 
   // ---------- MEU PERFIL: cor do nome, status, tema e notificacoes ----------
   const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
   const STATUS = { online: "[ONLINE]", ausente: "[AUSENTE]", ocupado: "[OCUPADO]" };
   const THEMES = { verde: "[VERDE]", ambar: "[AMBAR]", azul: "[AZUL]", win95: "[WINDOWS 95]" };
-  let myColor = store.get("chatpedro-cor") || "";
+  let myColor = ""; // vem da conta (boot.js)
   let myStatus = store.get("chatpedro-status") || "online";
   let myTheme = store.get("chatpedro-tema") || "verde";
   const applyTheme = () => { if (myTheme === "verde") delete document.body.dataset.tema; else document.body.dataset.tema = myTheme; };
   applyTheme();
-  function sendProfile() { if (nick) socket.emit("profile", { color: myColor || undefined, status: myStatus }); }
+  function sendProfile() { if (nick) socket.emit("profile", { status: myStatus }); }
   function renderProfile() {
     $("colorPick").replaceChildren(...NAME_COLORS.map((c) => {
       const b = document.createElement("button"); b.type = "button"; b.style.background = c;
       b.setAttribute("aria-label", "Cor " + c); b.setAttribute("aria-pressed", String(c === myColor));
-      b.addEventListener("click", () => { myColor = c; store.set("chatpedro-cor", c); sendProfile(); renderProfile(); });
+      b.addEventListener("click", () => {
+        window.ChatPedroAuth.updateProfile({ color: c }).then(() => { myColor = c; renderProfile(); }).catch((e) => { $("profMsg").textContent = e.message; });
+      });
       return b;
     }));
     const opts = (box, map, cur, fn) => $(box).replaceChildren(...Object.entries(map).map(([k, label]) => {
@@ -1333,7 +1426,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     store.set("chatpedro-notif", notifOn ? "on" : "off");
     renderProfile();
   });
-  $("profileBtn").addEventListener("click", () => { renderProfile(); $("profileModal").hidden = false; });
+  $("profileBtn").addEventListener("click", () => { $("profMsg").textContent = ""; renderProfile(); if (window.ChatPedroAuth) window.ChatPedroAuth.fillProfileForm(); $("profileModal").hidden = false; });
   $("profClose").addEventListener("click", () => { $("profileModal").hidden = true; });
   $("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").hidden = true; });
 
@@ -1341,7 +1434,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   let rec = null;
   async function startRecording() {
     if (rec) return;
-    if (!nick) { setNote("Escolha um apelido antes.", true); return; }
+    if (!nick) return;
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
     catch { setNote("Sem acesso ao microfone. Libere o microfone no navegador.", true); return; }
@@ -1378,8 +1471,10 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   $("recCancel").addEventListener("click", () => { if (rec) { rec.send = false; rec.mr.stop(); } });
 
   window.ChatPedro = {
-    socket, avatar, setNote, store, renderPeople,
+    socket, avatar, setNote, store, renderPeople, openMod,
     get nick() { return nick; },
+    get role() { return myRole; },
+    setColor(c) { myColor = c || ""; },
     callNicks: new Set(),
     pokerNicks: new Set(),
     trucoNicks: new Set(),
@@ -1400,5 +1495,6 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 <script src="/call.js"></script>
 <script src="/poker.js"></script>
 <script src="/truco.js"></script>
+<script src="/boot.js"></script>
 </body>
 </html>
