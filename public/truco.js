@@ -8,6 +8,9 @@
   const RANK = { Q: "Q", J: "J", K: "K", A: "A" };
   const MANILHA_NAME = { d: "PICA-FUMO", s: "ESPADILHA", h: "COPAS", c: "ZAP" };
   let st = null;
+  let clockSkew = 0;             // diferenca entre o relogio do servidor e o daqui
+  let hopNow = false;            // alguem acabou de jogar: as cartas da mesa pulam
+  let lastTick = -1, lastEnds = 0;
   let hideNext = false;          // proxima carta vai encoberta
   let funOpen = null;            // "zoar" | "sinal" | null
   const bubbles = new Map();     // seat -> { text, sig, until }
@@ -120,7 +123,7 @@
     const center = el("div", "tr-center");
     if (st.vira && !["lobby"].includes(st.stage)) {
       const v = el("div", "");
-      v.append(card(st.vira));
+      v.append(hopCard(card(st.vira), 0));
       center.append(v);
       center.append(el("div", "lbl", st.manilha ? "VIRA\nmanilha: " + (RANK[st.manilha] || st.manilha) : "VIRA\n(no escuro)"));
       center.lastChild.style.whiteSpace = "pre";
@@ -141,7 +144,7 @@
       seat.style.left = pos.x + "%"; seat.style.top = pos.y + "%";
       // cartas do parceiro na mao de onze
       if (s.hand) { const ph = el("div", "partner"); s.hand.forEach((c) => ph.append(card(c))); seat.append(ph); }
-      else if (s.cards && i !== st.me) { const bk = el("div", "backs"); for (let k = 0; k < s.cards; k++) bk.append(card("??")); seat.append(bk); }
+      else if (s.cards && i !== st.me) { const bk = el("div", "backs"); for (let k = 0; k < s.cards; k++) bk.append(hopCard(card("??"), i + 1)); seat.append(bk); }
       const box = el("div", "box");
       if (s.nick) {
         box.append(avatar(s.nick), el("span", "nm", s.nick + (i === st.me ? " (voce)" : "")));
@@ -152,6 +155,7 @@
         box.append(b);
       } else box.append(el("span", "nm", st.stage === "lobby" ? "vazio" : "vazio (joga sozinho)"));
       seat.append(box);
+      if (whoActs().seats.includes(i)) { const tm = el("div", "ttimer"); tm.append(el("i")); seat.append(tm); }
       const tags = [];
       if (i === st.dealer && !["lobby"].includes(st.stage)) tags.push("deu as cartas");
       if (s.nick && !s.online) tags.push("offline");
@@ -162,15 +166,55 @@
     });
 
     // cartas jogadas na rodada
-    for (const p of st.table) {
+    st.table.forEach((p, n) => {
       const pos = spot(p.seat, PLAY);
-      const c = card(p.card);
+      const c = hopCard(card(p.card), n + 1);
       c.classList.add("tr-played");
+      if (hopNow && n === st.table.length - 1) c.classList.add("new");
       c.style.left = pos.x + "%"; c.style.top = pos.y + "%";
       felt.append(c);
-    }
+    });
+    hopNow = false;
     if (keep) felt.append(keep);
   }
+
+  function hopCard(c, i) {
+    if (hopNow) { c.classList.add("hop"); c.style.setProperty("--i", i); }
+    return c;
+  }
+
+  // Quem precisa agir agora e se sou eu (para o relogio)
+  function whoActs() {
+    if (!st) return { seats: [], mine: false };
+    if (st.stage === "eleven") {
+      const seats = st.seats.map((s, i) => i).filter((i) => st.seats[i].team === st.elevenTeam);
+      return { seats, mine: st.myTeam === st.elevenTeam };
+    }
+    if (st.stage !== "playing") return { seats: [], mine: false };
+    if (st.pending) {
+      const t = 1 - st.pending.team;
+      return { seats: st.seats.map((s, i) => i).filter((i) => st.seats[i].team === t), mine: st.myTeam === t };
+    }
+    return { seats: [st.toPlay], mine: st.toPlay === st.me };
+  }
+
+  // Relogio da jogada: numero, barra embaixo das acoes e barrinha no lugar de quem joga
+  setInterval(() => {
+    const bar = $("trTimebar");
+    const acts = whoActs();
+    if (!st || !open() || !acts.seats.length) { bar.hidden = true; return; }
+    const left = Math.max(0, st.turnEndsAt - (Date.now() + clockSkew));
+    const pct = Math.min(100, (left / st.turnMs) * 100) + "%";
+    const secs = Math.ceil(left / 1000);
+    const low = secs <= 5;
+    bar.hidden = false;
+    bar.firstChild.style.width = pct;
+    bar.firstChild.classList.toggle("low", low);
+    document.querySelectorAll("#trFelt .ttimer i").forEach((i) => { i.style.width = pct; i.style.background = low ? "var(--err)" : ""; });
+    const clock = $("trClock");
+    if (clock) { clock.textContent = secs + "s"; clock.classList.toggle("low", low); }
+    if (acts.mine && low && secs > 0 && secs !== lastTick) { lastTick = secs; beep([[1200, 0.05]]); }
+  }, 200);
 
   function renderHand() {
     const box = $("trHand");
@@ -185,7 +229,6 @@
       b.addEventListener("click", () => {
         socket.emit("truco:play", { index: i, hidden: hideNext && st.canHide }, done);
         hideNext = false;
-        beep(SFX.card);
       });
       box.append(b);
     });
@@ -198,6 +241,7 @@
   function renderActions() {
     const box = $("trActions");
     box.replaceChildren();
+    if (whoActs().seats.length) { const c = el("span", "tr-clock"); c.id = "trClock"; box.append(c); }
     if (st.me < 0) {
       if (!["empty", "lobby"].includes(st.stage)) box.append(el("span", "msg", "assistindo"));
       return;
@@ -328,12 +372,16 @@
 
   socket.on("truco:state", (s) => {
     const wasMyTurn = st && st.stage === "playing" && st.toPlay === st.me && !st.pending;
+    // carta nova na mesa: todo mundo pula (e faz o barulhinho para todos)
+    if (st && s.table.length > st.table.length) { hopNow = true; beep(SFX.card); }
     st = s;
+    clockSkew = s.serverNow - Date.now();
+    if (s.turnEndsAt !== lastEnds) { lastEnds = s.turnEndsAt; lastTick = -1; } // relogio novo
     const myTurn = s.stage === "playing" && s.toPlay === s.me && s.me >= 0 && !s.pending;
     if (myTurn && !wasMyTurn) { beep(SFX.turn); if (!open()) setNote("[TRUCO] Sua vez de jogar!"); }
     if (!s.canHide) hideNext = false;
     sidebar();
-    if (open()) render();
+    if (open()) render(); else hopNow = false;
   });
 
   function sidebar() {

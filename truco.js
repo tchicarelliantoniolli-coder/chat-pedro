@@ -11,9 +11,9 @@ const RAISES = [1, 3, 6, 9, 12];
 const RAISE_NAME = { 3: "TRUCO", 6: "SEIS", 9: "NOVE", 12: "DOZE" };
 const WIN_POINTS = 12;
 
-let TURN_MS = 40000;        // tempo para jogar
-let ANSWER_MS = 30000;      // tempo para responder truco (acabou: corre)
-let ELEVEN_MS = 30000;      // tempo para decidir a mao de onze (acabou: joga)
+let TURN_MS = 20000;        // tempo para jogar (acabou: joga a carta mais fraca)
+let ANSWER_MS = 20000;      // tempo para responder truco (acabou: corre)
+let ELEVEN_MS = 20000;      // tempo para decidir a mao de onze (acabou: joga)
 let EMPTY_SEAT_MS = 2500;   // lugar vazio joga sozinho, rapido
 let ROUND_PAUSE_MS = 1600;  // pausa para todo mundo ver as cartas da rodada
 let HAND_PAUSE_MS = 3200;   // pausa entre maos
