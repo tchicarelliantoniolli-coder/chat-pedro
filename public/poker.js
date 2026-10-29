@@ -253,6 +253,7 @@
 
   function open() {
     $("activity").hidden = false;
+    $("truco").hidden = true; // um jogo aberto por vez
     document.body.classList.remove("drawer");
     render();
   }

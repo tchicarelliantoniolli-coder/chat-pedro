@@ -3,6 +3,7 @@ const http = require("http");
 const express = require("express");
 const { Server } = require("socket.io");
 const { createPoker } = require("./poker");
+const { createTruco } = require("./truco");
 
 const PORT = process.env.PORT || 3000;
 const MAX_HISTORY = 200; // quantas mensagens ficam guardadas na memoria
@@ -50,6 +51,11 @@ const poker = createPoker(io, {
   isAdmin: (id) => admins.has(id),
 });
 
+const truco = createTruco(io, {
+  nickOf: (id) => online.get(id),
+  isAdmin: (id) => admins.has(id),
+});
+
 function clientAddress(socket) {
   const fwd = socket.handshake.headers["x-forwarded-for"]; // o Render fica na frente do servidor
   return (fwd ? String(fwd).split(",")[0] : socket.handshake.address).trim();
@@ -75,6 +81,7 @@ io.on("connection", (socket) => {
   socket.emit("call:members", [...callMembers.values()]);
   sendUsers();
   poker.handle(socket);
+  truco.handle(socket);
 
   socket.on("join", (nick, reply) => {
     nick = cleanNick(nick);
@@ -87,8 +94,9 @@ io.on("connection", (socket) => {
     if (old && old !== nick) pushMessage({ type: "sys", text: `${old} agora se chama ${nick}`, ts: Date.now() });
     sendUsers();
     if (callMembers.has(socket.id)) { callMembers.get(socket.id).nick = nick; sendCall(); }
-    if (old && old !== nick) poker.rename(old, nick);
+    if (old && old !== nick) { poker.rename(old, nick); truco.rename(old, nick); }
     poker.broadcast();
+    truco.broadcast();
     poker.refresh();
   });
 
@@ -144,6 +152,7 @@ io.on("connection", (socket) => {
     admins.add(socket.id);
     reply({ ok: true });
     poker.broadcast();
+    truco.broadcast();
   });
 
   socket.on("admin:logout", () => {
@@ -189,6 +198,7 @@ io.on("connection", (socket) => {
     online.delete(socket.id);
     sendUsers();
     poker.left(nick);
+    truco.left(nick);
   });
 });
 
