@@ -46,6 +46,7 @@
     fillProfileForm() {
       $("profEmail").textContent = me ? "Conta: " + me.email : "";
       $("nickInput").value = profile ? profile.nick : "";
+      $("statusTextInput").value = profile && profile.status_text ? profile.status_text : "";
     },
   };
 
@@ -213,7 +214,7 @@
   $("railAdd").addEventListener("click", () => { document.body.classList.remove("railopen"); gmsg(""); showHome(!!current); });
   $("railBtn").addEventListener("click", (e) => { e.stopPropagation(); document.body.classList.toggle("railopen"); });
   document.addEventListener("click", (e) => {
-    if (document.body.classList.contains("railopen") && !$("rail").contains(e.target)) document.body.classList.remove("railopen");
+    if (document.body.classList.contains("railopen") && !$("rail").contains(e.target) && !$("side").contains(e.target)) document.body.classList.remove("railopen");
   });
 
   // ---------- menu do servidor: convidar, renomear, moderar, sair, apagar ----------
@@ -307,6 +308,12 @@
   $("nickForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     try { await window.ChatPedroAuth.updateProfile({ nick: $("nickInput").value }); $("profMsg").textContent = ""; app.setNote("Apelido trocado."); }
+    catch (err) { $("profMsg").textContent = err.message; }
+  });
+
+  $("statusTextForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try { await window.ChatPedroAuth.updateProfile({ status_text: $("statusTextInput").value }); $("profMsg").textContent = ""; app.setNote("Status salvo."); }
     catch (err) { $("profMsg").textContent = err.message; }
   });
 

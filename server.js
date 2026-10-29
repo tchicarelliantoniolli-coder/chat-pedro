@@ -65,7 +65,7 @@ const profileCache = new Map(); // id da conta -> { id, nick, avatar, color }
 async function getProfiles(ids) {
   const missing = [...new Set(ids)].filter((id) => !profileCache.has(id));
   if (missing.length) {
-    const rows = await db.select("profiles", { select: "id,nick,avatar,color", id: db.inList(missing) });
+    const rows = await db.select("profiles", { select: "id,nick,avatar,color,status_text", id: db.inList(missing) });
     for (const r of rows) profileCache.set(r.id, r);
   }
   return ids.map((id) => profileCache.get(id)).filter(Boolean);
@@ -208,7 +208,7 @@ function sendUsers(ctx, withAvatars) {
   const onlineIds = new Set([...ctx.sockets.values()].map((s) => s.data.user.id));
   toRoom(ctx, "users", [...new Set(ctx.online.values())].sort());
   const profiles = {};
-  for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline" };
+  for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline", text: m.status_text || undefined };
   for (const [id, nick] of ctx.online) profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online" };
   if (withAvatars) toRoom(ctx, "avatars", avatarsOf(ctx));
   toRoom(ctx, "profiles", profiles);
@@ -318,6 +318,10 @@ api.patch("/me", wrap(async (req, res) => {
       if (await nickTaken(nick, user.id)) return fail(res, 409, "Esse apelido já tem dono.");
       patch.nick = nick;
     }
+  }
+  if (req.body.status_text !== undefined) {
+    const t = String(req.body.status_text || "").replace(/\s+/g, " ").trim().slice(0, 60);
+    patch.status_text = t || null;
   }
   if (req.body.color !== undefined) { if (!NAME_COLORS.includes(req.body.color)) return fail(res, 400, "Cor inválida."); patch.color = req.body.color; }
   if (req.body.avatar !== undefined) {
@@ -629,6 +633,30 @@ io.on("connection", (socket) => {
     }
     if (who.length) m.reactions[msg.emoji] = who; else delete m.reactions[msg.emoji];
     toRoom(ctx, "message:update", { id: m.id, reactions: m.reactions });
+    persist(ctx);
+  });
+
+  // Editar: so a propria mensagem de texto
+  socket.on("edit", (msg) => {
+    if (!msg) return;
+    const m = ctx.history.find((x) => x.id === Number(msg.id));
+    if (!m || m.type !== "msg" || m.uid !== uid) return;
+    const text = String(msg.text || "").replace(/\r/g, "").trim().slice(0, MAX_TEXT);
+    if (!text || text === m.text) return;
+    if (text.split("\n").length > MAX_LINES) return notice("Mensagem com linhas demais (máximo " + MAX_LINES + ").");
+    m.text = text; m.edited = Date.now();
+    toRoom(ctx, "message:update", { id: m.id, text: m.text, edited: m.edited });
+    persist(ctx);
+  });
+
+  // Fixar: qualquer membro fixa ou desfixa uma mensagem (como no Discord, aparece um aviso)
+  socket.on("pin", (id) => {
+    const m = ctx.history.find((x) => x.id === Number(id));
+    if (!m || m.type === "sys") return;
+    if (blockedUntil(ctx.mutes, uid)) return notice("Você está silenciado.");
+    m.pinned = !m.pinned;
+    toRoom(ctx, "message:update", { id: m.id, pinned: m.pinned });
+    if (m.pinned) sys(ctx, nickNow() + " fixou uma mensagem neste canal.");
     persist(ctx);
   });
 

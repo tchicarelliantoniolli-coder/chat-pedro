@@ -9,23 +9,26 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap">
 <style>
 :root {
-  /* Cores no estilo do Discord (tema escuro) */
-  --bg: #313338;       /* area do chat */
-  --panel: #2b2d31;    /* barras laterais e janelas */
-  --rail: #1e1f22;     /* barra de servidores */
-  --stage: #232428;    /* call e jogos */
-  --box: #383a40;      /* campos de texto e caixinhas */
-  --fg: #dbdee1;       /* texto */
-  --dim: #949ba4;      /* texto secundario */
-  --bright: #f2f3f5;   /* nomes e titulos */
-  --line: #3f4147;     /* divisorias */
-  --hover: #2e3035;    /* mensagem com o mouse em cima */
-  --accent: #5865f2;   /* azul do Discord: botoes principais */
-  --accent-hover: #4752c4;
+  /* Cores tiradas do Discord (tema escuro atual), lidas do proprio site com o REA */
+  --bg: #1a1a1e;       /* area do chat (background-base-lower) */
+  --panel: #121214;    /* barras laterais e topo (background-base-lowest) */
+  --rail: #121214;     /* barra de servidores */
+  --stage: #0e0e10;    /* call e jogos */
+  --box: #202024;      /* campos e caixinhas (background-base-low) */
+  --surface: #242429;  /* janelas e cartoes (background-surface-high) */
+  --fg: #dfdfe2;       /* texto */
+  --dim: #96979e;      /* texto secundario (text-muted) */
+  --bright: #fbfbfb;   /* nomes e titulos (text-strong) */
+  --line: rgba(151, 151, 159, 0.12); /* divisorias (border-subtle) */
+  --hover: rgba(151, 151, 159, 0.08); /* mensagem com o mouse em cima */
+  --selected: rgba(151, 151, 159, 0.2);
+  --accent: #5865f2;   /* brand-500 */
+  --accent-hover: #4654c0; /* brand-560 */
   --on-accent: #ffffff;
-  --ok: #23a55a;       /* verde de online */
-  --err: #f23f43;
-  --gold: #f0b232;
+  --ok: #3d9e60;       /* status-online */
+  --err: #da3e44;      /* status-danger */
+  --gold: #f8a300;     /* destaque de mencao */
+  --link: #4d96ee;     /* text-link */
   --pink: #eb459e;
   /* mesma fonte do Discord ("gg sans", se estiver instalada; senao a Noto Sans, que e a reserva do proprio Discord) */
   --mono: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -606,7 +609,7 @@ button.cmd.small { color: var(--dim); font-size: 14px; align-self: flex-start; }
 /* Jogo aberto: o jogo ocupa a area toda, sem rolar; o chat vira uma coluna ao lado (como atividade no Discord) */
 body.gaming .chat {
   display: grid; grid-template-columns: minmax(0, 1fr) clamp(250px, 26vw, 340px);
-  grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "game call" "game log" "game input";
+  grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "head head" "game call" "game log" "game input";
 }
 body.gaming #activity, body.gaming #truco {
   grid-area: game; max-height: none; height: 100%; min-height: 0; overflow: hidden; border-bottom: 0; border-right: 1px solid var(--dim);
@@ -626,7 +629,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 
 @media (max-width: 760px) {
   /* celular com jogo aberto: o chat vira uma linha com a ultima mensagem; tocando, abre por cima do jogo */
-  body.gaming .chat { grid-template-columns: minmax(0, 1fr); grid-template-areas: "call" "game" "input"; }
+  body.gaming .chat { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "head" "call" "game" "input"; }
   body.gaming #activity, body.gaming #truco { border-right: 0; }
   body.gaming main { display: none; }
   body.gaming.chatopen main {
@@ -949,23 +952,176 @@ textarea { font-size: 16px; }
 .hint, .lbl2 { font-size: 14px; }
 .modal label, .gform label { font-size: 14px; }
 .modal .sect > b { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+
+/* ===== Layout do Discord: servidores | canais | chat | membros ===== */
+header { background: var(--panel); box-shadow: none; padding-block: 6px; min-height: 36px; }
+header h1.site { font-size: 14px; }
+.app { background: var(--panel); }
+#rail { width: 72px; gap: 8px; padding-top: 4px; background: var(--rail); }
+.srv { width: 40px; height: 40px; border-radius: 12px; font-size: 13px; }
+.srv:hover, .srv:focus-visible, .srv.on { border-radius: 12px; }
+.srv::before { left: -16px; }
+/* barra de canais */
+#side { width: 240px; flex: none; background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.srvhead { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 12px 0 14px; border-bottom: 1px solid var(--line); cursor: pointer; color: var(--bright); flex: none; transition: background-color 0.15s; }
+.srvhead:hover, .srvhead:focus-visible { background: var(--hover); }
+.srvhead b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 600; line-height: 1.2; }
+.srvhead .srvicon { width: 24px; height: 24px; font-size: 9px; border-radius: 7px; }
+.srvhead .ic { width: 18px; height: 18px; color: var(--dim); }
+.chans { flex: 1; overflow-y: auto; padding: 4px 8px 12px; min-height: 0; }
+.cat { font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 0.02em; padding: 18px 8px 6px; }
+.chan { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; color: #81828a; cursor: pointer; font-weight: 500; font-size: 16px; margin: 1px 0; transition: background-color 0.12s, color 0.12s; }
+.chan .ic { width: 20px; height: 20px; flex: none; }
+.chan:hover, .chan:focus-visible { background: var(--hover); color: var(--fg); }
+.chan.on { background: var(--selected); color: var(--bright); cursor: default; }
+.chan.voice .vn { flex: 1; }
+.chan .vj { font-size: 12px; color: var(--dim); font-weight: 500; }
+.chan.voice:hover .vj { color: var(--fg); }
+.chan.voice.in { color: var(--ok); }
+.chan.voice.in .vj { color: var(--ok); }
+.chan.game { padding: 6px 8px; }
+.chan.game .gi { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; flex: none; border: 0; }
+.chan.game .gi .ic { width: 16px; height: 16px; }
+#trOpen .gi { background: var(--ok); }
+.chan.game .gt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.chan.game .gt b { font-size: 15px; font-weight: 500; color: inherit; }
+.chan.game .gt small { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chan.game .live { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); opacity: 0; flex: none; }
+.chan.game.on { background: transparent; color: #81828a; cursor: pointer; }
+.chan.game.on .live { opacity: 1; animation: pulse 1.8s infinite; }
+.chan.game.on:hover { background: var(--hover); color: var(--fg); }
+#callPeople { list-style: none; margin: 0 0 4px; padding: 0 0 0 30px; display: flex; flex-direction: column; gap: 1px; }
+#callPeople li { display: flex; align-items: center; gap: 8px; padding: 3px 8px; border-radius: 6px; color: var(--dim); font-size: 14px; font-weight: 500; }
+#callPeople li:hover { background: var(--hover); color: var(--fg); }
+#callPeople li .av { width: 24px; height: 24px; font-size: 10px; margin: 0; transition: box-shadow 0.12s; }
+#callPeople li.speaking .av { outline: 0; box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--ok); }
+#callPeople .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#callPeople .tags { display: inline-flex; gap: 4px; align-items: center; color: var(--dim); }
+#callPeople .tags .ic { width: 14px; height: 14px; }
+#callPeople .tags .live { background: var(--err); color: #fff; font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 4px; }
+/* "Voz conectada" e o painel do usuario, no pe da barra */
+#voicePanel { display: flex; align-items: center; gap: 8px; margin: 0 8px; padding: 8px 8px 8px 10px; background: var(--surface); border-radius: 8px 8px 0 0; border-bottom: 1px solid var(--line); }
+#voicePanel[hidden] { display: none; }
+#voicePanel .vt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+#voicePanel b { color: var(--ok); font-size: 14px; font-weight: 600; }
+#voicePanel small { color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#voicePanel .ib { color: var(--fg); }
+#voicePanel .ib:hover { color: var(--err); }
+.profile { margin: 0 8px 8px; padding: 6px; display: flex; align-items: center; gap: 0; background: var(--surface); border-radius: 8px; }
+#voicePanel:not([hidden]) + .profile { border-radius: 0 0 8px 8px; }
+.profile[hidden] { display: none; }
+.profile .me { all: unset; box-sizing: border-box; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 6px; cursor: pointer; }
+.profile .me:hover { background: var(--hover); }
+.profile .me .av.big { width: 32px; height: 32px; font-size: 13px; }
+.profile .mt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.profile .mt b { font-size: 14px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile .mt small { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile .ib { min-width: 32px; height: 32px; padding: 0 6px; color: var(--dim); }
+.profile .ib:hover { color: var(--fg); }
+.profile .ib.off { color: var(--err); }
+/* chat com o canto arredondado, como no Discord */
+.chat { position: relative; background: var(--bg); border-top: 1px solid var(--line); border-left: 1px solid var(--line); border-top-left-radius: 8px; }
+.chathead { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); flex: none; color: var(--dim); grid-area: head; }
+.chathead > .ic { width: 22px; height: 22px; }
+.chathead > b { color: var(--bright); font-size: 16px; font-weight: 600; }
+.chathead .spacer { flex: 1; }
+.chathead .ib { color: var(--dim); }
+.chathead .ib:hover { color: var(--fg); background: transparent; }
+.search { display: flex; align-items: center; gap: 6px; background: var(--panel); border-radius: 6px; padding: 0 8px; height: 30px; width: 170px; transition: width 0.2s var(--ease); color: var(--dim); }
+.search:focus-within { width: 240px; }
+.search .ic { width: 16px; height: 16px; flex: none; }
+.search input { all: unset; flex: 1; min-width: 0; font-size: 14px; color: var(--fg); }
+.search input::placeholder { color: var(--dim); }
+#panel { position: absolute; top: 52px; right: 12px; z-index: 20; width: min(440px, calc(100% - 24px)); max-height: min(70vh, 560px); display: flex; flex-direction: column; background: var(--surface); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); animation: popIn 0.15s var(--ease); }
+#panel[hidden] { display: none; }
+#panel .ph { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--line); }
+#panel .ph b { color: var(--bright); font-size: 16px; font-weight: 600; }
+#panelList { overflow-y: auto; padding: 8px; }
+.pitem { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 10px 12px; border-radius: 6px; cursor: pointer; background: var(--box); margin-bottom: 6px; }
+.pitem:hover { background: #28282d; }
+.phead { display: flex; align-items: center; gap: 8px; }
+.phead .av { width: 24px; height: 24px; font-size: 10px; margin: 0; }
+.phead .who { font-size: 14px; }
+.ptxt { display: block; font-size: 15px; color: var(--fg); margin: 4px 0 0 32px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 6.6em; overflow: hidden; }
+.pempty { display: block; padding: 24px 16px; text-align: center; color: var(--dim); font-size: 14px; }
+/* membros, agrupados por cargo */
+aside { background: var(--bg); border-top: 1px solid var(--line); border-left: 1px solid var(--line); width: 240px; }
+#people { padding: 8px; gap: 1px; }
+#people .grp { font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 0.02em; padding: 16px 8px 6px; }
+#people li { display: flex; align-items: center; gap: 12px; padding: 5px 8px; border-radius: 6px; cursor: pointer; transition: background-color 0.12s; }
+#people li:hover { background: var(--hover); }
+#people li.off { opacity: 0.4; }
+#people li.off:hover { opacity: 1; }
+#people .mtxt { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+#people .name { font-size: 15px; font-weight: 500; color: var(--fg); }
+#people .sub2 { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#people .crown { color: var(--gold); margin-left: 4px; font-size: 13px; }
+#people .av.big { width: 32px; height: 32px; font-size: 13px; }
+.pres.none::after { display: none; }
+body.nomembers aside { display: none; }
+/* cartao de perfil */
+#popout { position: fixed; z-index: 55; width: 300px; background: var(--surface); border-radius: 8px; overflow: hidden; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); display: flex; flex-direction: column; padding-bottom: 14px; animation: popIn 0.15s var(--ease); }
+#popout[hidden] { display: none; }
+#popout .banner { height: 64px; }
+#popout .pres.big { margin: -44px 0 0 16px; align-self: flex-start; }
+#popout .pres.big .av.big { width: 80px; height: 80px; font-size: 28px; box-shadow: 0 0 0 6px var(--surface); }
+#popout .pres.big::after { width: 18px; height: 18px; right: 0; bottom: 0; border-width: 4px; border-color: var(--surface); }
+#popout .pname { font-size: 20px; font-weight: 700; color: var(--bright); padding: 10px 16px 0; overflow-wrap: anywhere; }
+#popout .ptext { padding: 4px 16px 0; font-size: 14px; color: var(--fg); }
+#popout .pact { padding: 2px 16px 0; font-size: 13px; color: var(--ok); }
+#popout .pinfo { display: flex; gap: 8px; align-items: center; padding: 10px 16px 0; font-size: 12px; color: var(--dim); }
+#popout .rbadge { background: rgba(88, 101, 242, 0.25); color: #c9cdfb; padding: 1px 8px; border-radius: 4px; font-weight: 600; }
+#popout .cmd.big { margin: 12px 16px 0; }
+/* mensagens: markdown, editar, fixadas */
+.line .txt code { font-family: Consolas, "Andale Mono WT", Monaco, monospace; font-size: 0.85em; background: #28282d; padding: 0.1em 0.3em; border-radius: 4px; }
+.line .txt pre.codeblock, .ptxt pre.codeblock { display: block; margin: 4px 0; padding: 8px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-family: Consolas, "Andale Mono WT", Monaco, monospace; font-size: 14px; white-space: pre-wrap; max-width: 90%; }
+.bq { display: block; border-left: 4px solid #4f505a; padding: 0 8px 0 12px; margin: 2px 0; }
+.spoiler { background: #666770; color: transparent; border-radius: 4px; cursor: pointer; transition: background-color 0.1s; }
+.spoiler:not(.shown) * { color: transparent !important; background: transparent !important; }
+.spoiler:hover:not(.shown) { background: #7a7b85; }
+.spoiler.shown { background: rgba(102, 103, 112, 0.2); color: inherit; cursor: text; }
+.line .txt a, .ptxt a { color: var(--link); text-decoration: none; }
+.line .txt a:hover { text-decoration: underline; }
+.edited { font-size: 10px; color: var(--dim); }
+.pinmark { position: absolute; right: 12px; top: 6px; color: var(--dim); }
+.pinmark .ic { width: 14px; height: 14px; }
+.line.msg:hover .pinmark { display: none; }
+.acts .ib.on { color: var(--accent); }
+.editbox { display: block; margin: 2px 0; }
+.editbox textarea { display: block; width: 100%; box-sizing: border-box; background: var(--box); color: var(--fg); border: 0; border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 16px; resize: none; outline: 0; }
+.editbox .ehint { font-size: 12px; color: var(--dim); }
+.line .who { cursor: pointer; }
+.line .who:hover { text-decoration: underline; }
+.line .gut .av { cursor: pointer; }
+#empty .big { border-radius: 50%; width: 68px; height: 68px; background: #28282d; color: var(--bright); }
+#empty .big .ic { width: 40px; height: 40px; }
+#form { border-radius: 8px; background: var(--box); }
+.chathead #onlineBtn { display: inline-flex; }
+/* o botao de call do topo so aparece no celular; no computador a call fica no canal de voz */
+@media (min-width: 761px) { #callBtn { display: none !important; } }
+@media (max-width: 760px) {
+  #rail { width: 72px; }
+  #side { position: fixed; top: 0; bottom: 0; left: 72px; z-index: 12; width: min(260px, calc(100vw - 72px)); transform: translateX(calc(-100% - 72px)); transition: transform 0.25s var(--ease); padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body.railopen #side { transform: none; }
+  .chat { border-radius: 0; border-left: 0; }
+  aside { width: min(260px, 80vw); }
+  .search { width: 110px; }
+  .search:focus-within { width: 170px; }
+  .chathead { padding: 0 8px 0 12px; gap: 4px; }
+  #popout { width: min(300px, calc(100vw - 16px)); }
+}
 </style>
 </head>
 <body>
 <!-- icones do site (desenhados aqui, sem depender de outro site) -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 7h12l3.5 10.5-3.5 1.5-3-4h-6l-3 4L2.5 17.5z"/><path d="M8 10v4M6 12h4"/><path fill="currentColor" stroke="none" d="M15 10h2v2h-2zM17 12h2v2h-2z"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 7h12l3.5 10.5-3.5 1.5-3-4h-6l-3 4L2.5 17.5z"/><path d="M8 10v4M6 12h4"/><path fill="currentColor" stroke="none" d="M15 10h2v2h-2zM17 12h2v2h-2z"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><path d="M10 3L8 21M16 3l-2 18M4 8.5h17M3 15.5h17"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4.5-4.5L4 21l-1-1 4.5-4.5L3 11l2-2 5 1 4-4z"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
 <header>
   <button type="button" class="ib" id="railBtn" title="Seus servidores" aria-label="Seus servidores" aria-controls="rail"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
   <div class="title">
     <h1 class="site"><span class="mark" aria-hidden="true"><svg class="ic"><use href="#i-message"/></svg></span>CHAT PEDRO</h1>
     <span class="sub" id="status">conectando</span>
-    <button type="button" class="callpill" id="callBtn" hidden></button>
   </div>
-  <nav class="hbtns" aria-label="Atalhos">
-    <button type="button" class="ib" id="actsBtn" title="Atividades: poker e truco" aria-label="Atividades: poker e truco" hidden><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg><span class="dot" aria-hidden="true"></span></button>
-    <button type="button" class="ib" id="onlineBtn" title="Quem está online" aria-label="Quem está online" aria-controls="sidebar"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg></button>
-    <button type="button" class="ib" id="srvBtn" title="Servidor: convidar, moderar e mais" aria-label="Servidor: convidar, moderar e mais"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
-  </nav>
+  <button type="button" class="callpill" id="callBtn" hidden></button>
 </header>
 
 <div class="app">
@@ -973,7 +1129,39 @@ textarea { font-size: 16px; }
     <div id="railList"></div>
     <button type="button" class="srv add" id="railAdd" title="Criar servidor ou entrar com convite">+</button>
   </nav>
+  <nav id="side" aria-label="Canais do servidor">
+    <button type="button" class="srvhead" id="srvBtn" title="Opções do servidor: convidar, personalizar, moderar"><span class="srvicon" id="headIcon" aria-hidden="true"></span><b id="serverName"></b><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
+    <div class="chans">
+      <div class="cat">Canais de texto</div>
+      <div class="chan on"><svg class="ic" aria-hidden="true"><use href="#i-hash"/></svg><span>chat</span></div>
+      <div class="cat">Canal de voz</div>
+      <button type="button" class="chan voice" id="voiceChan"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg><span class="vn">Call</span><span class="vj" id="voiceHint">Entrar</span></button>
+      <ul id="callPeople"></ul>
+      <div class="cat">Atividades</div>
+      <button type="button" class="chan game" id="actOpen" title="Abrir o poker"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-spade"/></svg></span><span class="gt"><b>Poker</b><small id="actTags">mesa vazia</small></span><span class="live" aria-hidden="true"></span></button>
+      <button type="button" class="chan game" id="trOpen" title="Abrir o truco"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-club"/></svg></span><span class="gt"><b>Truco</b><small id="trTags">sem mesa</small></span><span class="live" aria-hidden="true"></span></button>
+    </div>
+    <div id="voicePanel" hidden>
+      <span class="vt"><b>Voz conectada</b><small id="vpWhere">Call</small></span>
+      <button type="button" class="ib" id="vpLeave" title="Desconectar da call" aria-label="Desconectar da call"><svg class="ic" aria-hidden="true"><use href="#i-phone-off"/></svg></button>
+    </div>
+    <div class="profile" id="profile" hidden>
+      <button type="button" class="me" id="profileBtn" title="Meu perfil"><span class="pres" id="meAv"></span><span class="mt"><b id="meNick"></b><small id="meStatus">online</small></span></button>
+      <button type="button" class="ib" id="upMic" title="Microfone" aria-label="Microfone"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
+      <button type="button" class="ib" id="upDeaf" title="Fone" aria-label="Fone"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg></button>
+      <button type="button" class="ib" id="upSet" title="Configurações de áudio e vídeo" aria-label="Configurações de áudio e vídeo"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+      <input type="file" id="avatarFile" accept="image/*" hidden>
+    </div>
+  </nav>
   <div class="chat">
+    <div class="chathead">
+      <svg class="ic" aria-hidden="true"><use href="#i-hash"/></svg><b>chat</b><span class="topic" id="chanTopic"></span>
+      <span class="spacer"></span>
+      <button type="button" class="ib" id="pinsBtn" title="Mensagens fixadas" aria-label="Mensagens fixadas"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></button>
+      <button type="button" class="ib" id="onlineBtn" title="Mostrar ou esconder os membros" aria-label="Membros" aria-controls="sidebar"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg></button>
+      <label class="search"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><input type="search" id="searchBox" placeholder="Buscar" aria-label="Buscar mensagens" autocomplete="off"></label>
+    </div>
+    <div id="panel" hidden><div class="ph"><b id="panelTitle"></b><button type="button" class="ib sm" id="panelClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div><div id="panelList"></div></div>
     <section id="activity" aria-label="Poker" hidden>
       <div class="act-head">
         <h2>POKER</h2>
@@ -1043,18 +1231,8 @@ textarea { font-size: 16px; }
     </footer>
   </div>
 
-  <aside id="sidebar" aria-label="Quem está online">
-    <div class="srvhead"><span class="srvicon" id="headIcon" aria-hidden="true"></span><span class="t"><span class="lbl">servidor</span><b id="serverName"></b></span></div>
-    <h2 id="onlineTitle">ONLINE 0</h2>
+  <aside id="sidebar" aria-label="Membros">
     <ul id="people"></ul>
-    <div id="callSect" hidden>
-      <h2 id="callTitle">NA CALL 0</h2>
-      <ul id="callPeople"></ul>
-    </div>
-    <div class="profile" id="profile" hidden>
-      <button type="button" class="cmd withicon" id="profileBtn"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg> Meu perfil</button>
-      <input type="file" id="avatarFile" accept="image/*" hidden>
-    </div>
   </aside>
 </div>
 
@@ -1080,17 +1258,6 @@ textarea { font-size: 16px; }
     <div class="modlist" id="modBans"></div>
     <span class="lbl2">Expulsar tira do servidor (volta só com convite novo). Banir tira e impede de voltar. Para apagar uma mensagem, passe o mouse nela e clique em Apagar.</span>
     <div class="row"><button type="button" class="cmd danger" id="modClear">Limpar o chat todo</button></div>
-  </div>
-</div>
-
-<div class="modal" id="actsModal" hidden>
-  <div class="box" role="dialog" aria-labelledby="actsTitle">
-    <div class="row"><h3 id="actsTitle">ATIVIDADES</h3><button type="button" class="ib" id="actsClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-    <span class="lbl2">Escolha o que jogar com a galera do servidor.</span>
-    <div id="games">
-      <button type="button" class="game" id="actOpen"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-spade"/></svg></span><span class="gt"><b>Poker</b><small>Texas Hold'em, até 9 jogadores</small><small class="st" id="actTags">mesa vazia</small></span><span class="live" aria-hidden="true"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
-      <button type="button" class="game" id="trOpen"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-club"/></svg></span><span class="gt"><b>Truco</b><small>Truco Paulista, mesa de 4 ou 6</small><small class="st" id="trTags">sem mesa</small></span><span class="live" aria-hidden="true"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
-    </div>
   </div>
 </div>
 
@@ -1132,6 +1299,7 @@ textarea { font-size: 16px; }
     <div class="row"><h3 id="profTitle">MEU PERFIL</h3><button type="button" class="ib" id="profClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sect"><b>Conta</b><span id="profEmail" class="lbl2"></span>
       <form class="opts" id="nickForm"><label class="inline">Apelido <input type="text" id="nickInput" maxlength="20"></label><button type="submit" class="cmd">Salvar</button></form>
+      <form class="opts" id="statusTextForm"><label class="inline">Status <input type="text" id="statusTextInput" maxlength="60" placeholder="ex.: jogando truco"></label><button type="submit" class="cmd">Salvar</button></form>
     </div>
     <div class="sect"><b>Áudio e vídeo</b><div class="opts"><button type="button" class="cmd withicon" id="avBtn"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg> Microfone, saída de som e câmera</button></div></div>
     <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">Trocar foto de perfil</button></div></div>
@@ -1206,6 +1374,7 @@ textarea { font-size: 16px; }
 </div>
 
 <div id="tip" role="tooltip" hidden></div>
+<div id="popout" hidden></div>
 <div id="viewer" hidden><img alt="Foto em tamanho grande"></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -1330,7 +1499,59 @@ window.setIcon = (btn, name, label, extra) => {
     for (const { m } of lineById.values()) if (m.nick) set.add(m.nick);
     return [...set].sort((a, b) => b.length - a.length);
   }
+  // Markdown do Discord: **negrito**, *italico*, __sublinhado__, ~~riscado~~, `codigo`, ```bloco```,
+  // ||spoiler||, > citacao e links clicaveis. Tudo vira elementos (nunca HTML cru).
+  const MD = [
+    { re: /`([^`\n]+)`/, tag: "code" },
+    { re: /\*\*([\s\S]+?)\*\*/, tag: "strong" },
+    { re: /__([\s\S]+?)__/, tag: "u" },
+    { re: /~~([\s\S]+?)~~/, tag: "s" },
+    { re: /\|\|([\s\S]+?)\|\|/, tag: "spoiler" },
+    { re: /\*([^*\n]+?)\*/, tag: "em" },
+    { re: /(?<![\w])_([^_\n]+?)_(?![\w])/, tag: "em" },
+  ];
+  const URL_RE = /https?:\/\/[^\s<]+[^\s<.,:;"')\]!?]/;
+  function mdInline(text, el) {
+    while (text) {
+      let best = null;
+      for (const p of MD) { const m = p.re.exec(text); if (m && (!best || m.index < best.m.index)) best = { m, p }; }
+      if (!best) { mdLeaf(text, el); return; }
+      mdLeaf(text.slice(0, best.m.index), el);
+      let node;
+      if (best.p.tag === "spoiler") {
+        node = span("spoiler", ""); node.title = "Clique para ver";
+        node.addEventListener("click", (e) => { e.stopPropagation(); node.classList.add("shown"); });
+      } else node = document.createElement(best.p.tag);
+      if (best.p.tag === "code") node.textContent = best.m[1]; else mdInline(best.m[1], node);
+      el.append(node);
+      text = text.slice(best.m.index + best.m[0].length);
+    }
+  }
+  function mdLeaf(text, el) {
+    while (text) {
+      const m = URL_RE.exec(text);
+      if (!m) { renderMentions(text, el); return; }
+      renderMentions(text.slice(0, m.index), el);
+      const a = document.createElement("a"); a.href = m[0]; a.textContent = m[0]; a.target = "_blank"; a.rel = "noopener noreferrer nofollow";
+      el.append(a);
+      text = text.slice(m.index + m[0].length);
+    }
+  }
   function renderText(text, el) {
+    const parts = text.split(/```(?:[a-zA-Z0-9]*\n)?([\s\S]*?)```/);
+    parts.forEach((part, i) => {
+      if (i % 2 === 0) { if (i > 0) part = part.replace(/^\n/, ""); if (i < parts.length - 1) part = part.replace(/\n$/, ""); }
+      if (i % 2) { const pre = document.createElement("pre"); pre.className = "codeblock"; pre.textContent = part.replace(/\n$/, ""); el.append(pre); return; }
+      // linhas que comecam com "> " viram citacao
+      const lines = part.split("\n");
+      let buf = [], quote = [];
+      const flush = () => { if (buf.length) { mdInline(buf.join("\n"), el); buf = []; } };
+      const flushQ = () => { if (quote.length) { const q = span("bq", ""); mdInline(quote.join("\n"), q); el.append(q); quote = []; } };
+      lines.forEach((ln) => { if (/^> /.test(ln)) { flush(); quote.push(ln.slice(2)); } else { flushQ(); buf.push(ln); } });
+      flush(); flushQ();
+    });
+  }
+  function renderMentions(text, el) {
     const names = knownNames();
     let rest = text;
     while (rest) {
@@ -1372,6 +1593,8 @@ window.setIcon = (btn, name, label, extra) => {
       b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); acts.append(b); return b;
     };
     btn("reply", "Responder", () => setReply(m));
+    if (m.type === "msg" && m.uid && m.uid === myUid) btn("edit", "Editar", () => startEdit(m));
+    btn("pin", m.pinned ? "Desafixar" : "Fixar a mensagem", () => socket.emit("pin", m.id), m.pinned ? "on" : "");
     btn("smile", "Reagir", () => {
       const open = l.querySelector(".picker");
       document.querySelectorAll(".picker").forEach((x) => x.remove());
@@ -1427,6 +1650,7 @@ window.setIcon = (btn, name, label, extra) => {
       body.append(q);
     }
     if (!cont) { const head = span("head", ""); head.append(whoSpan(m.nick), span("time", fmtTime(m.ts))); body.append(head); }
+    if (m.pinned) { l.classList.add("pinned"); const pin = span("pinmark", ""); pin.append(icon("pin")); pin.title = "Mensagem fixada"; body.prepend(pin); }
     if (m.type === "img") {
       const box = span("pic" + (m.src ? "" : " wait"), "");
       const img = document.createElement("img");
@@ -1449,6 +1673,7 @@ window.setIcon = (btn, name, label, extra) => {
     } else {
       const t = span("txt", "");
       renderText(m.text, t);
+      if (m.edited) { const e = span("edited", "(editado)"); e.title = "Editado em " + new Date(m.edited).toLocaleString("pt-BR"); t.append(" ", e); }
       body.append(t);
       if (mentionsMe(m.text) && m.nick !== nick) l.classList.add("mentioned");
     }
@@ -1493,7 +1718,8 @@ window.setIcon = (btn, name, label, extra) => {
     const e = document.createElement("div");
     e.id = "empty";
     const ic = span("big", ""); ic.append(icon("message"));
-    e.append(ic, span("t", "Este é o começo de " + $("serverName").textContent), span("sys", "Nenhuma mensagem ainda. Mande a primeira!"));
+    ic.replaceChildren(icon("hash"));
+    e.append(ic, span("t", "Boas-vindas ao #chat!"), span("sys", "Este é o começo do servidor " + $("serverName").textContent + ". Mande a primeira mensagem!"));
     log.append(e);
   }
 
@@ -1541,6 +1767,74 @@ window.setIcon = (btn, name, label, extra) => {
   }
   $("jumpNew").addEventListener("click", () => scroller.scrollTo({ top: scroller.scrollHeight, behavior: "smooth" }));
   scroller.addEventListener("scroll", () => { if (newBelow && nearBottom()) { newBelow = 0; $("jumpNew").hidden = true; } }, { passive: true });
+
+  // ---------- editar mensagem no lugar (Enter salva, Esc cancela) ----------
+  let editing = null, pendingRerender = false;
+  function startEdit(m) {
+    if (editing) editing.cancel();
+    const it = lineById.get(m.id);
+    if (!it) return;
+    const txt = it.el.querySelector(".txt");
+    if (!txt) return;
+    const box = span("editbox", "");
+    const ta = document.createElement("textarea");
+    ta.value = m.text; ta.rows = 1; ta.maxLength = 2000;
+    const hint = span("ehint", "Esc para cancelar • Enter para salvar");
+    box.append(ta, hint);
+    txt.replaceWith(box);
+    const size = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+    size(); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    const done = () => { editing = null; if (pendingRerender) pendingRerender = false; rerenderAll(); input.focus(); };
+    editing = { cancel: done };
+    ta.addEventListener("input", size);
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); done(); }
+      else if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        const v = ta.value.trim();
+        if (!v) { done(); return; }
+        if (v !== m.text) socket.emit("edit", { id: m.id, text: v });
+        done();
+      }
+    });
+  }
+
+  // ---------- painel de mensagens fixadas e de busca ----------
+  let panelMode = null;
+  function openPanel(mode, title) { panelMode = mode; $("panelTitle").textContent = title; $("panel").hidden = false; }
+  function closePanel() { panelMode = null; $("panel").hidden = true; }
+  $("panelClose").addEventListener("click", () => { closePanel(); if ($("searchBox").value) $("searchBox").value = ""; });
+  function panelItem(m) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "pitem";
+    const head = span("phead", ""); head.append(avatar(m.nick), whoSpan(m.nick), span("time", new Date(m.ts).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })));
+    const body = span("ptxt", "");
+    if (m.type === "img") body.textContent = "foto"; else if (m.type === "audio") body.textContent = "áudio"; else renderText(m.text, body);
+    b.append(head, body);
+    b.addEventListener("click", () => { closePanel(); jumpTo(m.id); });
+    return b;
+  }
+  function renderPins() {
+    const list = entries.filter((m) => m.pinned).reverse();
+    $("panelList").replaceChildren(...(list.length ? list.map(panelItem) : [span("pempty", "Nenhuma mensagem fixada ainda. Passe o mouse numa mensagem e clique no alfinete para fixar.")]));
+  }
+  $("pinsBtn").addEventListener("click", (e) => { e.stopPropagation(); if (panelMode === "pins") return closePanel(); openPanel("pins", "Mensagens fixadas"); renderPins(); });
+  // busca: texto livre, ou "de: nome" para filtrar por quem mandou
+  const fold = (t) => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  let searchTimer = null;
+  function runSearch() {
+    const raw = $("searchBox").value.trim();
+    if (!raw) return closePanel();
+    let q = raw, from = null;
+    const fm = raw.match(/^de:\s*(\S+)\s*(.*)$/i);
+    if (fm) { from = fold(fm[1]); q = fm[2]; }
+    const fq = fold(q);
+    const hits = entries.filter((m) => m.type !== "sys" && m.id && (!from || fold(m.nick).startsWith(from)) && (!fq || fold(m.text).includes(fq))).reverse().slice(0, 50);
+    openPanel("search", hits.length ? hits.length + (hits.length === 50 ? "+" : "") + " resultado" + (hits.length === 1 ? "" : "s") : "Nenhum resultado");
+    $("panelList").replaceChildren(...(hits.length ? hits.map(panelItem) : [span("pempty", "Nada encontrado nas mensagens guardadas. Dica: use \"de: nome\" para ver as mensagens de alguém.")]));
+  }
+  $("searchBox").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 150); });
+  $("searchBox").addEventListener("keydown", (e) => { if (e.key === "Escape") { $("searchBox").value = ""; closePanel(); } });
+  document.addEventListener("click", (e) => { if (panelMode && !$("panel").contains(e.target) && !e.target.closest(".search, #pinsBtn")) closePanel(); });
 
   function jumpTo(id) {
     const it = lineById.get(id);
@@ -1665,45 +1959,105 @@ window.setIcon = (btn, name, label, extra) => {
   gameWatch.observe($("activity"), { attributes: true, attributeFilter: ["hidden"] });
   gameWatch.observe($("truco"), { attributes: true, attributeFilter: ["hidden"] });
 
+  // Lista de membros como no Discord: grupos por cargo (Dono, ADM, Online) e Offline,
+  // com o status personalizado ou a atividade embaixo do nome
+  const roleOfNick = (n) => (members.find((x) => keyOf(x.nick) === keyOf(n)) || {}).role || "member";
+  function activityOf(u) {
+    const k = u.toLowerCase(), app = window.ChatPedro;
+    if (app.trucoNicks.has(k)) return "Jogando truco";
+    if (app.pokerNicks.has(k)) return "Jogando poker";
+    if (app.callNicks.has(u)) return "Na call";
+    return "";
+  }
+  function memberRow(u, online) {
+    const li = document.createElement("li");
+    if (!online) li.className = "off";
+    const p = profiles[keyOf(u)] || {};
+    const pres = span("pres" + (online && (p.status === "ausente" || p.status === "ocupado") ? " " + p.status : "") + (online ? "" : " none"), "");
+    pres.append(avatar(u, true));
+    const box = span("mtxt", "");
+    const name = span("name", u);
+    if (p.color) name.style.color = p.color;
+    const role = roleOfNick(u);
+    if (role === "owner") { const c = span("crown", ""); c.textContent = "\u265B"; c.title = "Dono do servidor"; name.append(c); }
+    box.append(name);
+    const sub = online ? (p.text || activityOf(u)) : "";
+    if (sub) box.append(span("sub2", sub));
+    li.append(pres, box);
+    li.addEventListener("click", (e) => { e.stopPropagation(); showPopout(u, li); });
+    return li;
+  }
   function renderPeople() {
-    $("onlineTitle").textContent = "ONLINE " + users.length;
-    setIcon($("onlineBtn"), "users", users.length + " online", users.length);
+    setIcon($("onlineBtn"), "users", "Membros (" + users.length + " online)");
     const ul = $("people");
     ul.replaceChildren();
-    // voce primeiro, depois os outros em ordem alfabetica
-    const sorted = [...users].sort((a, b) => (b === nick) - (a === nick) || a.localeCompare(b));
-    for (const u of sorted) {
-      const li = document.createElement("li");
-      const pres = document.createElement("span");
-      const st = (profiles[keyOf(u)] || {}).status;
-      pres.className = "pres" + (st === "ausente" || st === "ocupado" ? " " + st : "");
-      pres.append(avatar(u, true));
-      const name = span("name", u);
-      const pc = (profiles[keyOf(u)] || {}).color;
-      if (pc) name.style.color = pc;
-      if (u === nick) name.append(span("me", " (você)"));
-      if (window.ChatPedro.callNicks.has(u)) name.append(span("tag", "\u266A"));
-      if (window.ChatPedro.pokerNicks.has(u.toLowerCase())) name.append(span("tag", "\u2660"));
-      if (window.ChatPedro.trucoNicks.has(u.toLowerCase())) name.append(span("tag", "\u2663"));
-      name.title = u + (window.ChatPedro.callNicks.has(u) ? " - na call" : "") + (window.ChatPedro.pokerNicks.has(u.toLowerCase()) ? " - no poker" : "") + (window.ChatPedro.trucoNicks.has(u.toLowerCase()) ? " - no truco" : "") + (st === "ausente" ? " - ausente" : st === "ocupado" ? " - ocupado" : "");
-      const mem = members.find((x) => keyOf(x.nick) === keyOf(u));
-      if (mem && mem.role !== "member") name.append(span("role", mem.role === "owner" ? "\u2605 dono" : "adm"));
-      li.append(pres, name);
-      ul.append(li);
+    const byName = (a, b) => a.localeCompare(b);
+    const groups = [
+      ["Dono", users.filter((u) => roleOfNick(u) === "owner")],
+      ["ADM", users.filter((u) => roleOfNick(u) === "admin")],
+      ["Online", users.filter((u) => roleOfNick(u) === "member")],
+    ];
+    for (const [title, list] of groups) {
+      if (!list.length) continue;
+      ul.append(span("grp", title + " — " + list.length));
+      for (const u of list.sort(byName)) ul.append(memberRow(u, true));
     }
-    // membros que nao estao online agora
-    const off = members.filter((m) => !users.some((u) => keyOf(u) === keyOf(m.nick))).sort((a, b) => a.nick.localeCompare(b.nick));
+    const off = members.filter((m) => !users.some((u) => keyOf(u) === keyOf(m.nick))).map((m) => m.nick).sort(byName);
     if (off.length) {
-      ul.append(span("offTitle", "OFFLINE " + off.length));
-      for (const m of off) {
-        const li = document.createElement("li"); li.className = "off";
-        const pres = span("pres-off", ""); pres.append(avatar(m.nick, true));
-        const name = span("name", m.nick);
-        if (m.role !== "member") name.append(span("role", m.role === "owner" ? "\u2605 dono" : "adm"));
-        li.append(pres, name); ul.append(li);
-      }
+      ul.append(span("grp", "Offline — " + off.length));
+      for (const u of off) ul.append(memberRow(u, false));
     }
+    renderMe();
   }
+
+  // painel do usuario embaixo da barra da esquerda
+  function renderMe() {
+    if (!nick) return;
+    const p = profiles[keyOf(nick)] || {};
+    const st = p.status && p.status !== "offline" ? p.status : myStatus;
+    const pres = $("meAv");
+    pres.className = "pres" + (st === "ausente" || st === "ocupado" ? " " + st : "");
+    pres.replaceChildren(avatar(nick, true));
+    $("meNick").textContent = nick;
+    $("meStatus").textContent = p.text || (st === "ausente" ? "Ausente" : st === "ocupado" ? "Ocupado" : "Online");
+  }
+
+  // cartao de perfil ao clicar num nome (como o popout do Discord)
+  function showPopout(u, anchor) {
+    const pop = $("popout"), p = profiles[keyOf(u)] || {};
+    const online = users.some((x) => keyOf(x) === keyOf(u));
+    const role = roleOfNick(u);
+    const banner = span("banner", ""); banner.style.background = p.color || "var(--accent)";
+    const pres = span("pres big" + (online ? (p.status === "ausente" || p.status === "ocupado" ? " " + p.status : "") : " none"), ""); pres.append(avatar(u, true));
+    const name = span("pname", u);
+    const info = span("pinfo", "");
+    if (role !== "member") info.append(span("rbadge", role === "owner" ? "Dono" : "ADM"));
+    info.append(span("pst", online ? (p.status === "ausente" ? "Ausente" : p.status === "ocupado" ? "Ocupado" : "Online") : "Offline"));
+    const parts = [banner, pres, name];
+    if (p.text) parts.push(span("ptext", p.text));
+    const act = online ? activityOf(u) : "";
+    if (act) parts.push(span("pact", act));
+    parts.push(info);
+    if (u !== nick) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "cmd big"; b.textContent = "Mencionar @" + u;
+      b.addEventListener("click", () => { pop.hidden = true; input.value = (input.value ? input.value.replace(/\s*$/, " ") : "") + "@" + u + " "; input.focus(); autosize(); });
+      parts.push(b);
+    }
+    pop.replaceChildren(...parts);
+    pop.hidden = false;
+    const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    let x = r.left - w - 12; if (x < 8) x = Math.min(innerWidth - w - 8, r.right + 12);
+    pop.style.left = Math.max(8, x) + "px";
+    pop.style.top = Math.max(8, Math.min(innerHeight - h - 8, r.top)) + "px";
+  }
+  document.addEventListener("click", (e) => { if (!$("popout").hidden && !$("popout").contains(e.target)) $("popout").hidden = true; });
+  log.addEventListener("click", (e) => {
+    const t = e.target.closest(".who, .gut .av");
+    if (!t) return;
+    const n = t.closest(".line") && lineById.get(Number(t.closest(".line").dataset.id));
+    const who = n ? n.m.nick : t.dataset.name;
+    if (who) { e.stopPropagation(); showPopout(who, t); }
+  });
 
   function updateStatus() {
     $("status").textContent = socket.connected ? "online" : "reconectando...";
@@ -1778,8 +2132,13 @@ window.setIcon = (btn, name, label, extra) => {
   socket.on("message:update", (u) => {
     const it = lineById.get(u.id);
     if (!it) return;
-    it.m.reactions = u.reactions;
-    renderReacts(it.el.querySelector(".reacts"), it.m, true);
+    if (u.reactions !== undefined) { it.m.reactions = u.reactions; const rx = it.el.querySelector(".reacts"); if (rx) renderReacts(rx, it.m, true); }
+    if (u.text !== undefined || u.pinned !== undefined) {
+      if (u.text !== undefined) { it.m.text = u.text; it.m.edited = u.edited; }
+      if (u.pinned !== undefined) it.m.pinned = u.pinned;
+      if (!editing) rerenderAll(); else pendingRerender = true;
+      if (panelMode === "pins") renderPins();
+    }
   });
   socket.on("message:delete", (id) => {
     if (!lineById.has(id)) return;
@@ -1794,6 +2153,7 @@ window.setIcon = (btn, name, label, extra) => {
   socket.on("ice", (list) => { window.ChatPedro.ice = list; });
   socket.on("members", (list) => { members = list || []; renderPeople(); renderMod(); });
   socket.on("profiles", (map) => {
+    setTimeout(renderMe, 0);
     profiles = map || {};
     document.querySelectorAll(".who[data-nick]").forEach((w) => { const p = profiles[w.dataset.nick]; w.style.color = p && p.color ? p.color : ""; });
     renderPeople();
@@ -1888,16 +2248,17 @@ window.setIcon = (btn, name, label, extra) => {
   });
 
   // ---------- atividades: escolher o jogo ----------
-  const closeActs = () => { $("actsModal").hidden = true; };
-  $("actsBtn").addEventListener("click", () => { $("actsModal").hidden = false; });
-  $("actsClose").addEventListener("click", closeActs);
-  $("actsModal").addEventListener("click", (e) => { if (e.target === $("actsModal") || e.target.closest(".game")) closeActs(); });
-  // pontinho no botao quando alguma mesa esta aberta
-  const syncActs = () => $("actsBtn").classList.toggle("live", $("actOpen").classList.contains("on") || $("trOpen").classList.contains("on"));
-  new MutationObserver(syncActs).observe($("games"), { subtree: true, attributes: true, attributeFilter: ["class"] });
+  // abrir um jogo pela barra da esquerda fecha a gaveta no celular
+  for (const id of ["actOpen", "trOpen"]) $(id).addEventListener("click", () => document.body.classList.remove("railopen"));
 
   // Gaveta de online no celular
-  $("onlineBtn").addEventListener("click", (e) => { e.stopPropagation(); document.body.classList.toggle("drawer"); });
+  // membros: no celular abre a gaveta; no computador mostra ou esconde a coluna (como no Discord)
+  if (store.get("chatpedro-nomembers") === "1") document.body.classList.add("nomembers");
+  $("onlineBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (matchMedia("(max-width: 760px)").matches) return document.body.classList.toggle("drawer");
+    store.set("chatpedro-nomembers", document.body.classList.toggle("nomembers") ? "1" : "0");
+  });
   document.addEventListener("click", (e) => {
     if (document.body.classList.contains("drawer") && !$("sidebar").contains(e.target)) document.body.classList.remove("drawer");
   });
@@ -1906,7 +2267,7 @@ window.setIcon = (btn, name, label, extra) => {
   function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
   viewer.addEventListener("click", () => { viewer.hidden = true; });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { viewer.hidden = true; for (const id of ["settings", "admModal", "profileModal", "srvModal", "actsModal"]) $(id).hidden = true; document.body.classList.remove("drawer", "railopen"); }
+    if (e.key === "Escape") { viewer.hidden = true; $("popout").hidden = true; for (const id of ["settings", "admModal", "profileModal", "srvModal"]) $(id).hidden = true; document.body.classList.remove("drawer", "railopen"); }
   });
 
   // ---------- moderacao: dono e ADMs do servidor ----------
@@ -2048,6 +2409,12 @@ window.setIcon = (btn, name, label, extra) => {
   input.addEventListener("keydown", (e) => {
     if (e.key === "Tab" && mentionList.length) { e.preventDefault(); pickMention(mentionList[0]); return; }
     if (e.key === "Escape" && replyTo) { clearReply(); return; }
+    // seta para cima com o campo vazio edita a sua ultima mensagem (como no Discord)
+    if (e.key === "ArrowUp" && !input.value) {
+      const last = [...entries].reverse().find((x) => x.type === "msg" && x.uid === myUid && !x.pending && x.id);
+      if (last) { e.preventDefault(); startEdit(last); }
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
   });
   $("form").addEventListener("submit", (e) => { e.preventDefault(); submit(); });

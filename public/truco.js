@@ -409,5 +409,5 @@
   window.addEventListener("resize", () => { if (open()) render(); });
 
   const prevJoin = app.onJoin;
-  app.onJoin = () => { prevJoin(); $("actsBtn").hidden = false; if (open()) render(); };
+  app.onJoin = () => { prevJoin(); if (open()) render(); };
 })();

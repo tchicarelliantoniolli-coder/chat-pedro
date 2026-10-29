@@ -70,14 +70,13 @@ Compre um dominio (ex.: no Registro.br para `.com.br`). No Render, em **Settings
 ## Bom saber
 
 - No plano grátis o servidor dorme depois de uns 15 minutos sem ninguém. Quem entrar primeiro espera uns 30–60 segundos.
-- Cada servidor guarda as últimas 200 mensagens no Supabase.
-- Topo: o botão verde "Entrar na call" fica ao lado do nome do servidor (mostra quantos estão na call). O controle abre as Atividades (poker e truco), as pessoas mostram quem está online (no celular) e a engrenagem abre o menu do servidor.
-- Fotos: ícone de imagem ao lado do campo de mensagem, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande.
-- Áudio: ícone de microfone ao lado do campo de mensagem, grava até 1 minuto.
-- Chat: passe o mouse numa mensagem para responder, reagir ou apagar. `@nome` menciona alguém (Tab completa).
-- Meu perfil (canto de baixo da barra da direita): foto, apelido, cor do nome, status e notificações. O site usa as cores do Discord (tema escuro).
-- Call: microfone, fone, câmera, tela, YouTube junto e configurações (volume e apertar para falar com ESPAÇO). Áudio e vídeo vão direto entre os navegadores (WebRTC).
-- Poker: Texas Hold'em No-Limit, até 9 jogadores, blinds 10/20, 1000 fichas iniciais. Só o dono e os ADMs trancam a mesa e liberam fichas novas.
-- Truco: Truco Paulista, mesa de 4 ou 6, partida até 12.
-- Moderação: engrenagem > Moderar (dono e ADMs). O anti-flood silencia por 2 min quem insistir.
-- Comandos no chat: `/nick NOVO`, `/perfil`, `/limpar`, `/ajuda`.
+- O visual segue o Discord: servidores na esquerda, canais (texto, voz e atividades), chat no meio e membros na direita.
+- **Canal de voz "Call"**: clique para entrar. Quem está na call aparece embaixo dele; o painel "Voz conectada" tem o botão de desconectar. No celular, use o botão "Call" do topo.
+- **Painel do usuário** (embaixo da barra de canais): seu perfil, microfone, fone e configurações de áudio e vídeo.
+- **Mensagens**: responder, reagir (uma reação por pessoa), editar (ou seta para cima com o campo vazio), fixar e apagar. Fotos (botão, colar ou arrastar) e áudio de até 1 minuto.
+- **Formatação**: `**negrito**`, `*itálico*`, `__sublinhado__`, `~~riscado~~`, `` `código` ``, blocos com três crases, `||spoiler||`, `> citação` e links clicáveis. `@nome` menciona alguém.
+- **Busca** no topo do chat (use `de: nome` para filtrar) e **mensagens fixadas** no alfinete.
+- **Membros** agrupados em Dono, ADM, Online e Offline, com status personalizado. Clique num nome para ver o cartão de perfil.
+- **Atividades**: Poker (Texas Hold'em, até 9) e Truco Paulista (mesa de 4 ou 6).
+- **Moderação**: nome do servidor (no topo da barra de canais) > Moderar membros (dono e ADMs). O anti-flood silencia por 2 min quem insistir.
+- Comandos: `/nick NOVO`, `/perfil`, `/limpar`, `/ajuda`.

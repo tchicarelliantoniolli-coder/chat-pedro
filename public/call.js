@@ -57,6 +57,18 @@
     const label = inCall ? "Você está na call com " + n + (n === 1 ? " pessoa" : " pessoas") + ". Clique para ver" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call";
     cb.title = label; cb.setAttribute("aria-label", label);
     cb.hidden = !app.nick;
+    // canal de voz na barra da esquerda (como no Discord) e o painel "Voz conectada"
+    const vc = $("voiceChan");
+    vc.classList.toggle("in", inCall);
+    $("voiceHint").textContent = inCall ? "você está aqui" : n ? n + (n === 1 ? " pessoa" : " pessoas") + " · entrar" : "entrar";
+    vc.title = inCall ? "Mostrar a call" : "Entrar na call";
+    $("voicePanel").hidden = !inCall;
+    $("vpWhere").textContent = "Call / " + n + (n === 1 ? " pessoa" : " pessoas");
+    // microfone e fone do painel do usuario, embaixo da barra
+    setIcon($("upMic"), micOn ? "mic" : "mic-off", micOn ? "Desligar o microfone" : "Ligar o microfone");
+    $("upMic").classList.toggle("off", !micOn);
+    setIcon($("upDeaf"), deaf ? "headphones-off" : "headphones", deaf ? "Voltar a ouvir" : "Parar de ouvir");
+    $("upDeaf").classList.toggle("off", deaf);
   }
 
   // ---------- audio local ----------
@@ -313,6 +325,7 @@
   }
 
   function toggleMic() {
+    if (!inCall) { micOn = !micOn; if (micOn) deaf = false; refreshButtons(); return; } // fora da call: so guarda a escolha
     if (!micRaw) { setNote("Sem acesso ao microfone. Libere o microfone no navegador e entre de novo.", true); return; }
     micOn = !micOn;
     if (!micOn && deaf) {} // mutar nao mexe no fone
@@ -551,8 +564,6 @@
   }
 
   function renderSidebar() {
-    $("callTitle").textContent = "NA CALL " + members.length;
-    $("callSect").hidden = !members.length;
     const ul = $("callPeople");
     ul.replaceChildren();
     for (const m of members) {
@@ -563,7 +574,11 @@
       if (m.deaf) tags.push("surdo"); else if (!m.mic) tags.push("mudo");
       if (m.cam) tags.push("cam");
       if (m.screen) tags.push("ao vivo");
-      const t = document.createElement("span"); t.className = "tags"; t.textContent = tags.join(" · ");
+      const t = document.createElement("span"); t.className = "tags";
+      if (m.deaf) t.append(icon("headphones-off")); else if (!m.mic) t.append(icon("mic-off"));
+      if (m.cam) t.append(icon("video"));
+      if (m.screen) { const live = document.createElement("b"); live.className = "live"; live.textContent = "AO VIVO"; t.append(live); }
+      t.title = tags.join(" · ");
       li.append(avatar(m.nick), name, t);
       ul.append(li);
     }
@@ -797,6 +812,15 @@
     $("call").scrollIntoView({ block: "nearest" });
   });
   $("leaveBtn").addEventListener("click", leave);
+  $("vpLeave").addEventListener("click", leave);
+  $("voiceChan").addEventListener("click", () => {
+    document.body.classList.remove("railopen");
+    if (!inCall) return join();
+    $("call").classList.toggle("min", false); refreshButtons();
+  });
+  $("upMic").addEventListener("click", toggleMic);
+  $("upDeaf").addEventListener("click", toggleDeaf);
+  $("upSet").addEventListener("click", openSettings);
   $("micBtn").addEventListener("click", toggleMic);
   $("deafBtn").addEventListener("click", toggleDeaf);
   $("camBtn").addEventListener("click", toggleCam);

@@ -263,5 +263,5 @@
   window.addEventListener("resize", () => { if (!$("activity").hidden) render(); });
 
   const prevJoin = app.onJoin;
-  app.onJoin = () => { prevJoin(); $("actsBtn").hidden = false; if (!$("activity").hidden) render(); };
+  app.onJoin = () => { prevJoin(); if (!$("activity").hidden) render(); };
 })();
