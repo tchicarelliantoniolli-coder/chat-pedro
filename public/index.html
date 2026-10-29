@@ -9,6 +9,7 @@
 <style>
 :root {
   --bg: #000000;
+  --panel: #031a0a;
   --fg: #33ff66;
   --dim: #1f9940;
   --bright: #b6ffc8;
@@ -23,39 +24,82 @@ body {
   background: var(--bg); color: var(--fg); font-family: var(--mono); font-size: 22px; line-height: 1.2;
   display: flex; flex-direction: column;
 }
-.wrap {
-  width: 100%; box-sizing: border-box;
+button.cmd { all: unset; cursor: pointer; color: var(--bright); white-space: pre; }
+button.cmd:hover, button.cmd:focus-visible { color: var(--bg); background: var(--fg); }
+
+header {
+  display: flex; align-items: flex-start; gap: 12px; border-bottom: 2px solid var(--dim);
+  padding-block: 12px 6px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-header .wrap { padding-block: 12px 4px; }
+header .title { flex: 1; min-width: 0; }
 h1 { font-family: var(--pixel); font-size: 14px; font-weight: 400; margin: 0; color: var(--bright); }
 .sub { color: var(--dim); margin-top: 6px; overflow-wrap: anywhere; }
+#onlineBtn { display: none; }
+
+.app { flex: 1; min-height: 0; display: flex; }
+.chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pad {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: 16px;
+}
 main { flex: 1; overflow-y: auto; min-height: 0; }
 #log { padding-block: 8px; }
 .line { white-space: pre-wrap; overflow-wrap: anywhere; }
 .time { color: var(--dim); }
 .who { color: var(--bright); }
 .sys { color: var(--dim); }
-footer .wrap { padding-block: 6px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
-form { display: flex; align-items: flex-start; }
-.ps1 { color: var(--bright); white-space: pre; }
+
+/* Avatares em pixel art: a foto e guardada em 48x48 e ampliada sem suavizar */
+.av {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 22px; height: 22px; vertical-align: -4px; margin-right: 6px;
+  border: 1px solid var(--dim); box-sizing: border-box; overflow: hidden;
+  font-family: var(--pixel); font-size: 9px; color: var(--bg);
+}
+.av img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.av.big { width: 36px; height: 36px; font-size: 13px; vertical-align: middle; margin-right: 0; }
+
+footer { padding-block: 6px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px dashed var(--dim); }
+form { display: flex; align-items: flex-start; gap: 8px; }
+.ps1 { color: var(--bright); white-space: pre; margin-right: -8px; }
 textarea {
   flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: transparent;
   color: var(--fg); font: inherit; caret-color: var(--fg); padding: 0; margin: 0; max-height: 6em;
 }
 textarea::placeholder { color: var(--dim); }
 #note { color: var(--dim); min-height: 1.2em; margin: 4px 0 0; }
-#photoBtn {
-  all: unset; cursor: pointer; color: var(--bright); white-space: pre; margin-left: 8px;
-}
-#photoBtn:hover, #photoBtn:focus-visible { color: var(--bg); background: var(--fg); }
+#note.err { color: var(--err); }
+
 .pic { display: block; margin: 4px 0 6px; }
 .pic img {
   display: block; max-width: min(280px, 100%); max-height: 320px; border: 2px solid var(--dim);
   cursor: zoom-in; background: #111;
 }
 .pic img:hover { border-color: var(--fg); }
+
+aside {
+  width: 230px; flex: none; border-left: 2px solid var(--dim); background: var(--panel);
+  display: flex; flex-direction: column; min-height: 0;
+  padding-right: env(safe-area-inset-right, 0px);
+}
+aside h2 {
+  font-family: var(--pixel); font-size: 10px; font-weight: 400; color: var(--dim);
+  letter-spacing: 0.05em; margin: 0; padding: 14px 14px 10px;
+}
+#people { list-style: none; margin: 0; padding: 0 14px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+#people li { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#people .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--bright); }
+#people .me { color: var(--dim); }
+.pres { position: relative; flex: none; }
+.pres::after {
+  content: ""; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px;
+  background: var(--fg); border: 2px solid var(--panel);
+}
+.profile { border-top: 1px dashed var(--dim); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.profile .hint { color: var(--dim); font-size: 18px; }
+
 #viewer {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); display: flex; align-items: center;
   justify-content: center; z-index: 20; cursor: zoom-out;
@@ -63,26 +107,55 @@ textarea::placeholder { color: var(--dim); }
 }
 #viewer img { max-width: 100%; max-height: 100%; border: 2px solid var(--fg); }
 body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
-#note.err { color: var(--err); }
+
+/* Celular: a lista de online vira uma gaveta que abre pelo botao [ONLINE n] */
+@media (max-width: 760px) {
+  #onlineBtn { display: inline; }
+  .pad { padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  aside {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 10; width: min(260px, 80vw);
+    padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+    transform: translateX(100%); transition: transform 0.15s steps(4);
+  }
+  body.drawer aside { transform: none; }
+  body.drawer::after { content: ""; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); z-index: 5; }
+}
+@media (prefers-reduced-motion: reduce) { aside { transition: none; } }
 </style>
 </head>
 <body>
-<header><div class="wrap">
-  <h1>CHAT PEDRO</h1>
-  <div class="sub" id="status">C:\&gt; conectando...</div>
-</div></header>
+<header>
+  <div class="title">
+    <h1>CHAT PEDRO</h1>
+    <div class="sub" id="status">C:\&gt; conectando...</div>
+  </div>
+  <button type="button" class="cmd" id="onlineBtn" aria-controls="sidebar">[ONLINE 0]</button>
+</header>
 
-<main id="scroller"><div class="wrap"><div id="log"></div></div></main>
+<div class="app">
+  <div class="chat">
+    <main id="scroller"><div class="pad"><div id="log"></div></div></main>
+    <footer class="pad">
+      <form id="form">
+        <span class="ps1" id="ps1">apelido: </span>
+        <textarea id="input" rows="1" placeholder="digite seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
+        <button type="button" class="cmd" id="photoBtn" title="Enviar foto" hidden>[FOTO]</button>
+        <input type="file" id="file" accept="image/*" hidden>
+      </form>
+      <p id="note">Escolha um apelido e aperte ENTER</p>
+    </footer>
+  </div>
 
-<footer><div class="wrap">
-  <form id="form">
-    <span class="ps1" id="ps1">apelido: </span>
-    <textarea id="input" rows="1" placeholder="digite seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
-    <button type="button" id="photoBtn" title="Enviar foto" hidden>[FOTO]</button>
-    <input type="file" id="file" accept="image/*" hidden>
-  </form>
-  <p id="note">Escolha um apelido e aperte ENTER</p>
-</div></footer>
+  <aside id="sidebar" aria-label="Quem esta online">
+    <h2 id="onlineTitle">ONLINE - 0</h2>
+    <ul id="people"></ul>
+    <div class="profile" id="profile" hidden>
+      <button type="button" class="cmd" id="avatarBtn">[FOTO DE PERFIL]</button>
+      <span class="hint">aparece ao lado do seu nome</span>
+      <input type="file" id="avatarFile" accept="image/*" hidden>
+    </div>
+  </aside>
+</div>
 
 <div id="viewer" hidden><img alt="Foto em tamanho grande"></div>
 
@@ -92,14 +165,41 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
   const $ = (id) => document.getElementById(id);
   const log = $("log"), scroller = $("scroller"), input = $("input"), note = $("note"), ps1 = $("ps1");
   const socket = io();
-  let nick = null, users = [];
+  let nick = null, users = [], avatars = {};
 
-  const HELP = "ENTER envia | [FOTO] ou cole/arraste uma imagem | /nick NOVO muda o apelido | /quem lista quem esta online | /limpar limpa a tela";
+  const HELP = "ENTER envia | [FOTO] ou cole/arraste uma imagem | /nick NOVO muda o apelido | /perfil troca a foto de perfil | /limpar limpa a tela";
   const setNote = (text, err) => { note.textContent = text; note.classList.toggle("err", !!err); };
   const pad = (n) => String(n).padStart(2, "0");
   const fmtTime = (ts) => { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
   const span = (cls, text) => { const s = document.createElement("span"); s.className = cls; s.textContent = text; return s; };
-  const saved = (() => { try { return localStorage.getItem("chatpedro-nick"); } catch { return null; } })();
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+  const saved = store.get("chatpedro-nick");
+
+  // Avatar: foto de perfil, ou a inicial do apelido num quadrado com cor fixa por pessoa
+  function hue(name) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+  function fillAvatar(el, name) {
+    const key = name.toLowerCase();
+    el.replaceChildren();
+    if (avatars[key]) {
+      const img = document.createElement("img");
+      img.alt = ""; img.src = avatars[key];
+      el.append(img); el.style.background = "";
+    } else {
+      el.textContent = (name.trim()[0] || "?").toUpperCase();
+      el.style.background = "hsl(" + hue(key) + " 70% 55%)";
+    }
+  }
+  function avatar(name, big) {
+    const el = document.createElement("span");
+    el.className = "av" + (big ? " big" : "");
+    el.dataset.nick = name.toLowerCase();
+    el.dataset.name = name;
+    fillAvatar(el, name);
+    return el;
+  }
 
   function addLine(m) {
     const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
@@ -118,17 +218,35 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
       img.addEventListener("load", () => { if (atBottom) scroller.scrollTop = scroller.scrollHeight; });
       img.addEventListener("click", () => openViewer(m.src));
       box.append(img);
-      l.append(span("who", m.nick + "> "), box);
+      l.append(avatar(m.nick), span("who", m.nick + "> "), box);
     }
-    else l.append(span("who", m.nick + "> "), document.createTextNode(m.text));
+    else l.append(avatar(m.nick), span("who", m.nick + "> "), document.createTextNode(m.text));
     log.append(l);
     if (atBottom) scroller.scrollTop = scroller.scrollHeight;
   }
-  const localSys = (text) => addLine({ type: "sys", text, ts: Date.now() });
+
+  function renderPeople() {
+    $("onlineTitle").textContent = "ONLINE - " + users.length;
+    $("onlineBtn").textContent = "[ONLINE " + users.length + "]";
+    const ul = $("people");
+    ul.replaceChildren();
+    // voce primeiro, depois os outros em ordem alfabetica
+    const sorted = [...users].sort((a, b) => (b === nick) - (a === nick) || a.localeCompare(b));
+    for (const u of sorted) {
+      const li = document.createElement("li");
+      const pres = document.createElement("span");
+      pres.className = "pres";
+      pres.append(avatar(u, true));
+      const name = span("name", u);
+      if (u === nick) name.append(span("me", " (voce)"));
+      li.append(pres, name);
+      ul.append(li);
+    }
+  }
 
   function updateStatus() {
     $("status").textContent = socket.connected
-      ? "C:\\> online | " + users.length + " na sala" + (nick ? " | voce: " + nick : "")
+      ? "C:\\> online" + (nick ? " | voce: " + nick : "")
       : "C:\\> desconectado... tentando reconectar";
   }
 
@@ -136,12 +254,17 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
     socket.emit("join", name, (res) => {
       if (!res.ok) { setNote("ERRO: " + res.error, true); return; }
       nick = res.nick;
-      try { localStorage.setItem("chatpedro-nick", nick); } catch {}
+      store.set("chatpedro-nick", nick);
       ps1.textContent = nick + "> ";
       $("photoBtn").hidden = false;
+      $("profile").hidden = false;
       input.placeholder = "digite aqui_";
       setNote(HELP);
       updateStatus();
+      renderPeople();
+      // o servidor esquece tudo quando reinicia, entao a foto de perfil vai de novo a cada entrada
+      const myAvatar = store.get("chatpedro-avatar");
+      if (myAvatar) socket.emit("avatar", myAvatar);
     });
   }
 
@@ -152,13 +275,18 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
     input.value = ""; autosize();
     if (!nick) return join(text);
     if (text.startsWith("/nick ")) return join(text.slice(6));
-    if (text === "/quem") return localSys("online: " + users.join(", "));
+    if (text === "/perfil") return $("avatarFile").click();
     if (text === "/limpar") { log.replaceChildren(); return; }
     socket.emit("message", text);
   }
 
   socket.on("connect", () => { updateStatus(); if (nick) join(nick); else if (saved) join(saved); });
   socket.on("disconnect", updateStatus);
+  socket.on("avatars", (map) => { avatars = map || {}; });
+  socket.on("avatar", ({ nick: key, src }) => {
+    avatars[key] = src;
+    document.querySelectorAll('.av[data-nick="' + CSS.escape(key) + '"]').forEach((el) => fillAvatar(el, el.dataset.name));
+  });
   socket.on("history", (msgs) => {
     log.replaceChildren();
     msgs.forEach(addLine);
@@ -170,11 +298,11 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
     scroller.scrollTop = scroller.scrollHeight;
   });
   socket.on("message", addLine);
-  socket.on("users", (list) => { users = list; updateStatus(); });
+  socket.on("users", (list) => { users = list; renderPeople(); });
 
   // Fotos: reduz para no maximo 1280px e converte para JPEG antes de enviar.
   // GIFs pequenos vao como estao para manter a animacao.
-  const MAX_SIDE = 1280, MAX_BYTES = 3 * 1024 * 1024;
+  const MAX_SIDE = 1280, MAX_BYTES = 3 * 1024 * 1024, AVATAR_SIDE = 48;
   const readAsDataURL = (file) => new Promise((ok, fail) => {
     const r = new FileReader();
     r.onload = () => ok(r.result); r.onerror = fail; r.readAsDataURL(file);
@@ -201,22 +329,52 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
     throw new Error("grande demais");
   }
 
+  // Foto de perfil: recorta o centro em quadrado e reduz para 48x48 (vira pixel art na tela)
+  async function prepareAvatar(file) {
+    const img = await loadImage(await readAsDataURL(file));
+    const side = Math.min(img.width, img.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = AVATAR_SIDE;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, AVATAR_SIDE, AVATAR_SIDE);
+    ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, AVATAR_SIDE, AVATAR_SIDE);
+    return canvas.toDataURL("image/jpeg", 0.9);
+  }
+
+  function canSend(file) {
+    if (!file || !file.type.startsWith("image/")) { setNote("ERRO: isso nao e uma imagem.", true); return false; }
+    if (!nick) { setNote("Escolha um apelido antes de mandar foto.", true); return false; }
+    if (!socket.connected) { setNote("ERRO: sem conexao. Espere reconectar.", true); return false; }
+    return true;
+  }
+
   async function sendImage(file) {
-    if (!file || !file.type.startsWith("image/")) { setNote("ERRO: isso nao e uma imagem.", true); return; }
-    if (!nick) { setNote("Escolha um apelido antes de mandar foto.", true); return; }
-    if (!socket.connected) { setNote("ERRO: sem conexao. Espere reconectar.", true); return; }
+    if (!canSend(file)) return;
     setNote("enviando foto...");
     try {
-      const data = await prepareImage(file);
-      socket.emit("image", data);
+      socket.emit("image", await prepareImage(file));
       setNote(HELP);
     } catch {
       setNote("ERRO: nao deu para enviar essa foto. Tente outra.", true);
     }
   }
 
+  async function setAvatar(file) {
+    if (!canSend(file)) return;
+    try {
+      const data = await prepareAvatar(file);
+      store.set("chatpedro-avatar", data);
+      socket.emit("avatar", data);
+      setNote("Foto de perfil atualizada.");
+    } catch {
+      setNote("ERRO: nao deu para usar essa foto. Tente outra.", true);
+    }
+  }
+
   $("photoBtn").addEventListener("click", () => $("file").click());
   $("file").addEventListener("change", (e) => { sendImage(e.target.files[0]); e.target.value = ""; });
+  $("avatarBtn").addEventListener("click", () => $("avatarFile").click());
+  $("avatarFile").addEventListener("change", (e) => { setAvatar(e.target.files[0]); e.target.value = ""; });
   input.addEventListener("paste", (e) => {
     const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
     if (item) { e.preventDefault(); sendImage(item.getAsFile()); }
@@ -229,10 +387,18 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
     if (file) sendImage(file);
   });
 
+  // Gaveta de online no celular
+  $("onlineBtn").addEventListener("click", (e) => { e.stopPropagation(); document.body.classList.toggle("drawer"); });
+  document.addEventListener("click", (e) => {
+    if (document.body.classList.contains("drawer") && !$("sidebar").contains(e.target)) document.body.classList.remove("drawer");
+  });
+
   const viewer = $("viewer");
   function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
   viewer.addEventListener("click", () => { viewer.hidden = true; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") viewer.hidden = true; });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { viewer.hidden = true; document.body.classList.remove("drawer"); }
+  });
 
   function autosize() { input.style.height = "auto"; input.style.height = input.scrollHeight + "px"; }
   input.addEventListener("input", autosize);

@@ -33,5 +33,6 @@ Abra http://localhost:3000.
 - No plano grátis o servidor dorme depois de uns 15 minutos sem ninguém. Quem entrar primeiro espera uns 30–60 segundos.
 - As mensagens ficam na memória do servidor (as últimas 200). Quando ele dorme ou reinicia, o histórico é apagado.
 - Fotos: botão `[FOTO]`, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande. O servidor guarda as últimas 40 fotos.
-- Comandos no chat: `/nick NOVO` muda o apelido, `/quem` mostra quem está online, `/limpar` limpa a tela.
+- Quem está online aparece na barra da direita (no celular, no botão `[ONLINE n]`). A foto de perfil é escolhida em `[FOTO DE PERFIL]` e fica salva no navegador de cada um.
+- Comandos no chat: `/nick NOVO` muda o apelido, `/perfil` troca a foto de perfil, `/limpar` limpa a tela.
 - Qualquer pessoa com o link pode entrar. Não mande para quem você não quer no chat.

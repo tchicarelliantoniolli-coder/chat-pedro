@@ -10,6 +10,8 @@ const MAX_NICK = 20;
 const MAX_IMAGE = 3 * 1024 * 1024; // tamanho maximo da foto (ja comprimida) em bytes de texto
 const MAX_IMAGES_KEPT = 40; // fotos mais antigas que isso saem do historico para nao lotar a memoria
 const IMAGE_RE = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/;
+const MAX_AVATAR = 60 * 1024; // foto de perfil ja vem pequena (48x48) do navegador
+const MAX_AVATARS_KEPT = 200;
 
 const app = express();
 const server = http.createServer(app);
@@ -20,6 +22,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // Historico em memoria: some quando o servidor reinicia.
 const history = [];
 const online = new Map(); // socket.id -> apelido
+const avatars = new Map(); // apelido em minusculas -> foto de perfil
 
 function cleanNick(nick) {
   return String(nick || "").replace(/\s+/g, " ").trim().slice(0, MAX_NICK);
@@ -38,6 +41,7 @@ function sendUsers() {
 }
 
 io.on("connection", (socket) => {
+  socket.emit("avatars", Object.fromEntries(avatars));
   socket.emit("history", history);
   sendUsers();
 
@@ -73,6 +77,17 @@ io.on("connection", (socket) => {
     if (now - lastSent < 1000) return;
     lastSent = now;
     pushMessage({ type: "img", nick, src: data, ts: now });
+  });
+
+  socket.on("avatar", (data) => {
+    const nick = online.get(socket.id);
+    if (!nick || typeof data !== "string") return;
+    if (data.length > MAX_AVATAR || !IMAGE_RE.test(data)) return;
+    const key = nick.toLowerCase();
+    avatars.delete(key); // reinsere no fim para a ordem refletir o uso recente
+    avatars.set(key, data);
+    if (avatars.size > MAX_AVATARS_KEPT) avatars.delete(avatars.keys().next().value);
+    io.emit("avatar", { nick: key, src: data });
   });
 
   socket.on("disconnect", () => {
