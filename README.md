@@ -35,5 +35,6 @@ Abra http://localhost:3000.
 - Fotos: botão `[FOTO]`, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande. O servidor guarda as últimas 40 fotos.
 - Quem está online aparece na barra da direita (no celular, no botão `[ONLINE n]`). A foto de perfil é escolhida em `[FOTO DE PERFIL]` e fica salva no navegador de cada um.
 - Chamada: botão `[ENTRAR NA CHAMADA]`. Dá para ligar microfone, câmera e compartilhar a tela; o volume de cada pessoa fica no `VOL` do quadro dela e o resto em `[CONFIG]`. Áudio e vídeo vão direto entre os navegadores (WebRTC); em algumas redes (4G, redes de empresa/escola) a conexão pode não fechar.
+- Poker: botão `[POKER]` (ou ATIVIDADES na barra lateral). Texas Hold'em No-Limit, até 9 jogadores, blinds 10/20, 1000 fichas iniciais. As fichas ficam na memória do servidor e voltam a 1000 quando ele reinicia.
 - Comandos no chat: `/nick NOVO` muda o apelido, `/perfil` troca a foto de perfil, `/limpar` limpa a tela.
 - Qualquer pessoa com o link pode entrar. Não mande para quem você não quer no chat.

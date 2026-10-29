@@ -28,12 +28,12 @@ button.cmd { all: unset; cursor: pointer; color: var(--bright); white-space: pre
 button.cmd:hover, button.cmd:focus-visible { color: var(--bg); background: var(--fg); }
 
 header {
-  display: flex; align-items: flex-start; gap: 12px; border-bottom: 2px solid var(--dim);
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 12px; border-bottom: 2px solid var(--dim);
   padding-block: 12px 6px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-header .title { flex: 1; min-width: 0; }
+header .title { flex: 1 1 220px; min-width: 0; }
 h1 { font-family: var(--pixel); font-size: 14px; font-weight: 400; margin: 0; color: var(--bright); }
 .sub { color: var(--dim); margin-top: 6px; overflow-wrap: anywhere; }
 #onlineBtn { display: none; }
@@ -173,6 +173,86 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .meter i { display: block; height: 100%; width: 0; background: var(--fg); }
 .modal .row { display: flex; justify-content: space-between; gap: 12px; }
 
+/* Atividade: mesa de poker no estilo PokerStars, com o verde do terminal */
+#activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 2px solid var(--dim); background: #020d05; max-height: 78%; min-height: 0; overflow-y: auto; }
+.act-head { display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-bottom: 1px dashed var(--dim); }
+.act-head h2 { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--bright); margin: 0; flex: 1; }
+.table-wrap { container-type: inline-size; padding: 10px 16px 4px; }
+.felt {
+  position: relative; width: 100%; aspect-ratio: 2.1 / 1; max-height: 52vh; margin: 0 auto;
+  --card-w: clamp(26px, 5.2cqw, 54px);
+}
+.felt::before {
+  content: ""; position: absolute; inset: 8% 11%; border-radius: 50%;
+  background: radial-gradient(ellipse at center, #1d7a3e 0%, #11592b 60%, #0a3d1c 100%);
+  border: clamp(6px, 1.4cqw, 14px) solid #3b2412; box-shadow: 0 0 0 2px var(--dim), inset 0 0 30px rgba(0,0,0,0.6);
+}
+.center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 6px; width: 60%; }
+.board { display: flex; gap: 4px; justify-content: center; min-height: calc(var(--card-w) * 1.4); }
+.pot { background: rgba(0,0,0,0.65); color: var(--bright); padding: 0 8px; font-size: clamp(15px, 2.4cqw, 22px); white-space: nowrap; }
+.banner { background: #000; border: 2px solid var(--fg); color: var(--bright); padding: 2px 8px; text-align: center; font-size: clamp(14px, 2.2cqw, 20px); max-width: 100%; }
+.card {
+  width: var(--card-w); height: calc(var(--card-w) * 1.4); background: #f4f4ec; color: #111; border-radius: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; flex: none;
+  font-family: var(--mono); font-size: calc(var(--card-w) * 0.62); box-shadow: 0 1px 3px rgba(0,0,0,0.6); border: 1px solid #000;
+}
+.card .s { font-size: 0.8em; }
+.card.red { color: #c8102e; }
+.card.back { background: repeating-linear-gradient(45deg, #0b3d1c 0 4px, #1f9940 4px 8px); border: 2px solid #f4f4ec; }
+.card.slot { background: transparent; border: 1px dashed rgba(182,255,200,0.3); box-shadow: none; }
+.card.dim { opacity: 0.35; }
+.card.win { outline: 3px solid #ffd84d; outline-offset: -1px; }
+.seat {
+  position: absolute; transform: translate(-50%, -50%); width: clamp(76px, 15cqw, 140px);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: clamp(14px, 2.1cqw, 20px);
+}
+.seat .cards { display: flex; gap: 2px; margin-bottom: -10px; z-index: 1; }
+.seat .cards .card { --card-w: clamp(22px, 4.2cqw, 44px); width: var(--card-w); height: calc(var(--card-w) * 1.4); font-size: calc(var(--card-w) * 0.62); }
+.seat .box {
+  width: 100%; background: #000; border: 2px solid var(--dim); padding: 3px 4px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 5px; position: relative; z-index: 2;
+}
+.seat .box .av { margin: 0; width: clamp(18px, 3cqw, 28px); height: clamp(18px, 3cqw, 28px); }
+.seat .info { min-width: 0; flex: 1; line-height: 1; }
+.seat .nm { color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seat .ch { color: var(--fg); font-variant-numeric: tabular-nums; }
+.seat.turn .box { border-color: #ffd84d; box-shadow: 0 0 0 2px #ffd84d; }
+.seat.folded { opacity: 0.45; }
+.seat.out .nm::after { content: " (ausente)"; color: var(--dim); }
+.seat .act { background: var(--fg); color: #000; padding: 0 4px; white-space: nowrap; font-size: 0.9em; z-index: 3; margin-top: -2px; }
+.seat .timer { width: 100%; height: 4px; background: #222; }
+.seat .timer i { display: block; height: 100%; background: #ffd84d; width: 100%; }
+.seat.empty button { all: unset; cursor: pointer; border: 2px dashed var(--dim); color: var(--dim); padding: 6px 4px; width: 100%; text-align: center; box-sizing: border-box; background: rgba(0,0,0,0.5); }
+.seat.empty button:hover, .seat.empty button:focus-visible { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.seat.empty span { color: rgba(182,255,200,0.25); border: 1px dashed rgba(182,255,200,0.2); width: 70%; text-align: center; padding: 4px 0; font-size: 0.8em; }
+.chipbet { position: absolute; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #ffd84d; padding: 0 5px; white-space: nowrap; font-size: clamp(13px, 2cqw, 19px); display: flex; align-items: center; gap: 4px; }
+.chipbet::before { content: ""; width: 0.6em; height: 0.6em; border-radius: 50%; background: #ffd84d; border: 2px dashed #b8860b; }
+.dealer { position: absolute; transform: translate(-50%, -50%); width: clamp(16px, 2.6cqw, 24px); height: clamp(16px, 2.6cqw, 24px); border-radius: 50%; background: #fff; color: #000; font-family: var(--pixel); font-size: clamp(7px, 1.1cqw, 10px); display: flex; align-items: center; justify-content: center; border: 2px solid #000; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 16px; border-top: 1px dashed var(--dim); }
+.actions .big { all: unset; cursor: pointer; border: 2px solid var(--fg); color: var(--bright); padding: 2px 12px; white-space: nowrap; }
+.actions .big:hover, .actions .big:focus-visible { background: var(--fg); color: #000; }
+.actions .big.fold { border-color: var(--err); color: var(--err); }
+.actions .big.fold:hover, .actions .big.fold:focus-visible { background: var(--err); color: #000; }
+.actions .big:disabled { opacity: 0.4; cursor: default; background: none; }
+.sizing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; flex: 1 1 260px; min-width: 0; }
+.sizing input[type=range] { flex: 1 1 120px; min-width: 100px; accent-color: var(--fg); }
+.sizing input[type=number] { width: 6ch; font: inherit; color: var(--fg); background: #000; border: 1px solid var(--dim); padding: 0 4px; }
+.sizing .cmd { color: var(--dim); }
+.tablebar { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 6px 16px 10px; color: var(--dim); }
+.tablebar .spacer { flex: 1; }
+.dealerlog { margin: 0 16px 10px; padding: 4px 8px; border: 1px solid var(--dim); max-height: 6.2em; overflow-y: auto; color: var(--dim); font-size: 18px; }
+#actList { list-style: none; margin: 0; padding: 0 14px 6px; }
+#actList li { display: flex; gap: 8px; align-items: center; color: var(--bright); flex-wrap: wrap; }
+#actList .tags { color: var(--dim); font-size: 17px; }
+
+@container (max-width: 520px) {
+  .felt::before { inset: 9% 12%; }
+  .felt { aspect-ratio: 1 / 1.25; max-height: none; --card-w: clamp(24px, 8.5cqw, 40px); }
+  .seat { width: clamp(64px, 22cqw, 100px); font-size: 15px; }
+  .seat .cards .card { --card-w: clamp(18px, 6.5cqw, 30px); }
+  .center { width: 80%; }
+}
+
 /* Celular: a lista de online vira uma gaveta que abre pelo botao [ONLINE n] */
 @media (max-width: 760px) {
   #onlineBtn { display: inline; }
@@ -196,12 +276,23 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
     <h1>CHAT PEDRO</h1>
     <div class="sub" id="status">C:\&gt; conectando...</div>
   </div>
+  <button type="button" class="cmd" id="pokerBtn" hidden>[POKER]</button>
   <button type="button" class="cmd" id="callBtn" hidden>[ENTRAR NA CHAMADA]</button>
   <button type="button" class="cmd" id="onlineBtn" aria-controls="sidebar">[ONLINE 0]</button>
 </header>
 
 <div class="app">
   <div class="chat">
+    <section id="activity" aria-label="Poker" hidden>
+      <div class="act-head">
+        <h2>ATIVIDADE: POKER TEXAS HOLD'EM</h2>
+        <button type="button" class="cmd" id="actClose">[FECHAR]</button>
+      </div>
+      <div class="table-wrap"><div class="felt" id="felt"></div></div>
+      <div class="actions" id="actions" hidden></div>
+      <div class="tablebar" id="tablebar"></div>
+      <div class="dealerlog" id="dealerlog" aria-live="polite"></div>
+    </section>
     <section id="call" aria-label="Chamada" hidden>
       <div id="tiles"></div>
       <div class="controls">
@@ -230,6 +321,8 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   <aside id="sidebar" aria-label="Quem esta online">
     <h2 id="onlineTitle">ONLINE - 0</h2>
     <ul id="people"></ul>
+    <h2>ATIVIDADES</h2>
+    <ul id="actList"><li><span>Poker</span><span class="tags" id="actTags">[mesa vazia]</span><button type="button" class="cmd" id="actOpen">[ABRIR]</button></li></ul>
     <h2 id="callTitle">CHAMADA - 0</h2>
     <ul id="callPeople"></ul>
     <div class="callbox"><button type="button" class="cmd" id="joinBtn" hidden>[ENTRAR NA CHAMADA]</button></div>
@@ -344,6 +437,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
       const name = span("name", u);
       if (u === nick) name.append(span("me", " (voce)"));
       if (window.ChatPedro.callNicks.has(u)) name.append(span("tag", "[CALL]"));
+      if (window.ChatPedro.pokerNicks.has(u.toLowerCase())) name.append(span("tag", "[POKER]"));
       li.append(pres, name);
       ul.append(li);
     }
@@ -510,6 +604,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
     socket, avatar, setNote, store, renderPeople,
     get nick() { return nick; },
     callNicks: new Set(),
+    pokerNicks: new Set(),
     onJoin() {},
   };
 
@@ -523,5 +618,6 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 })();
 </script>
 <script src="/call.js"></script>
+<script src="/poker.js"></script>
 </body>
 </html>

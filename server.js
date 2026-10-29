@@ -2,6 +2,7 @@ const path = require("path");
 const http = require("http");
 const express = require("express");
 const { Server } = require("socket.io");
+const { createPoker } = require("./poker");
 
 const PORT = process.env.PORT || 3000;
 const MAX_HISTORY = 200; // quantas mensagens ficam guardadas na memoria
@@ -39,6 +40,11 @@ function pushMessage(msg) {
   io.emit("message", msg);
 }
 
+const poker = createPoker(io, {
+  nickOf: (id) => online.get(id),
+  announce: (text) => pushMessage({ type: "sys", text, ts: Date.now() }),
+});
+
 function sendCall() {
   io.emit("call:members", [...callMembers.values()]);
 }
@@ -58,6 +64,7 @@ io.on("connection", (socket) => {
   socket.emit("history", history);
   socket.emit("call:members", [...callMembers.values()]);
   sendUsers();
+  poker.handle(socket);
 
   socket.on("join", (nick, reply) => {
     nick = cleanNick(nick);
@@ -70,6 +77,9 @@ io.on("connection", (socket) => {
     pushMessage({ type: "sys", text: old ? `${old} agora se chama ${nick}` : `${nick} entrou no chat`, ts: Date.now() });
     sendUsers();
     if (callMembers.has(socket.id)) { callMembers.get(socket.id).nick = nick; sendCall(); }
+    if (old && old !== nick) poker.rename(old, nick);
+    poker.broadcast();
+    poker.refresh();
   });
 
   let lastSent = 0;
@@ -145,6 +155,7 @@ io.on("connection", (socket) => {
     online.delete(socket.id);
     pushMessage({ type: "sys", text: `${nick} saiu do chat`, ts: Date.now() });
     sendUsers();
+    poker.left(nick);
   });
 });
 
