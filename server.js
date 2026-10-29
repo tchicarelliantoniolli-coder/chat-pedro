@@ -23,6 +23,9 @@ app.use(express.static(path.join(__dirname, "public")));
 const history = [];
 const online = new Map(); // socket.id -> apelido
 const avatars = new Map(); // apelido em minusculas -> foto de perfil
+// Chamada: o servidor so guarda quem esta nela e repassa os sinais de conexao.
+// Audio e video vao direto de navegador para navegador (WebRTC).
+const callMembers = new Map(); // socket.id -> { id, nick, mic, deaf, cam, screen }
 
 function cleanNick(nick) {
   return String(nick || "").replace(/\s+/g, " ").trim().slice(0, MAX_NICK);
@@ -36,6 +39,16 @@ function pushMessage(msg) {
   io.emit("message", msg);
 }
 
+function sendCall() {
+  io.emit("call:members", [...callMembers.values()]);
+}
+
+function cleanCallState(s) {
+  s = s && typeof s === "object" ? s : {};
+  const streamId = (v) => (typeof v === "string" && v ? v.slice(0, 100) : null);
+  return { mic: !!s.mic, deaf: !!s.deaf, cam: streamId(s.cam), screen: streamId(s.screen) };
+}
+
 function sendUsers() {
   io.emit("users", [...new Set(online.values())].sort());
 }
@@ -43,6 +56,7 @@ function sendUsers() {
 io.on("connection", (socket) => {
   socket.emit("avatars", Object.fromEntries(avatars));
   socket.emit("history", history);
+  socket.emit("call:members", [...callMembers.values()]);
   sendUsers();
 
   socket.on("join", (nick, reply) => {
@@ -55,6 +69,7 @@ io.on("connection", (socket) => {
     reply && reply({ ok: true, nick });
     pushMessage({ type: "sys", text: old ? `${old} agora se chama ${nick}` : `${nick} entrou no chat`, ts: Date.now() });
     sendUsers();
+    if (callMembers.has(socket.id)) { callMembers.get(socket.id).nick = nick; sendCall(); }
   });
 
   let lastSent = 0;
@@ -90,7 +105,41 @@ io.on("connection", (socket) => {
     io.emit("avatar", { nick: key, src: data });
   });
 
+  socket.on("call:join", (state, reply) => {
+    const nick = online.get(socket.id);
+    if (!nick || typeof reply !== "function") return;
+    const others = [...callMembers.keys()].filter((id) => id !== socket.id);
+    const wasIn = callMembers.has(socket.id);
+    callMembers.set(socket.id, { id: socket.id, nick, ...cleanCallState(state) });
+    reply({ ok: true, others });
+    if (!wasIn) pushMessage({ type: "sys", text: `${nick} entrou na chamada`, ts: Date.now() });
+    sendCall();
+  });
+
+  socket.on("call:state", (state) => {
+    const member = callMembers.get(socket.id);
+    if (!member) return;
+    Object.assign(member, cleanCallState(state));
+    sendCall();
+  });
+
+  socket.on("call:signal", (msg) => {
+    if (!msg || !callMembers.has(socket.id) || !callMembers.has(msg.to)) return;
+    if (JSON.stringify(msg).length > 100 * 1024) return;
+    io.to(msg.to).emit("call:signal", { from: socket.id, description: msg.description, candidate: msg.candidate });
+  });
+
+  function leaveCall() {
+    const member = callMembers.get(socket.id);
+    if (!member) return;
+    callMembers.delete(socket.id);
+    pushMessage({ type: "sys", text: `${member.nick} saiu da chamada`, ts: Date.now() });
+    sendCall();
+  }
+  socket.on("call:leave", leaveCall);
+
   socket.on("disconnect", () => {
+    leaveCall();
     const nick = online.get(socket.id);
     if (!nick) return;
     online.delete(socket.id);
