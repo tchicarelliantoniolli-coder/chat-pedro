@@ -82,7 +82,21 @@
     micAnalyser = ctx.createAnalyser();
     micAnalyser.fftSize = 512;
   }
-  const micTrack = () => micDest && micDest.stream.getAudioTracks()[0];
+  // Com o volume em 100% o microfone vai direto para a call (o jeito mais confiavel);
+  // com outro volume ele passa pelo ajuste do navegador
+  const rawTrack = () => micRaw && micRaw.getAudioTracks()[0];
+  const useRaw = () => prefs.micGain === 100 || !micDest;
+  const micTrack = () => (useRaw() ? rawTrack() : micDest.stream.getAudioTracks()[0]) || null;
+  const micStream = () => (useRaw() ? micRaw : micDest.stream);
+  // troca o som enviado para todo mundo sem refazer a conexao
+  function syncMicTrack() {
+    const t = micTrack();
+    for (const p of peers.values()) {
+      if (p.micSender) { if (p.micSender.track !== t) p.micSender.replaceTrack(t).catch(() => {}); }
+      else if (t) p.micSender = p.pc.addTrack(t, micStream());
+    }
+    applyMic();
+  }
 
   function level(analyser) {
     const buf = new Uint8Array(analyser.fftSize);
@@ -95,7 +109,7 @@
   // ---------- conexoes com os outros ----------
   function localTracks() {
     const out = [];
-    if (micTrack()) out.push([micTrack(), micDest.stream]);
+    if (micTrack()) out.push([micTrack(), micStream()]);
     if (camStream) out.push([camStream.getVideoTracks()[0], camStream]);
     if (screenStream) out.push([screenStream.getVideoTracks()[0], screenStream]);
     return out;
@@ -107,7 +121,11 @@
     const pc = new RTCPeerConnection(iceConfig());
     p = { pc, polite: socket.id < id, makingOffer: false, ignoreOffer: false, streams: {}, audio: null, senders: new Map(), analyser: null };
     peers.set(id, p);
-    for (const [track, stream] of localTracks()) p.senders.set(track.id, pc.addTrack(track, stream));
+    for (const [track, stream] of localTracks()) {
+      const sender = pc.addTrack(track, stream);
+      p.senders.set(track.id, sender);
+      if (track.kind === "audio") p.micSender = sender;
+    }
 
     pc.onnegotiationneeded = async () => {
       try {
@@ -379,7 +397,7 @@
     prefs.micId = e.target.value; store.set("cp-mic", prefs.micId);
     if (!inCall && !preview) return;
     lastHeard = Date.now();
-    try { await startMic(); applyMic(); } // o som enviado passa pelo mesmo ganho, sem renegociar
+    try { await startMic(); syncMicTrack(); }
     catch { setNote("ERRO: não deu para usar esse microfone.", true); }
   });
   $("camSelect").addEventListener("change", async (e) => {
@@ -402,6 +420,7 @@
     prefs.micGain = Number(e.target.value); store.set("cp-micgain", prefs.micGain);
     $("micGainVal").textContent = prefs.micGain + "%";
     if (micGain) micGain.gain.value = prefs.micGain / 100;
+    syncMicTrack(); // 100% vai direto; outro valor passa pelo ajuste
   });
   $("master").value = prefs.master;
   $("masterVal").textContent = prefs.master + "%";
@@ -579,7 +598,11 @@
   // ---------- apertar para falar ----------
   let pttHeld = false;
   const micLive = () => micOn && (!prefs.ptt || pttHeld);
-  function applyMic() { if (micTrack()) micTrack().enabled = micLive(); }
+  function applyMic() {
+    const t = micTrack();
+    if (rawTrack() && t !== rawTrack()) rawTrack().enabled = true; // o ajuste de volume precisa do som cru ligado
+    if (t) t.enabled = micLive();
+  }
   function setPtt(held) {
     if (pttHeld === held) return;
     pttHeld = held;
