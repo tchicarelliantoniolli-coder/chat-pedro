@@ -13,6 +13,9 @@ const MAX_IMAGES_KEPT = 40; // fotos mais antigas que isso saem do historico par
 const IMAGE_RE = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_AVATAR = 60 * 1024; // foto de perfil ja vem pequena (48x48) do navegador
 const MAX_AVATARS_KEPT = 200;
+// Senha do ADM: fica nas variaveis de ambiente do Render (o codigo no GitHub e publico).
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+const LOGIN_TRIES = 5; // tentativas erradas por endereco a cada 10 minutos
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +30,8 @@ const avatars = new Map(); // apelido em minusculas -> foto de perfil
 // Chamada: o servidor so guarda quem esta nela e repassa os sinais de conexao.
 // Audio e video vao direto de navegador para navegador (WebRTC).
 const callMembers = new Map(); // socket.id -> { id, nick, mic, deaf, cam, screen }
+const admins = new Set(); // socket.id de quem entrou com a senha de ADM
+const failedLogins = new Map(); // endereco -> { count, until }
 
 function cleanNick(nick) {
   return String(nick || "").replace(/\s+/g, " ").trim().slice(0, MAX_NICK);
@@ -42,7 +47,13 @@ function pushMessage(msg) {
 
 const poker = createPoker(io, {
   nickOf: (id) => online.get(id),
+  isAdmin: (id) => admins.has(id),
 });
+
+function clientAddress(socket) {
+  const fwd = socket.handshake.headers["x-forwarded-for"]; // o Render fica na frente do servidor
+  return (fwd ? String(fwd).split(",")[0] : socket.handshake.address).trim();
+}
 
 function sendCall() {
   io.emit("call:members", [...callMembers.values()]);
@@ -114,6 +125,32 @@ io.on("connection", (socket) => {
     io.emit("avatar", { nick: key, src: data });
   });
 
+  socket.on("admin:login", (password, reply) => {
+    if (typeof reply !== "function") return;
+    if (!ADMIN_PASSWORD) return reply({ ok: false, error: "O ADM ainda nao foi configurado no servidor." });
+    const addr = clientAddress(socket);
+    const now = Date.now();
+    const fail = failedLogins.get(addr);
+    if (fail && fail.count >= LOGIN_TRIES && fail.until > now) {
+      return reply({ ok: false, error: "Muitas tentativas erradas. Espere " + Math.ceil((fail.until - now) / 60000) + " min." });
+    }
+    if (String(password) !== ADMIN_PASSWORD) {
+      const f = fail && fail.until > now ? fail : { count: 0, until: now + 10 * 60000 };
+      f.count++;
+      failedLogins.set(addr, f);
+      return reply({ ok: false, error: "Senha errada." });
+    }
+    failedLogins.delete(addr);
+    admins.add(socket.id);
+    reply({ ok: true });
+    poker.broadcast();
+  });
+
+  socket.on("admin:logout", () => {
+    admins.delete(socket.id);
+    poker.broadcast();
+  });
+
   socket.on("call:join", (state, reply) => {
     const nick = online.get(socket.id);
     if (!nick || typeof reply !== "function") return;
@@ -146,6 +183,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     leaveCall();
+    admins.delete(socket.id);
     const nick = online.get(socket.id);
     if (!nick) return;
     online.delete(socket.id);

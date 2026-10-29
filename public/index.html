@@ -259,6 +259,21 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .invite .t small { display: block; color: var(--dim); font-size: 17px; }
 .invite .row { display: flex; gap: 16px; }
 .seat .nm .crown { color: #ffd84d; }
+.seat .act.lose { background: var(--err); color: #000; }
+#fodeu {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  background: rgba(40, 0, 0, 0.55); pointer-events: auto; cursor: pointer;
+}
+#fodeu span {
+  font-family: var(--pixel); font-size: clamp(28px, 9vw, 96px); color: var(--err); text-align: center;
+  text-shadow: 4px 4px 0 #000, -2px -2px 0 #000; padding: 0 16px;
+}
+#fodeu.go span { animation: fodeu 0.5s steps(3) 3; }
+@keyframes fodeu { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-8px, 4px) rotate(-2deg); } 75% { transform: translate(8px, -4px) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { #fodeu.go span { animation: none; } }
+#admBtn { color: var(--dim); }
+#admBtn.on { color: #ffd84d; }
+.modal input[type=password] { font: inherit; color: var(--fg); background: #000; border: 1px solid var(--dim); padding: 2px 6px; }
 #actList li { display: flex; gap: 8px; align-items: center; color: var(--dim); flex-wrap: wrap; justify-content: space-between; }
 
 @container (max-width: 520px) {
@@ -298,6 +313,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   <button type="button" class="cmd" id="pokerBtn" hidden>[POKER]</button>
   <button type="button" class="cmd" id="callBtn" hidden>[CALL]</button>
   <button type="button" class="cmd" id="onlineBtn" aria-controls="sidebar">[ONLINE 0]</button>
+  <button type="button" class="cmd" id="admBtn" title="Area do ADM">[ADM]</button>
 </header>
 
 <div class="app">
@@ -354,6 +370,21 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 </div>
 
 <div id="invites" aria-live="polite"></div>
+<div id="fodeu" hidden role="alert"><span>SE FODEU</span></div>
+
+<div class="modal" id="admModal" hidden>
+  <form class="box" id="admForm" role="dialog" aria-labelledby="admTitle">
+    <div class="row"><h3 id="admTitle">ADM</h3><button type="button" class="cmd" id="admClose">[X]</button></div>
+    <div id="admIn">
+      <label>Senha
+        <input type="password" id="admPass" autocomplete="current-password" inputmode="numeric">
+      </label>
+    </div>
+    <div id="admOut" hidden style="color: var(--dim)">Voce e o ADM: controla a mesa de poker (trancar, aceitar quem entra e quem quer fichas novas).</div>
+    <p id="admMsg" style="margin: 0; color: var(--err)"></p>
+    <div class="row"><span></span><button type="submit" class="cmd" id="admGo">[ENTRAR]</button></div>
+  </form>
+</div>
 
 <div class="modal" id="settings" hidden>
   <div class="box" role="dialog" aria-labelledby="setTitle">
@@ -627,8 +658,48 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
   viewer.addEventListener("click", () => { viewer.hidden = true; });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { viewer.hidden = true; $("settings").hidden = true; document.body.classList.remove("drawer"); }
+    if (e.key === "Escape") { viewer.hidden = true; $("settings").hidden = true; $("admModal").hidden = true; document.body.classList.remove("drawer"); }
   });
+
+  // ADM: a senha so e conferida no servidor; fica guardada aqui para reconectar sozinho
+  let admPass = store.get("chatpedro-adm");
+  let isAdmin = false;
+  function admUI() {
+    $("admBtn").textContent = isAdmin ? "[ADM \u2605]" : "[ADM]";
+    $("admBtn").classList.toggle("on", isAdmin);
+    $("admIn").hidden = isAdmin; $("admOut").hidden = !isAdmin;
+    $("admGo").textContent = isAdmin ? "[SAIR DO ADM]" : "[ENTRAR]";
+  }
+  function admLogin(pass, quiet) {
+    socket.emit("admin:login", pass, (r) => {
+      if (r && r.ok) {
+        isAdmin = true; admPass = pass; store.set("chatpedro-adm", pass);
+        $("admModal").hidden = true; $("admMsg").textContent = "";
+        if (!quiet) setNote("Voce entrou como ADM.");
+      } else {
+        isAdmin = false;
+        if (quiet) { admPass = null; store.set("chatpedro-adm", ""); }
+        else $("admMsg").textContent = (r && r.error) || "Nao deu para entrar.";
+      }
+      admUI();
+    });
+  }
+  socket.on("connect", () => { if (admPass) admLogin(admPass, true); });
+  $("admBtn").addEventListener("click", () => {
+    $("admModal").hidden = false; $("admMsg").textContent = ""; $("admPass").value = "";
+    if (!isAdmin) setTimeout(() => $("admPass").focus(), 0);
+  });
+  $("admClose").addEventListener("click", () => { $("admModal").hidden = true; });
+  $("admForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (isAdmin) {
+      socket.emit("admin:logout"); isAdmin = false; admPass = null; store.set("chatpedro-adm", "");
+      $("admModal").hidden = true; admUI(); return;
+    }
+    const pass = $("admPass").value.trim();
+    if (pass) admLogin(pass, false);
+  });
+  admUI();
 
   window.ChatPedro = {
     socket, avatar, setNote, store, renderPeople,

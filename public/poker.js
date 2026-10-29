@@ -64,14 +64,11 @@
       if (!s) {
         seat.classList.add("empty");
         if (st.mySeat < 0 && app.nick && !st.myRequest) {
-          const ask = st.locked && !st.isOwner;
+          const ask = (st.locked || st.busted) && !st.isAdmin;
           const b = el("button", "", ask ? "[PEDIR]" : "[SENTAR]");
           b.type = "button";
-          b.title = ask ? "A mesa esta trancada: o dono precisa aceitar" : "Sentar neste lugar";
-          b.addEventListener("click", () => socket.emit("poker:sit", i, (r) => {
-            if (r && r.pending) setNote("Pedido enviado. Esperando " + (st.ownerNick || "o dono") + " aceitar.");
-            else if (r && !r.ok) setNote("ERRO: " + r.error, true);
-          }));
+          b.title = ask ? "O ADM precisa aceitar" : "Sentar neste lugar";
+          b.addEventListener("click", () => socket.emit("poker:sit", i, done));
           seat.append(b);
         } else seat.append(el("span", "", "vazio"));
         felt.append(seat);
@@ -86,12 +83,13 @@
       const box = el("div", "box");
       const info = el("div", "info");
       const nm = el("div", "nm", s.nick + (i === st.mySeat ? " (voce)" : ""));
-      if (s.owner) { const c = el("span", "crown", " \u2605"); c.title = "Dono da mesa"; nm.prepend(c); }
+      if (s.admin) { const c = el("span", "crown", "\u2605 "); c.title = "ADM"; nm.prepend(c); }
       info.append(nm, el("div", "ch", s.allIn && s.chips === 0 ? "ALL-IN" : s.chips + ""));
       box.append(avatar(s.nick), info);
       seat.append(box);
       if (st.toAct === i) { const tm = el("div", "timer"); tm.append(el("i")); seat.append(tm); }
-      if (s.lastAction) seat.append(el("div", "act", s.lastAction));
+      if (st.result && st.result.losers && st.result.losers.includes(s.nick)) seat.append(el("div", "act lose", "SE FODEU"));
+      else if (s.lastAction) seat.append(el("div", "act", s.lastAction));
       felt.append(seat);
 
       if (s.bet > 0) {
@@ -168,20 +166,16 @@
     bar.replaceChildren();
     const me = st.mySeat >= 0 ? st.seats[st.mySeat] : null;
     const cmd = (text, fn, cls) => { const b = el("button", "cmd" + (cls ? " " + cls : ""), text); b.type = "button"; b.addEventListener("click", fn); return b; };
-    const done = (r) => {
-      if (r && r.pending) setNote("Pedido enviado. Esperando " + (st.ownerNick || "o dono") + " aceitar.");
-      else if (r && !r.ok) setNote("ERRO: " + r.error, true);
-    };
-
     if (st.myRequest) {
-      bar.append(el("span", "", "esperando " + (st.ownerNick || "o dono") + (st.myRequest === "rebuy" ? " liberar a recompra" : " aceitar voce")));
+      bar.append(el("span", "", "esperando o ADM " + (st.myRequest === "rebuy" ? "liberar fichas novas" : "aceitar voce") + (st.adminOnline ? "" : " (nenhum ADM online agora)")));
       bar.append(cmd("[CANCELAR]", () => socket.emit("poker:cancel")));
     } else if (!me) {
       bar.append(el("span", "", !app.nick ? "escolha um apelido para jogar"
-        : st.locked && !st.isOwner ? "mesa trancada: clique em [PEDIR] num lugar" : "clique em [SENTAR] num lugar vazio"));
+        : st.busted && !st.isAdmin ? "voce perdeu tudo: clique em [PEDIR] para o ADM liberar fichas novas"
+        : st.locked && !st.isAdmin ? "mesa trancada: clique em [PEDIR] num lugar" : "clique em [SENTAR] num lugar vazio"));
     } else {
       if (me.chips < st.blinds[1] && !(me.inHand && st.stage !== "waiting")) {
-        bar.append(cmd(st.locked && !st.isOwner ? "[PEDIR RECOMPRA]" : "[RECOMPRAR " + st.startChips + "]", () => socket.emit("poker:rebuy", done)));
+        bar.append(cmd(st.isAdmin ? "[RECOMPRAR " + st.startChips + "]" : "[PEDIR FICHAS AO ADM]", () => socket.emit("poker:rebuy", done)));
       }
       bar.append(me.sittingOut
         ? cmd("[VOLTAR]", () => socket.emit("poker:away", false, done), "on")
@@ -189,21 +183,26 @@
       bar.append(cmd(me.leaving ? "[SAINDO...]" : "[LEVANTAR]", () => socket.emit("poker:stand", done)));
     }
     bar.append(el("span", "spacer"));
-    if (st.isOwner) {
+    if (st.isAdmin) {
       bar.append(cmd(st.locked ? "[DESTRANCAR MESA]" : "[TRANCAR MESA]", () => socket.emit("poker:lock", !st.locked), st.locked ? "on" : ""));
     }
     const log = $("dealerlog");
     bar.append(cmd(log.hidden ? "[HISTORICO]" : "[ESCONDER HISTORICO]", () => { log.hidden = !log.hidden; renderBar(); log.scrollTop = log.scrollHeight; }));
   }
 
-  // Convites para o dono: aparecem em qualquer tela, mesmo com o poker fechado
+  function done(r) {
+    if (r && r.pending) setNote("Pedido enviado. Esperando o ADM aceitar.");
+    else if (r && !r.ok) setNote("ERRO: " + r.error, true);
+  }
+
+  // Pedidos para o ADM: aparecem em qualquer tela, mesmo com o poker fechado
   function renderInvites() {
     const box = $("invites");
-    const reqs = st && st.isOwner ? st.requests : [];
+    const reqs = st && st.isAdmin ? st.requests : [];
     box.replaceChildren(...reqs.map((r) => {
       const card = el("div", "invite");
-      const tx = el("div", "t", r.nick + (r.type === "rebuy" ? " quer recomprar " + st.startChips + " fichas" : " quer entrar na mesa"));
-      tx.append(el("small", "", "a mesa de poker esta trancada"));
+      const tx = el("div", "t", r.nick + (r.type === "rebuy" ? " quer " + st.startChips + " fichas novas" : " quer entrar na mesa"));
+      tx.append(el("small", "", r.type === "rebuy" ? "perdeu tudo no poker" : "a mesa de poker esta trancada"));
       const row = el("div", "row");
       const yes = el("button", "cmd", "[ACEITAR]"); yes.type = "button";
       const no = el("button", "cmd danger", "[RECUSAR]"); no.type = "button";
@@ -232,13 +231,25 @@
 
   socket.on("poker:state", (s) => {
     const wasMyTurn = st && st.me;
+    const prevResult = st && st.result;
     st = s;
     clockSkew = s.serverNow - Date.now();
+    // perdeu um all-in: aviso na tela inteira por alguns segundos
+    if (s.result && !prevResult && app.nick && (s.result.losers || []).includes(app.nick)) fodeu();
     sidebar();
     renderInvites();
     if (!$("activity").hidden) render();
     if (s.me && !wasMyTurn && $("activity").hidden) setNote("[POKER] Sua vez de jogar! Clique em [POKER] la em cima.");
   });
+
+  function fodeu() {
+    const box = $("fodeu");
+    box.hidden = false;
+    box.classList.remove("go"); void box.offsetWidth; box.classList.add("go");
+    clearTimeout(fodeu.t);
+    fodeu.t = setTimeout(() => { box.hidden = true; }, 4000);
+  }
+  $("fodeu").addEventListener("click", () => { $("fodeu").hidden = true; });
 
   function open() {
     $("activity").hidden = false;

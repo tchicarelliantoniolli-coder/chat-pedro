@@ -95,8 +95,10 @@ function handName(v) {
 // ---------- mesa ----------
 function createPoker(io, helpers, timing) {
   if (timing) ({ TURN_MS = TURN_MS, AWAY_TURN_MS = AWAY_TURN_MS, NEXT_HAND_MS = NEXT_HAND_MS, RUNOUT_MS = RUNOUT_MS } = timing); // usado nos testes
-  const { nickOf } = helpers; // nickOf(socket.id) -> apelido ou undefined
-  const bank = new Map(); // apelido(minusculo) -> fichas guardadas quando a pessoa levanta
+  // nickOf(socket.id) -> apelido; isAdmin(socket.id) -> entrou com a senha de ADM
+  const { nickOf, isAdmin } = helpers;
+  const adminKeys = () => new Set([...io.sockets.sockets.values()].filter((x) => isAdmin(x.id)).map((x) => (nickOf(x.id) || "").toLowerCase()));
+  const bank = new Map(); // apelido(minusculo) -> fichas guardadas quando a pessoa levanta (0 = perdeu tudo)
 
   const t = {
     seats: Array(SEATS).fill(null),
@@ -112,8 +114,9 @@ function createPoker(io, helpers, timing) {
     result: null,
     log: [],
     sb: -1, bb: -1,
-    owner: null,        // quem criou a mesa (primeiro a sentar); continua dono mesmo sem jogar
-    locked: false,      // trancada: quem nao e o dono precisa de permissao para sentar ou recomprar
+    // So o ADM manda na mesa. Trancada: ninguem novo senta sem o ADM aceitar.
+    // Recomprar (ou voltar depois de perder tudo) sempre precisa do aceite do ADM.
+    locked: false,
     requests: new Map(), // apelido(minusculo) -> { nick, type: "sit" | "rebuy", seat }
   };
   let timer = null;
@@ -378,7 +381,9 @@ function createPoker(io, helpers, timing) {
       if (pot.players.length === 1) say(winners[0].nick + " recebe de volta " + pot.amount + " nao pago");
       else say(winners.map((w) => w.nick).join(" e ") + " ganha" + (winners.length > 1 ? "m" : "") + " o " + label + " (" + pot.amount + ") com " + winners[0].best.name);
     });
-    t.result = { winners: [...totals].map(([w, amt]) => ({ nick: w.nick, amount: amt, hand: w.best.name })) };
+    t.result = { winners: [...totals].map(([w, amt]) => ({ nick: w.nick, amount: amt, hand: w.best.name })), losers: [] };
+    // All-in pago: quem foi ate o fim e nao levou nada "se fodeu"
+    if (live.some((p) => p.allIn)) t.result.losers = live.filter((p) => !totals.has(p)).map((p) => p.nick);
     finishHand();
   }
 
@@ -409,20 +414,22 @@ function createPoker(io, helpers, timing) {
     const mySeat = key ? seatOfKey(key) : -1;
     const me = mySeat >= 0 ? t.seats[mySeat] : null;
     const collected = t.seats.reduce((n, p) => n + (p ? p.total - p.bet : 0), 0);
+    const admins = adminKeys();
+    const amAdmin = isAdmin(socketId);
     const view = {
       seats: t.seats.map((p, i) => p && {
         seat: i, nick: p.nick, chips: p.chips, bet: p.bet, folded: p.folded, allIn: p.allIn, inHand: p.inHand,
         sittingOut: p.sittingOut, leaving: p.leaving, lastAction: p.lastAction,
         cards: p.inHand ? (p.key === key || p.shown ? p.hole : p.folded ? [] : ["??", "??"]) : [],
-        best: p.shown && p.best ? p.best.cards : null, owner: p.key === t.owner,
+        best: p.shown && p.best ? p.best.cards : null, admin: admins.has(p.key),
       }),
       board: t.board, stage: t.stage, button: t.button, sb: t.sb, bb: t.bb, toAct: t.toAct, turnEndsAt: t.turnEndsAt,
       turnMs: TURN_MS, pot: collected, handNo: t.handNo, result: t.result, log: t.log,
       blinds: [SMALL_BLIND, BIG_BLIND], startChips: START_CHIPS, mySeat, serverNow: Date.now(),
-      locked: t.locked, isOwner: !!key && key === t.owner,
-      ownerNick: t.owner ? (t.seats.find((p) => p && p.key === t.owner) || {}).nick || [...io.sockets.sockets.values()].map((x) => nickOf(x.id)).find((n) => n && keyOf(n) === t.owner) || null : null,
+      locked: t.locked, isAdmin: amAdmin, adminOnline: admins.size > 0,
+      busted: !!key && bank.get(key) === 0 && mySeat < 0,
       myRequest: key && t.requests.has(key) ? t.requests.get(key).type : null,
-      requests: key && key === t.owner ? [...t.requests].map(([k, r]) => ({ key: k, nick: r.nick, type: r.type })) : [],
+      requests: amAdmin ? [...t.requests].map(([k, r]) => ({ key: k, nick: r.nick, type: r.type })) : [],
     };
     if (me && t.toAct === mySeat) {
       const toCall = Math.min(t.currentBet - me.bet, me.chips);
@@ -460,10 +467,10 @@ function createPoker(io, helpers, timing) {
         t.seats[seat] = t.seats[already]; t.seats[already] = null;
         reply(cb); broadcast(); return;
       }
-      if (!t.seats.some(Boolean) && !(t.owner && isOnline(t.owner))) { t.owner = key; t.locked = false; t.requests.clear(); }
-      if (t.locked && key !== t.owner) {
-        t.requests.set(key, { nick, type: "sit", seat });
-        say(nick + " pediu para entrar");
+      const lost = bank.get(key) === 0; // perdeu tudo e saiu: voltar e uma recompra
+      if (!isAdmin(socket.id) && (t.locked || lost)) {
+        t.requests.set(key, { nick, type: lost ? "rebuy" : "sit", seat });
+        say(nick + (lost ? " pediu para voltar com fichas novas" : " pediu para entrar"));
         if (typeof cb === "function") cb({ ok: false, pending: true });
         broadcast(); return;
       }
@@ -477,15 +484,16 @@ function createPoker(io, helpers, timing) {
     });
 
     socket.on("poker:lock", (locked) => {
-      const nick = nickNow(); if (!nick || keyOf(nick) !== t.owner) return;
+      if (!isAdmin(socket.id)) return;
       t.locked = !!locked;
-      say(t.locked ? "A mesa foi trancada pelo dono" : "A mesa foi aberta pelo dono");
-      if (!t.locked) for (const k of [...t.requests.keys()]) approve(k); // abrir a mesa aceita quem estava esperando
+      say(t.locked ? "O ADM trancou a mesa" : "O ADM abriu a mesa");
+      // abrir a mesa aceita quem so queria sentar; recompras continuam esperando o ADM
+      if (!t.locked) for (const [k, r] of [...t.requests]) if (r.type === "sit") approve(k);
       broadcast();
     });
 
     socket.on("poker:answer", (msg) => {
-      const nick = nickNow(); if (!nick || keyOf(nick) !== t.owner || !msg) return;
+      if (!isAdmin(socket.id) || !msg) return;
       const req = t.requests.get(String(msg.key));
       if (!req) return;
       if (msg.accept) approve(String(msg.key));
@@ -542,7 +550,7 @@ function createPoker(io, helpers, timing) {
       const p = t.seats[s];
       if (p.inHand && t.stage !== "waiting") return reply(cb, "Espere a mao acabar.");
       if (p.chips >= BIG_BLIND) return reply(cb, "Voce ainda tem fichas.");
-      if (t.locked && key !== t.owner) {
+      if (!isAdmin(socket.id)) {
         t.requests.set(key, { nick, type: "rebuy", seat: s });
         say(nick + " pediu para recomprar");
         if (typeof cb === "function") cb({ ok: false, pending: true });
@@ -575,9 +583,9 @@ function createPoker(io, helpers, timing) {
     const req = t.requests.get(key);
     t.requests.delete(key);
     if (!req || !isOnline(key)) return;
-    if (req.type === "sit") {
+    if (req.type === "sit" || seatOfKey(key) < 0) {
       if (!t.seats.some((x) => !x)) { say("Mesa cheia: " + req.nick + " nao conseguiu sentar"); return; }
-      doSit(key, req.nick, req.seat);
+      doSit(key, req.nick, req.seat); // quem tinha perdido tudo volta com fichas novas
     } else {
       const s = seatOfKey(key);
       const p = s >= 0 ? t.seats[s] : null;
@@ -585,20 +593,10 @@ function createPoker(io, helpers, timing) {
     }
   }
 
-  // Dono saiu do site: a mesa passa para alguem que esta jogando (ou fica sem dono)
-  function checkOwner() {
-    if (!t.owner || isOnline(t.owner)) return;
-    const next = t.seats.find((p) => p && isOnline(p.key));
-    t.owner = next ? next.key : null;
-    if (next) say(next.nick + " agora e o dono da mesa");
-    else { t.locked = false; t.requests.clear(); }
-  }
-
   // Quando alguem troca de apelido, o lugar acompanha
   function rename(oldNick, newNick) {
     const s = seatOfKey(keyOf(oldNick));
     if (s >= 0) { t.seats[s].nick = newNick; t.seats[s].key = keyOf(newNick); }
-    if (t.owner === keyOf(oldNick)) t.owner = keyOf(newNick);
     const req = t.requests.get(keyOf(oldNick));
     if (req) { t.requests.delete(keyOf(oldNick)); t.requests.set(keyOf(newNick), { ...req, nick: newNick }); }
     broadcast();
@@ -612,7 +610,6 @@ function createPoker(io, helpers, timing) {
       const p = t.seats[s];
       if (!p.inHand || t.stage === "waiting") { bank.set(p.key, p.chips); t.seats[s] = null; say(p.nick + " saiu da mesa"); }
     }
-    setTimeout(() => { checkOwner(); broadcast(); }, 20000); // tempo para quem so recarregou a pagina voltar
     broadcast();
   }
 
