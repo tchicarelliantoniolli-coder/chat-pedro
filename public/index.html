@@ -124,7 +124,22 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
   display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;
 }
 .tile.speaking { border-color: var(--fg); box-shadow: 0 0 0 2px var(--fg); }
-.tile.focus { grid-column: 1 / -1; }
+.tile.focus { grid-column: 1 / -1; aspect-ratio: auto; height: min(52vh, 56vw); }
+.tile.focus video { object-fit: contain; }
+.tile .full {
+  position: absolute; top: 6px; left: 6px; background: rgba(0, 0, 0, 0.75); padding: 0 6px; font-size: 18px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.tile:hover .full, .tile .full:focus-visible, .tile.focus .full, .tile.screen .full { opacity: 1; }
+@media (hover: none) { .tile .full { opacity: 1; } }
+.tile:fullscreen, .tile.theater {
+  position: fixed; inset: 0; z-index: 35; width: 100%; height: 100%; max-width: none; aspect-ratio: auto;
+  border: 0; box-shadow: none; background: #000; cursor: default;
+}
+.tile.theater { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+.tile:fullscreen video, .tile.theater video { object-fit: contain; }
+.tile:fullscreen .full, .tile.theater .full { opacity: 1; top: 12px; left: 12px; font-size: 22px; }
+.tile:fullscreen .label, .tile.theater .label { bottom: 12px; left: 12px; }
 .tile video { width: 100%; height: 100%; object-fit: cover; background: #000; }
 .tile.screen video { object-fit: contain; }
 .tile video.mirror { transform: scaleX(-1); }

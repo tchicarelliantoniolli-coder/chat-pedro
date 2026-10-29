@@ -331,10 +331,15 @@
       el = document.createElement("div");
       el.className = "tile";
       el.addEventListener("click", (e) => {
-        if (e.target.closest(".vol")) return;
+        if (e.target.closest(".vol, .full") || isFull(el)) return;
         focused.has(key) ? focused.delete(key) : focused.add(key);
         el.classList.toggle("focus", focused.has(key));
       });
+      el.addEventListener("dblclick", (e) => { if (!e.target.closest(".vol, .full")) toggleFull(el); });
+      const fb = document.createElement("button");
+      fb.type = "button"; fb.className = "cmd full"; fb.textContent = "[TELA CHEIA]";
+      fb.addEventListener("click", (e) => { e.stopPropagation(); toggleFull(el); });
+      el.append(fb);
       tiles.set(key, el);
     }
     el.classList.toggle("screen", !!opts.screen);
@@ -382,6 +387,29 @@
     return el;
   }
 
+  // Tela cheia: usa a do navegador; onde ela nao existe (iPhone), o quadro cobre a pagina
+  const fullEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const isFull = (el) => fullEl() === el || el.classList.contains("theater");
+  function toggleFull(el) {
+    if (fullEl() === el) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    if (el.classList.contains("theater")) { el.classList.remove("theater"); syncFullButtons(); return; }
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    const theater = () => { el.classList.add("theater"); syncFullButtons(); };
+    if (!req) return theater();
+    try { const r = req.call(el); if (r && r.catch) r.catch(theater); } catch { theater(); }
+  }
+  function syncFullButtons() {
+    for (const el of tiles.values()) {
+      const b = el.querySelector(".full");
+      if (b) b.textContent = isFull(el) ? "[SAIR DA TELA CHEIA]" : "[TELA CHEIA]";
+    }
+  }
+  document.addEventListener("fullscreenchange", syncFullButtons);
+  document.addEventListener("webkitfullscreenchange", syncFullButtons);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") for (const el of tiles.values()) if (el.classList.contains("theater")) { el.classList.remove("theater"); syncFullButtons(); }
+  });
+
   function renderTiles() {
     if (!inCall) return;
     const want = [];
@@ -397,7 +425,11 @@
       if (scr) want.push(videoTile(m.id + ":screen", scr, { id: m.id, nick: m.nick, title: "Tela de " + m.nick + (me ? " (voce)" : ""), screen: true }));
     }
     for (const [key, el] of tiles) if (!want.includes(el)) { el.remove(); tiles.delete(key); focused.delete(key); }
-    $("tiles").replaceChildren(...want);
+    // so mexe na ordem quando ela muda de verdade: tirar um quadro da pagina fecha a tela cheia dele
+    const box = $("tiles"), cur = [...box.children];
+    if (cur.length !== want.length || cur.some((el, i) => el !== want[i])) box.replaceChildren(...want);
+    for (const v of box.querySelectorAll("video")) if (v.paused) v.play().catch(() => {});
+    syncFullButtons();
   }
 
   function renderSidebar() {
