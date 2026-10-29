@@ -18,6 +18,7 @@
   color-scheme: dark;
 }
 html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--fg); font-family: var(--mono); font-size: 22px; line-height: 1.2;
   display: flex; flex-direction: column;
@@ -45,6 +46,23 @@ textarea {
 }
 textarea::placeholder { color: var(--dim); }
 #note { color: var(--dim); min-height: 1.2em; margin: 4px 0 0; }
+#photoBtn {
+  all: unset; cursor: pointer; color: var(--bright); white-space: pre; margin-left: 8px;
+}
+#photoBtn:hover, #photoBtn:focus-visible { color: var(--bg); background: var(--fg); }
+.pic { display: block; margin: 4px 0 6px; }
+.pic img {
+  display: block; max-width: min(280px, 100%); max-height: 320px; border: 2px solid var(--dim);
+  cursor: zoom-in; background: #111;
+}
+.pic img:hover { border-color: var(--fg); }
+#viewer {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); display: flex; align-items: center;
+  justify-content: center; z-index: 20; cursor: zoom-out;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+#viewer img { max-width: 100%; max-height: 100%; border: 2px solid var(--fg); }
+body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
 #note.err { color: var(--err); }
 </style>
 </head>
@@ -60,9 +78,13 @@ textarea::placeholder { color: var(--dim); }
   <form id="form">
     <span class="ps1" id="ps1">apelido: </span>
     <textarea id="input" rows="1" placeholder="digite seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
+    <button type="button" id="photoBtn" title="Enviar foto" hidden>[FOTO]</button>
+    <input type="file" id="file" accept="image/*" hidden>
   </form>
   <p id="note">Escolha um apelido e aperte ENTER</p>
 </div></footer>
+
+<div id="viewer" hidden><img alt="Foto em tamanho grande"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -72,7 +94,7 @@ textarea::placeholder { color: var(--dim); }
   const socket = io();
   let nick = null, users = [];
 
-  const HELP = "ENTER envia | SHIFT+ENTER nova linha | /nick NOVO muda o apelido | /quem lista quem esta online | /limpar limpa a tela";
+  const HELP = "ENTER envia | [FOTO] ou cole/arraste uma imagem | /nick NOVO muda o apelido | /quem lista quem esta online | /limpar limpa a tela";
   const setNote = (text, err) => { note.textContent = text; note.classList.toggle("err", !!err); };
   const pad = (n) => String(n).padStart(2, "0");
   const fmtTime = (ts) => { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
@@ -87,6 +109,17 @@ textarea::placeholder { color: var(--dim); }
     l.className = "line";
     l.append(span("time", "[" + fmtTime(m.ts) + "] "));
     if (m.type === "sys") l.append(span("sys", "*** " + m.text));
+    else if (m.type === "img") {
+      const box = document.createElement("span");
+      box.className = "pic";
+      const img = document.createElement("img");
+      img.alt = "Foto de " + m.nick;
+      img.src = m.src;
+      img.addEventListener("load", () => { if (atBottom) scroller.scrollTop = scroller.scrollHeight; });
+      img.addEventListener("click", () => openViewer(m.src));
+      box.append(img);
+      l.append(span("who", m.nick + "> "), box);
+    }
     else l.append(span("who", m.nick + "> "), document.createTextNode(m.text));
     log.append(l);
     if (atBottom) scroller.scrollTop = scroller.scrollHeight;
@@ -105,6 +138,7 @@ textarea::placeholder { color: var(--dim); }
       nick = res.nick;
       try { localStorage.setItem("chatpedro-nick", nick); } catch {}
       ps1.textContent = nick + "> ";
+      $("photoBtn").hidden = false;
       input.placeholder = "digite aqui_";
       setNote(HELP);
       updateStatus();
@@ -137,6 +171,68 @@ textarea::placeholder { color: var(--dim); }
   });
   socket.on("message", addLine);
   socket.on("users", (list) => { users = list; updateStatus(); });
+
+  // Fotos: reduz para no maximo 1280px e converte para JPEG antes de enviar.
+  // GIFs pequenos vao como estao para manter a animacao.
+  const MAX_SIDE = 1280, MAX_BYTES = 3 * 1024 * 1024;
+  const readAsDataURL = (file) => new Promise((ok, fail) => {
+    const r = new FileReader();
+    r.onload = () => ok(r.result); r.onerror = fail; r.readAsDataURL(file);
+  });
+  const loadImage = (src) => new Promise((ok, fail) => {
+    const img = new Image(); img.onload = () => ok(img); img.onerror = fail; img.src = src;
+  });
+
+  async function prepareImage(file) {
+    const raw = await readAsDataURL(file);
+    if (file.type === "image/gif" && raw.length < MAX_BYTES) return raw;
+    const img = await loadImage(raw);
+    const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); // fundo para PNG transparente
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    for (const q of [0.82, 0.7, 0.55, 0.4]) {
+      const out = canvas.toDataURL("image/jpeg", q);
+      if (out.length < MAX_BYTES) return out;
+    }
+    throw new Error("grande demais");
+  }
+
+  async function sendImage(file) {
+    if (!file || !file.type.startsWith("image/")) { setNote("ERRO: isso nao e uma imagem.", true); return; }
+    if (!nick) { setNote("Escolha um apelido antes de mandar foto.", true); return; }
+    if (!socket.connected) { setNote("ERRO: sem conexao. Espere reconectar.", true); return; }
+    setNote("enviando foto...");
+    try {
+      const data = await prepareImage(file);
+      socket.emit("image", data);
+      setNote(HELP);
+    } catch {
+      setNote("ERRO: nao deu para enviar essa foto. Tente outra.", true);
+    }
+  }
+
+  $("photoBtn").addEventListener("click", () => $("file").click());
+  $("file").addEventListener("change", (e) => { sendImage(e.target.files[0]); e.target.value = ""; });
+  input.addEventListener("paste", (e) => {
+    const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+    if (item) { e.preventDefault(); sendImage(item.getAsFile()); }
+  });
+  document.addEventListener("dragover", (e) => { e.preventDefault(); document.body.classList.add("dragging"); });
+  document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) document.body.classList.remove("dragging"); });
+  document.addEventListener("drop", (e) => {
+    e.preventDefault(); document.body.classList.remove("dragging");
+    const file = [...(e.dataTransfer?.files || [])].find((f) => f.type.startsWith("image/"));
+    if (file) sendImage(file);
+  });
+
+  const viewer = $("viewer");
+  function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
+  viewer.addEventListener("click", () => { viewer.hidden = true; });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") viewer.hidden = true; });
 
   function autosize() { input.style.height = "auto"; input.style.height = input.scrollHeight + "px"; }
   input.addEventListener("input", autosize);

@@ -7,10 +7,13 @@ const PORT = process.env.PORT || 3000;
 const MAX_HISTORY = 200; // quantas mensagens ficam guardadas na memoria
 const MAX_TEXT = 2000;
 const MAX_NICK = 20;
+const MAX_IMAGE = 3 * 1024 * 1024; // tamanho maximo da foto (ja comprimida) em bytes de texto
+const MAX_IMAGES_KEPT = 40; // fotos mais antigas que isso saem do historico para nao lotar a memoria
+const IMAGE_RE = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/;
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: MAX_IMAGE + 64 * 1024 });
 
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -25,6 +28,8 @@ function cleanNick(nick) {
 function pushMessage(msg) {
   history.push(msg);
   if (history.length > MAX_HISTORY) history.shift();
+  const images = history.filter((m) => m.type === "img");
+  if (images.length > MAX_IMAGES_KEPT) history.splice(history.indexOf(images[0]), 1);
   io.emit("message", msg);
 }
 
@@ -58,6 +63,16 @@ io.on("connection", (socket) => {
     if (now - lastSent < 300) return; // evita flood
     lastSent = now;
     pushMessage({ type: "msg", nick, text, ts: now });
+  });
+
+  socket.on("image", (data) => {
+    const nick = online.get(socket.id);
+    if (!nick || typeof data !== "string") return;
+    if (data.length > MAX_IMAGE || !IMAGE_RE.test(data)) return;
+    const now = Date.now();
+    if (now - lastSent < 1000) return;
+    lastSent = now;
+    pushMessage({ type: "img", nick, src: data, ts: now });
   });
 
   socket.on("disconnect", () => {
