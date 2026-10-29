@@ -42,11 +42,16 @@
     $("pttBtn").hidden = !(inCall && prefs.ptt);
     const min = $("call").classList.contains("min");
     setIcon($("minBtn"), min ? "chevron-down" : "chevron-up", min ? "Mostrar os vídeos" : "Esconder os vídeos");
-    const n = members.length;
-    setIcon($("callBtn"), "headphones", inCall ? "Você está na call (" + n + ")" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call", n || "");
-    $("callBtn").classList.toggle("on", inCall);
-    $("joinBtn").hidden = inCall || !app.nick;
-    $("callBtn").hidden = !app.nick;
+    // botao grande da call ao lado do nome do servidor
+    const n = members.length, cb = $("callBtn");
+    const txt = (cls, t) => { const s = document.createElement("span"); s.className = cls; s.textContent = t; return s; };
+    cb.replaceChildren(icon("headphones"), ...(inCall ? [txt("", "Na call")] : [txt("long", "Entrar na call"), txt("short", "Call")]));
+    if (n) cb.append(txt("cnt", n));
+    cb.classList.toggle("in", inCall);
+    cb.classList.toggle("busy", !inCall && n > 0); // tem gente conversando: o numero pulsa
+    const label = inCall ? "Você está na call com " + n + (n === 1 ? " pessoa" : " pessoas") + ". Clique para ver" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call";
+    cb.title = label; cb.setAttribute("aria-label", label);
+    cb.hidden = !app.nick;
   }
 
   // ---------- audio local ----------
@@ -454,14 +459,10 @@
   }
 
   function renderSidebar() {
-    $("callTitle").textContent = "CALL " + members.length;
+    $("callTitle").textContent = "NA CALL " + members.length;
+    $("callSect").hidden = !members.length;
     const ul = $("callPeople");
     ul.replaceChildren();
-    if (!members.length) {
-      const li = document.createElement("li");
-      li.style.color = "var(--dim)"; li.textContent = "vazia";
-      ul.append(li);
-    }
     for (const m of members) {
       const li = document.createElement("li");
       li.dataset.member = m.id;
@@ -649,7 +650,6 @@
     $("call").classList.toggle("min", false);
     $("call").scrollIntoView({ block: "nearest" });
   });
-  $("joinBtn").addEventListener("click", () => { document.body.classList.remove("drawer"); join(); });
   $("leaveBtn").addEventListener("click", leave);
   $("micBtn").addEventListener("click", toggleMic);
   $("deafBtn").addEventListener("click", toggleDeaf);

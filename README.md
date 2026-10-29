@@ -71,7 +71,7 @@ Compre um dominio (ex.: no Registro.br para `.com.br`). No Render, em **Settings
 
 - No plano grátis o servidor dorme depois de uns 15 minutos sem ninguém. Quem entrar primeiro espera uns 30–60 segundos.
 - Cada servidor guarda as últimas 200 mensagens no Supabase.
-- Os botões do topo são ícones: espadas (poker), paus (truco), fone (call), pessoas (online, no celular) e engrenagem (servidor). Passe o mouse para ver o nome.
+- Topo: o botão verde "Entrar na call" fica ao lado do nome do servidor (mostra quantos estão na call). O controle abre as Atividades (poker e truco), as pessoas mostram quem está online (no celular) e a engrenagem abre o menu do servidor.
 - Fotos: ícone de imagem ao lado do campo de mensagem, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande.
 - Áudio: ícone de microfone ao lado do campo de mensagem, grava até 1 minuto.
 - Chat: passe o mouse numa mensagem para responder, reagir ou apagar. `@nome` menciona alguém (Tab completa).

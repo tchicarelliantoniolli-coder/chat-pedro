@@ -730,11 +730,38 @@ footer { position: relative; }
 .srv.add:hover, .srv.add:focus-visible { background: var(--fg); color: var(--bg); border-style: solid; border-color: var(--fg); }
 
 /* Atividades na barra da direita */
-#games { list-style: none; margin: 0; padding: 0 8px 6px; display: flex; flex-direction: column; gap: 2px; }
-.game { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 10px; padding: 6px; cursor: pointer; }
+#games { display: flex; flex-direction: column; gap: 8px; }
+.game { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 14px; padding: 10px 12px; cursor: pointer; border: 1px solid var(--line); }
+.game:hover, .game:focus-visible { border-color: var(--fg); }
+.game .gi .ic { width: 24px; height: 24px; }
+.game > .ic { color: var(--dim); transition: transform 0.15s var(--ease), color 0.15s; }
+.game:hover > .ic { color: var(--fg); transform: translateX(3px); }
+.game .gt small.st { color: var(--fg); }
+/* atividades no topo: um pontinho aceso quando tem mesa rolando */
+#actsBtn { position: relative; }
+#actsBtn .dot { position: absolute; top: 5px; right: 4px; width: 7px; height: 7px; background: var(--gold); opacity: 0; transition: opacity 0.2s; }
+#actsBtn.live .dot { opacity: 1; }
+/* botao da call: grande e logo ao lado do nome do servidor */
+.callpill {
+  all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px;
+  background: var(--fg); color: var(--bg); font-size: 19px; white-space: nowrap; flex: none; align-self: center;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.callpill:hover { background: var(--bright); }
+.callpill:active { transform: scale(0.96); }
+.callpill:focus-visible { outline: 2px solid var(--bright); outline-offset: 2px; }
+.callpill .cnt { background: var(--bg); color: var(--fg); padding: 0 6px; font-size: 16px; line-height: 1.3; }
+.callpill.busy .cnt { animation: pulse 1.8s infinite; }
+.callpill.in { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 2px var(--fg); }
+.callpill.in:hover { background: color-mix(in srgb, var(--fg) 16%, transparent); }
+.callpill.in .cnt { background: var(--fg); color: var(--bg); }
+.callpill .short { display: none; }
+header .title { align-items: center; }
+#callSect { padding-bottom: 6px; }
 .game:hover, .game:focus-visible { background: color-mix(in srgb, var(--fg) 12%, transparent); }
-.game .gi { width: 32px; height: 32px; flex: none; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); color: var(--fg); }
-.game .gt { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.1; }
+.game .gi { width: 44px; height: 44px; flex: none; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); color: var(--fg); }
+.game .gt { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.game .gt b { font-size: 21px; }
 .game .gt b { font-weight: 400; color: var(--bright); }
 .game .gt small { font-size: 16px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .game .live { width: 8px; height: 8px; flex: none; background: var(--fg); opacity: 0; transition: opacity 0.2s; }
@@ -765,6 +792,9 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
   .sub { flex: none; }
   header .hbtns { gap: 0; flex: none; }
   header .hbtns .ib { min-width: 32px; padding: 0 5px; }
+  .callpill { padding: 0 10px; gap: 6px; font-size: 18px; }
+  .callpill .long { display: none; }
+  .callpill .short { display: inline; }
   .line.msg, .line.sysl { grid-template-columns: 34px minmax(0, 1fr); column-gap: 10px; }
   .line .gut .av.big { width: 32px; height: 32px; }
 }
@@ -775,17 +805,16 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
 </head>
 <body>
 <!-- icones do site (desenhados aqui, sem depender de outro site) -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 7h12l3.5 10.5-3.5 1.5-3-4h-6l-3 4L2.5 17.5z"/><path d="M8 10v4M6 12h4"/><path fill="currentColor" stroke="none" d="M15 10h2v2h-2zM17 12h2v2h-2z"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
 <header>
   <button type="button" class="ib" id="railBtn" title="Seus servidores" aria-label="Seus servidores" aria-controls="rail"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
   <div class="title">
     <h1 id="serverName">CHAT PEDRO</h1>
     <span class="sub" id="status">conectando</span>
+    <button type="button" class="callpill" id="callBtn" hidden></button>
   </div>
   <nav class="hbtns" aria-label="Atalhos">
-    <button type="button" class="ib" id="pokerBtn" title="Poker" aria-label="Poker" hidden><svg class="ic" aria-hidden="true"><use href="#i-spade"/></svg></button>
-    <button type="button" class="ib" id="trucoBtn" title="Truco" aria-label="Truco" hidden><svg class="ic" aria-hidden="true"><use href="#i-club"/></svg></button>
-    <button type="button" class="ib" id="callBtn" title="Entrar na call" aria-label="Entrar na call" hidden><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg></button>
+    <button type="button" class="ib" id="actsBtn" title="Atividades: poker e truco" aria-label="Atividades: poker e truco" hidden><svg class="ic" aria-hidden="true"><use href="#i-gamepad"/></svg><span class="dot" aria-hidden="true"></span></button>
     <button type="button" class="ib" id="onlineBtn" title="Quem está online" aria-label="Quem está online" aria-controls="sidebar"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg></button>
     <button type="button" class="ib" id="srvBtn" title="Servidor: convidar, moderar e mais" aria-label="Servidor: convidar, moderar e mais"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
   </nav>
@@ -872,14 +901,10 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
   <aside id="sidebar" aria-label="Quem está online">
     <h2 id="onlineTitle">ONLINE 0</h2>
     <ul id="people"></ul>
-    <h2>ATIVIDADES</h2>
-    <ul id="games">
-      <li><button type="button" class="game" id="actOpen" title="Abrir o poker"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-spade"/></svg></span><span class="gt"><b>Poker</b><small id="actTags">mesa vazia</small></span><span class="live" aria-hidden="true"></span></button></li>
-      <li><button type="button" class="game" id="trOpen" title="Abrir o truco"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-club"/></svg></span><span class="gt"><b>Truco</b><small id="trTags">sem mesa</small></span><span class="live" aria-hidden="true"></span></button></li>
-    </ul>
-    <h2 id="callTitle">CALL 0</h2>
-    <ul id="callPeople"></ul>
-    <div class="callbox"><button type="button" class="cmd" id="joinBtn" hidden>Entrar</button></div>
+    <div id="callSect" hidden>
+      <h2 id="callTitle">NA CALL 0</h2>
+      <ul id="callPeople"></ul>
+    </div>
     <div class="profile" id="profile" hidden>
       <button type="button" class="cmd withicon" id="profileBtn"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg> Meu perfil</button>
       <input type="file" id="avatarFile" accept="image/*" hidden>
@@ -909,6 +934,17 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
     <div class="modlist" id="modBans"></div>
     <span class="lbl2">Expulsar tira do servidor (volta só com convite novo). Banir tira e impede de voltar. Para apagar uma mensagem, passe o mouse nela e clique em Apagar.</span>
     <div class="row"><button type="button" class="cmd danger" id="modClear">Limpar o chat todo</button></div>
+  </div>
+</div>
+
+<div class="modal" id="actsModal" hidden>
+  <div class="box" role="dialog" aria-labelledby="actsTitle">
+    <div class="row"><h3 id="actsTitle">ATIVIDADES</h3><button type="button" class="ib" id="actsClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <span class="lbl2">Escolha o que jogar com a galera do servidor.</span>
+    <div id="games">
+      <button type="button" class="game" id="actOpen"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-spade"/></svg></span><span class="gt"><b>Poker</b><small>Texas Hold'em, até 9 jogadores</small><small class="st" id="actTags">mesa vazia</small></span><span class="live" aria-hidden="true"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <button type="button" class="game" id="trOpen"><span class="gi"><svg class="ic" aria-hidden="true"><use href="#i-club"/></svg></span><span class="gt"><b>Truco</b><small>Truco Paulista, mesa de 4 ou 6</small><small class="st" id="trTags">sem mesa</small></span><span class="live" aria-hidden="true"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+    </div>
   </div>
 </div>
 
@@ -1687,6 +1723,15 @@ window.setIcon = (btn, name, label, extra) => {
     if (file) sendImage(file);
   });
 
+  // ---------- atividades: escolher o jogo ----------
+  const closeActs = () => { $("actsModal").hidden = true; };
+  $("actsBtn").addEventListener("click", () => { $("actsModal").hidden = false; });
+  $("actsClose").addEventListener("click", closeActs);
+  $("actsModal").addEventListener("click", (e) => { if (e.target === $("actsModal") || e.target.closest(".game")) closeActs(); });
+  // pontinho no botao quando alguma mesa esta aberta
+  const syncActs = () => $("actsBtn").classList.toggle("live", $("actOpen").classList.contains("on") || $("trOpen").classList.contains("on"));
+  new MutationObserver(syncActs).observe($("games"), { subtree: true, attributes: true, attributeFilter: ["class"] });
+
   // Gaveta de online no celular
   $("onlineBtn").addEventListener("click", (e) => { e.stopPropagation(); document.body.classList.toggle("drawer"); });
   document.addEventListener("click", (e) => {
@@ -1697,7 +1742,7 @@ window.setIcon = (btn, name, label, extra) => {
   function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
   viewer.addEventListener("click", () => { viewer.hidden = true; });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { viewer.hidden = true; for (const id of ["settings", "admModal", "profileModal", "srvModal"]) $(id).hidden = true; document.body.classList.remove("drawer", "railopen"); }
+    if (e.key === "Escape") { viewer.hidden = true; for (const id of ["settings", "admModal", "profileModal", "srvModal", "actsModal"]) $(id).hidden = true; document.body.classList.remove("drawer", "railopen"); }
   });
 
   // ---------- moderacao: dono e ADMs do servidor ----------

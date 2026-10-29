@@ -353,7 +353,7 @@
     if (e.type === "raise") {
       beep(SFX.raise);
       if (open()) shout(e.text, "", (e.nick || "") + " pediu " + e.to);
-      else if (st.me >= 0 && !mine) setNote("Truco: " + e.text + " Abra o truco (ícone de paus) para responder!", true);
+      else if (st.me >= 0 && !mine) setNote("Truco: " + e.text + " Abra em Atividades para responder!", true);
       return;
     }
     if (e.type === "accept") { beep(SFX.accept); if (open()) shout(e.text, "ok", e.nick ? e.nick + " aceitou" : ""); return; }
@@ -397,7 +397,6 @@
     document.body.classList.remove("drawer");
     render();
   }
-  $("trucoBtn").addEventListener("click", () => (open() ? ($("truco").hidden = true) : show()));
   $("trOpen").addEventListener("click", show);
   $("trClose").addEventListener("click", () => { $("truco").hidden = true; });
   const soundIcon = () => setIcon($("trSound"), sound ? "volume" : "volume-off", sound ? "Desligar os sons" : "Ligar os sons");
@@ -410,5 +409,5 @@
   window.addEventListener("resize", () => { if (open()) render(); });
 
   const prevJoin = app.onJoin;
-  app.onJoin = () => { prevJoin(); $("trucoBtn").hidden = false; if (open()) render(); };
+  app.onJoin = () => { prevJoin(); $("actsBtn").hidden = false; if (open()) render(); };
 })();

@@ -240,7 +240,7 @@
     sidebar();
     renderInvites();
     if (!$("activity").hidden) render();
-    if (s.me && !wasMyTurn && $("activity").hidden) setNote("Poker: sua vez de jogar! Clique nas espadas lá em cima.");
+    if (s.me && !wasMyTurn && $("activity").hidden) setNote("Poker: sua vez de jogar! Abra em Atividades, lá em cima.");
   });
 
   function fodeu() {
@@ -258,11 +258,10 @@
     document.body.classList.remove("drawer");
     render();
   }
-  $("pokerBtn").addEventListener("click", () => ($("activity").hidden ? open() : ($("activity").hidden = true)));
   $("actOpen").addEventListener("click", open);
   $("actClose").addEventListener("click", () => { $("activity").hidden = true; });
   window.addEventListener("resize", () => { if (!$("activity").hidden) render(); });
 
   const prevJoin = app.onJoin;
-  app.onJoin = () => { prevJoin(); $("pokerBtn").hidden = false; if (!$("activity").hidden) render(); };
+  app.onJoin = () => { prevJoin(); $("actsBtn").hidden = false; if (!$("activity").hidden) render(); };
 })();
