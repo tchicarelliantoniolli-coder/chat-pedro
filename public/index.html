@@ -65,7 +65,7 @@ main { flex: 1; overflow-y: auto; min-height: 0; }
 .av.big { width: 36px; height: 36px; font-size: 13px; vertical-align: middle; margin-right: 0; }
 
 footer { padding-block: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--dim); }
-form { display: flex; align-items: flex-start; gap: 8px; }
+#form { display: flex; align-items: flex-start; gap: 8px; }
 .ps1 { color: var(--bright); white-space: pre; margin-right: -8px; }
 textarea {
   flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: transparent;
@@ -175,7 +175,8 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .modal input[type=range] { accent-color: var(--fg); width: 100%; }
 .meter { height: 10px; border: 1px solid var(--dim); background: #000; }
 .meter i { display: block; height: 100%; width: 0; background: var(--fg); }
-.modal .row { display: flex; justify-content: space-between; gap: 12px; }
+.modal .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.modal .close { font-size: 26px; padding: 0 4px; }
 
 /* Atividade: mesa de poker no estilo PokerStars, com o verde do terminal */
 #activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: #020d05; max-height: 78%; min-height: 0; overflow-y: auto; }
@@ -374,7 +375,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 
 <div class="modal" id="admModal" hidden>
   <form class="box" id="admForm" role="dialog" aria-labelledby="admTitle">
-    <div class="row"><h3 id="admTitle">ADM</h3><button type="button" class="cmd" id="admClose">[X]</button></div>
+    <div class="row"><h3 id="admTitle">ADM</h3><button type="button" class="cmd close" id="admClose" aria-label="Fechar">[X]</button></div>
     <div id="admIn">
       <label>Senha
         <input type="password" id="admPass" autocomplete="current-password" inputmode="numeric">
@@ -388,7 +389,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 
 <div class="modal" id="settings" hidden>
   <div class="box" role="dialog" aria-labelledby="setTitle">
-    <div class="row"><h3 id="setTitle">CONFIGURACOES</h3><button type="button" class="cmd" id="setClose">[X]</button></div>
+    <div class="row"><h3 id="setTitle">CONFIGURACOES</h3><button type="button" class="cmd close" id="setClose" aria-label="Fechar">[X]</button></div>
     <label>Microfone
       <select id="micSelect"></select>
     </label>
@@ -690,6 +691,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
     if (!isAdmin) setTimeout(() => $("admPass").focus(), 0);
   });
   $("admClose").addEventListener("click", () => { $("admModal").hidden = true; });
+  $("admModal").addEventListener("click", (e) => { if (e.target === $("admModal")) $("admModal").hidden = true; }); // clicar fora fecha
   $("admForm").addEventListener("submit", (e) => {
     e.preventDefault();
     if (isAdmin) {
