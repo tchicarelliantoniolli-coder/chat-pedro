@@ -2,6 +2,7 @@ const path = require("path");
 const http = require("http");
 const crypto = require("crypto");
 const express = require("express");
+const compression = require("compression");
 const { Server } = require("socket.io");
 const { createPoker } = require("./poker");
 const { createTruco } = require("./truco");
@@ -39,14 +40,19 @@ if (process.env.TURN_URLS) {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: MAX_IMAGE + 64 * 1024 });
+// perMessageDeflate compacta as mensagens grandes (historico, listas); as pequenas vao como estao
+const io = new Server(server, { maxHttpBufferSize: MAX_IMAGE + 64 * 1024, serveClient: false, perMessageDeflate: { threshold: 2048 } });
 const INDEX = path.join(__dirname, "public", "index.html");
 
 app.set("trust proxy", true); // o Render fica na frente do servidor
+app.use(compression()); // texto do site vai compactado (gzip): carrega varias vezes mais rapido
 app.use(express.json({ limit: "200kb" }));
-app.use(express.static(path.join(__dirname, "public")));
-// biblioteca de login do Supabase servida daqui mesmo (nao depende de CDN)
-app.use("/vendor/supabase", express.static(path.join(__dirname, "node_modules", "@supabase", "supabase-js", "dist", "umd")));
+// os arquivos do site sao conferidos a cada visita (ETag): se nao mudaram, o navegador usa o que ja tem
+app.use(express.static(path.join(__dirname, "public"), { cacheControl: true, maxAge: 0 }));
+// bibliotecas com versao fixa: o navegador guarda por 7 dias sem perguntar de novo
+const vendor = (dir) => express.static(dir, { maxAge: "7d" });
+app.use("/vendor/supabase", vendor(path.join(__dirname, "node_modules", "@supabase", "supabase-js", "dist", "umd")));
+app.use("/vendor/socket.io", vendor(path.join(__dirname, "node_modules", "socket.io", "client-dist")));
 app.get(["/s/:id", "/convite/:code"], (req, res) => res.sendFile(INDEX));
 
 const keyOf = (nick) => String(nick || "").toLowerCase();

@@ -6,6 +6,7 @@
 <title>Chat Pedro</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%2333ff66'/%3E%3Cpath d='M5 5h14v10H10l-5 4z' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap">
 <style>
 :root {
@@ -1377,7 +1378,7 @@ body.nomembers aside { display: none; }
 <div id="popout" hidden></div>
 <div id="viewer" hidden><img alt="Foto em tamanho grande"></div>
 
-<script src="/socket.io/socket.io.js"></script>
+<script src="/vendor/socket.io/socket.io.min.js"></script>
 <script src="/vendor/supabase/supabase.js"></script>
 <script>
 // Icone do sprite: icon("mic") devolve um <svg>; setIcon troca o icone e o texto de ajuda de um botao
@@ -1454,12 +1455,27 @@ window.setIcon = (btn, name, label, extra) => {
 
   // Avatar: foto de perfil, ou a inicial do apelido num quadrado com cor fixa por pessoa
   function hue(name) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+  // a foto chega como texto (data URL); vira um endereco curto (blob) uma vez so,
+  // e todos os avatares iguais usam o mesmo, sem repetir dezenas de KB em cada mensagem
+  const blobUrls = new Map(); // data URL -> blob URL
+  function avatarUrl(data) {
+    let u = blobUrls.get(data);
+    if (u) return u;
+    try {
+      const [head, b64] = data.split(",");
+      const bin = atob(b64), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      u = URL.createObjectURL(new Blob([bytes], { type: head.slice(5).split(";")[0] }));
+    } catch { u = data; }
+    blobUrls.set(data, u);
+    return u;
+  }
   function fillAvatar(el, name) {
     const key = name.toLowerCase();
     el.replaceChildren();
     if (avatars[key]) {
       const img = document.createElement("img");
-      img.alt = ""; img.src = avatars[key];
+      img.alt = ""; img.src = avatarUrl(avatars[key]);
       el.append(img); el.style.background = "";
     } else {
       el.textContent = (name.trim()[0] || "?").toUpperCase();
@@ -1494,10 +1510,15 @@ window.setIcon = (btn, name, label, extra) => {
   }
 
   // Texto com as @mencoes destacadas (os apelidos podem ter espaco, entao procura pelos nomes conhecidos)
+  // nomes para achar @mencoes; a lista so e refeita quando muda quem esta online ou o chat
+  let namesCache = null, namesKey = "";
   function knownNames() {
+    const k = users.join("\n") + "|" + lineById.size;
+    if (namesCache && k === namesKey) return namesCache;
     const set = new Set(users);
     for (const { m } of lineById.values()) if (m.nick) set.add(m.nick);
-    return [...set].sort((a, b) => b.length - a.length);
+    namesKey = k;
+    return (namesCache = [...set].sort((a, b) => b.length - a.length));
   }
   // Markdown do Discord: **negrito**, *italico*, __sublinhado__, ~~riscado~~, `codigo`, ```bloco```,
   // ||spoiler||, > citacao e links clicaveis. Tudo vira elementos (nunca HTML cru).
