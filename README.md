@@ -71,14 +71,13 @@ Compre um dominio (ex.: no Registro.br para `.com.br`). No Render, em **Settings
 
 - No plano grátis o servidor dorme depois de uns 15 minutos sem ninguém. Quem entrar primeiro espera uns 30–60 segundos.
 - Cada servidor guarda as últimas 200 mensagens no Supabase.
-- Fotos: botão `[FOTO]`, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande. O servidor guarda as últimas 40 fotos.
-- Quem está online aparece na barra da direita (no celular, no botão `[ONLINE n]`). Foto, apelido e cor ficam salvos na conta, em `[MEU PERFIL]`.
-- Chamada: botão `[ENTRAR NA CHAMADA]`. Dá para ligar microfone, câmera e compartilhar a tela; o volume de cada pessoa fica no `VOL` do quadro dela e o resto em `[CONFIG]`. Áudio e vídeo vão direto entre os navegadores (WebRTC); em algumas redes (4G, redes de empresa/escola) a conexão pode não fechar.
-- Poker: botão `[POKER]`. Texas Hold'em No-Limit, até 9 jogadores, blinds 10/20, 1000 fichas iniciais. Só o dono e os ADMs do servidor trancam a mesa e liberam fichas novas para quem perdeu tudo. As fichas ficam na memória do servidor e voltam a 1000 quando ele reinicia.
-- Truco: botão `[TRUCO]`. Truco Paulista (vira e manilha), mesa de 4 (2x2) ou 6 (3x3) escolhida por quem cria a mesa, partida até 12, com mão de onze, mão de ferro, carta encoberta, zoeira e sinais para o parceiro.
-- Chat: passe o mouse numa mensagem para [RESPONDER], [REAGIR] ou [APAGAR] (a sua; o ADM apaga qualquer uma). `@nome` menciona alguem (Tab completa). [AUDIO] grava ate 1 minuto.
-- [MEU PERFIL]: foto, cor do nome, status (online, ausente, ocupado), tema (verde, ambar, azul, Windows 95) e notificacoes.
-- Call: [SONS] toca sons para todos, [YOUTUBE] assiste um video junto, e em [CONFIG] da para ligar o apertar para falar (segure ESPACO).
-- Moderacao: [SERVIDOR] > [MODERAR] (dono e ADMs). O anti-flood bloqueia mensagens demais e silencia por 2 min quem insistir.
-- Comandos no chat: `/nick NOVO` muda o apelido da conta, `/perfil` troca a foto de perfil, `/limpar` limpa a tela, `/ajuda` mostra os atalhos.
-- Qualquer pessoa com o link pode entrar. Não mande para quem você não quer no chat.
+- Os botões do topo são ícones: espadas (poker), paus (truco), fone (call), pessoas (online, no celular) e engrenagem (servidor). Passe o mouse para ver o nome.
+- Fotos: ícone de imagem ao lado do campo de mensagem, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande.
+- Áudio: ícone de microfone ao lado do campo de mensagem, grava até 1 minuto.
+- Chat: passe o mouse numa mensagem para responder, reagir ou apagar. `@nome` menciona alguém (Tab completa).
+- Meu perfil (canto de baixo da barra da direita): foto, apelido, cor do nome, status, tema (verde, âmbar, azul, Windows 95) e notificações.
+- Call: microfone, fone, câmera, tela, sons, YouTube junto e configurações (volume e apertar para falar com ESPAÇO). Áudio e vídeo vão direto entre os navegadores (WebRTC).
+- Poker: Texas Hold'em No-Limit, até 9 jogadores, blinds 10/20, 1000 fichas iniciais. Só o dono e os ADMs trancam a mesa e liberam fichas novas.
+- Truco: Truco Paulista, mesa de 4 ou 6, partida até 12.
+- Moderação: engrenagem > Moderar (dono e ADMs). O anti-flood silencia por 2 min quem insistir.
+- Comandos no chat: `/nick NOVO`, `/perfil`, `/limpar`, `/ajuda`.

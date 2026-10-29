@@ -60,7 +60,7 @@
     $("authEmail").required = m !== "newpass";
     $("authPass").autocomplete = m === "login" ? "current-password" : "new-password";
     $("authPass").closest("label").firstChild.textContent = m === "newpass" ? "Senha nova " : "Senha ";
-    $("authGo").textContent = { login: "[ENTRAR]", signup: "[CRIAR CONTA]", newpass: "[SALVAR SENHA NOVA]" }[m];
+    $("authGo").textContent = { login: "Entrar", signup: "Criar conta", newpass: "Salvar senha nova" }[m];
     $("forgotBtn").hidden = m !== "login";
     $("tabLogin").parentElement.hidden = m === "newpass";
   }
@@ -177,7 +177,7 @@
       const r = await api("/api/invites/" + code);
       $("invName").textContent = r.server.name;
       $("invInfo").textContent = r.members + (r.members === 1 ? " membro" : " membros") + (r.already ? " | voce ja esta nele" : "");
-      $("invAccept").textContent = r.already ? "[IR PARA O SERVIDOR]" : "[ENTRAR NO SERVIDOR]";
+      $("invAccept").textContent = r.already ? "Ir para o servidor" : "Entrar no servidor";
       $("invAccept").hidden = false;
       $("invAccept").onclick = async () => {
         try { const a = await api("/api/invites/" + code + "/accept", { method: "POST" }); goServer(a.server.id); }
@@ -239,7 +239,7 @@
     } catch (err) { $("srvMsg").textContent = err.message; }
   });
   $("invCopy").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText($("invLink").value); $("invCopy").textContent = "[COPIADO!]"; setTimeout(() => { $("invCopy").textContent = "[COPIAR]"; }, 1500); }
+    try { await navigator.clipboard.writeText($("invLink").value); $("invCopy").textContent = "Copiado!"; setTimeout(() => { $("invCopy").textContent = "Copiar"; }, 1500); }
     catch { $("invLink").select(); $("srvMsg").textContent = "Aperte Ctrl+C para copiar."; }
   });
   $("srvRename").addEventListener("submit", async (e) => {
@@ -252,15 +252,15 @@
   function twoStep(btn, label, fn) {
     let armed = false;
     btn.addEventListener("click", async () => {
-      if (!armed) { armed = true; btn.textContent = "[CERTEZA? CLIQUE DE NOVO]"; setTimeout(() => { armed = false; btn.textContent = label; }, 4000); return; }
+      if (!armed) { armed = true; btn.textContent = "Certeza? clique de novo"; setTimeout(() => { armed = false; btn.textContent = label; }, 4000); return; }
       try { await fn(); } catch (err) { $("srvMsg").textContent = err.message; }
     });
   }
-  twoStep($("srvLeave"), "[SAIR DO SERVIDOR]", async () => {
+  twoStep($("srvLeave"), "Sair do servidor", async () => {
     await api("/api/servers/" + current + "/leave", { method: "POST" });
     store.set("chatpedro-server", ""); location.href = "/";
   });
-  twoStep($("srvDelete"), "[APAGAR SERVIDOR]", async () => {
+  twoStep($("srvDelete"), "Apagar servidor", async () => {
     await api("/api/servers/" + current, { method: "DELETE" });
     store.set("chatpedro-server", ""); location.href = "/";
   });

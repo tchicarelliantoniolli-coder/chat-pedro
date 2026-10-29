@@ -65,7 +65,7 @@
         seat.classList.add("empty");
         if (st.mySeat < 0 && app.nick && !st.myRequest) {
           const ask = (st.locked || st.busted) && !st.isAdmin;
-          const b = el("button", "", ask ? "[PEDIR]" : "[SENTAR]");
+          const b = el("button", "", ask ? "Pedir" : "Sentar");
           b.type = "button";
           b.title = ask ? "O ADM precisa aceitar" : "Sentar neste lugar";
           b.addEventListener("click", () => socket.emit("poker:sit", i, done));
@@ -149,10 +149,10 @@
       const preset = (text, v) => { const b = el("button", "cmd", text); b.type = "button"; b.addEventListener("click", () => set(v)); return b; };
       const pot = me.potAfterCall;
       sizing.append(
-        preset("[MIN]", me.minTo),
-        preset("[1/2 POTE]", me.currentBet + Math.floor(pot / 2)),
-        preset("[POTE]", me.currentBet + pot),
-        preset("[ALL-IN]", me.maxTo),
+        preset("Mín.", me.minTo),
+        preset("½ pote", me.currentBet + Math.floor(pot / 2)),
+        preset("Pote", me.currentBet + pot),
+        preset("All-in", me.maxTo),
         range, num,
       );
       if (me.minTo >= me.maxTo) sizing.hidden = true;
@@ -168,26 +168,26 @@
     const cmd = (text, fn, cls) => { const b = el("button", "cmd" + (cls ? " " + cls : ""), text); b.type = "button"; b.addEventListener("click", fn); return b; };
     if (st.myRequest) {
       bar.append(el("span", "", "esperando o ADM " + (st.myRequest === "rebuy" ? "liberar fichas novas" : "aceitar voce") + (st.adminOnline ? "" : " (nenhum ADM online agora)")));
-      bar.append(cmd("[CANCELAR]", () => socket.emit("poker:cancel")));
+      bar.append(cmd("Cancelar", () => socket.emit("poker:cancel")));
     } else if (!me) {
       bar.append(el("span", "", !app.nick ? "escolha um apelido para jogar"
-        : st.busted && !st.isAdmin ? "voce perdeu tudo: clique em [PEDIR] para o ADM liberar fichas novas"
-        : st.locked && !st.isAdmin ? "mesa trancada: clique em [PEDIR] num lugar" : "clique em [SENTAR] num lugar vazio"));
+        : st.busted && !st.isAdmin ? "voce perdeu tudo: clique em Pedir para o ADM liberar fichas novas"
+        : st.locked && !st.isAdmin ? "mesa trancada: clique em Pedir num lugar" : "clique em Sentar num lugar vazio"));
     } else {
       if (me.chips < st.blinds[1] && !(me.inHand && st.stage !== "waiting")) {
-        bar.append(cmd(st.isAdmin ? "[RECOMPRAR " + st.startChips + "]" : "[PEDIR FICHAS AO ADM]", () => socket.emit("poker:rebuy", done)));
+        bar.append(cmd(st.isAdmin ? "Recomprar " + st.startChips : "Pedir fichas ao ADM", () => socket.emit("poker:rebuy", done)));
       }
       bar.append(me.sittingOut
-        ? cmd("[VOLTAR]", () => socket.emit("poker:away", false, done), "on")
-        : cmd("[AUSENTE]", () => socket.emit("poker:away", true, done)));
-      bar.append(cmd(me.leaving ? "[SAINDO...]" : "[LEVANTAR]", () => socket.emit("poker:stand", done)));
+        ? cmd("Voltar", () => socket.emit("poker:away", false, done), "on")
+        : cmd("Ausente", () => socket.emit("poker:away", true, done)));
+      bar.append(cmd(me.leaving ? "Saindo..." : "Levantar", () => socket.emit("poker:stand", done)));
     }
     bar.append(el("span", "spacer"));
     if (st.isAdmin) {
-      bar.append(cmd(st.locked ? "[DESTRANCAR MESA]" : "[TRANCAR MESA]", () => socket.emit("poker:lock", !st.locked), st.locked ? "on" : ""));
+      bar.append(cmd(st.locked ? "Destrancar mesa" : "Trancar mesa", () => socket.emit("poker:lock", !st.locked), st.locked ? "on" : ""));
     }
     const log = $("dealerlog");
-    bar.append(cmd(log.hidden ? "[HISTORICO]" : "[ESCONDER HISTORICO]", () => { log.hidden = !log.hidden; renderBar(); log.scrollTop = log.scrollHeight; }));
+    bar.append(cmd(log.hidden ? "Histórico" : "Esconder histórico", () => { log.hidden = !log.hidden; renderBar(); log.scrollTop = log.scrollHeight; }));
   }
 
   function done(r) {
@@ -204,8 +204,8 @@
       const tx = el("div", "t", r.nick + (r.type === "rebuy" ? " quer " + st.startChips + " fichas novas" : " quer entrar na mesa"));
       tx.append(el("small", "", r.type === "rebuy" ? "perdeu tudo no poker" : "a mesa de poker esta trancada"));
       const row = el("div", "row");
-      const yes = el("button", "cmd", "[ACEITAR]"); yes.type = "button";
-      const no = el("button", "cmd danger", "[RECUSAR]"); no.type = "button";
+      const yes = el("button", "cmd", "Aceitar"); yes.type = "button";
+      const no = el("button", "cmd danger", "Recusar"); no.type = "button";
       yes.addEventListener("click", () => socket.emit("poker:answer", { key: r.key, accept: true }));
       no.addEventListener("click", () => socket.emit("poker:answer", { key: r.key, accept: false }));
       row.append(yes, no);
@@ -239,7 +239,7 @@
     sidebar();
     renderInvites();
     if (!$("activity").hidden) render();
-    if (s.me && !wasMyTurn && $("activity").hidden) setNote("[POKER] Sua vez de jogar! Clique em [POKER] la em cima.");
+    if (s.me && !wasMyTurn && $("activity").hidden) setNote("Poker Sua vez de jogar! Clique em Poker la em cima.");
   });
 
   function fodeu() {

@@ -19,6 +19,7 @@
   --box: #000000;     /* fundo de caixinhas (lugares, convites, campos) */
   --stage: #020d05;   /* fundo das areas de jogo e call */
   --gold: #ffd84d;
+  --line: color-mix(in srgb, var(--dim) 45%, transparent); /* divisorias suaves */
   color-scheme: dark;
 }
 /* Temas escolhidos no MEU PERFIL */
@@ -35,17 +36,35 @@ body {
   background: var(--bg); color: var(--fg); font-family: var(--mono); font-size: 20px; line-height: 1.25;
   display: flex; flex-direction: column;
 }
-button.cmd { all: unset; cursor: pointer; color: var(--bright); white-space: pre; }
-button.cmd:hover, button.cmd:focus-visible { color: var(--bg); background: var(--fg); }
+/* Botoes: texto limpo (sem colchetes) ou so icone; o fundo aparece ao passar o mouse */
+button.cmd { all: unset; box-sizing: border-box; cursor: pointer; color: var(--bright); white-space: nowrap; padding: 1px 8px; }
+button.cmd:hover, button.cmd:focus-visible { background: color-mix(in srgb, var(--fg) 16%, transparent); }
+button.cmd:focus-visible, button.ib:focus-visible { outline: 1px solid var(--fg); outline-offset: 1px; }
+button.cmd:disabled { opacity: 0.4; cursor: default; background: none; }
+.ic { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: square; stroke-linejoin: miter; }
+button.ib {
+  all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 34px; height: 34px; padding: 0 7px; color: var(--fg); white-space: nowrap; flex: none;
+}
+button.ib:hover { background: color-mix(in srgb, var(--fg) 16%, transparent); }
+button.ib.on { color: var(--bg); background: var(--fg); }
+button.ib.off { color: var(--err); }
+button.ib .n { font-size: 17px; }
+button.ib.sm { min-width: 26px; height: 26px; padding: 0 4px; }
+button.ib.sm .ic { width: 15px; height: 15px; }
+button.cmd.withicon { display: inline-flex; align-items: center; gap: 8px; }
+button.ib.leave { color: var(--err); }
+button.ib.leave:hover { background: color-mix(in srgb, var(--err) 20%, transparent); }
+#sendBtn { color: var(--bright); }
 
 header {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; border-bottom: 1px solid var(--dim);
-  padding-block: 10px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; border-bottom: 1px solid var(--line);
+  padding-block: 8px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 header .title { flex: 1 1 200px; min-width: 0; display: flex; align-items: baseline; gap: 14px; }
-header .cmd { color: var(--fg); }
+header .hbtns { display: flex; align-items: center; gap: 2px; }
 h1 { font-family: var(--pixel); font-size: 14px; font-weight: 400; margin: 0; color: var(--bright); }
 .sub { color: var(--dim); white-space: nowrap; }
 .sub::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; background: var(--dim); }
@@ -61,7 +80,7 @@ h1 { font-family: var(--pixel); font-size: 14px; font-weight: 400; margin: 0; co
 main { flex: 1; overflow-y: auto; min-height: 0; }
 #log { padding-block: 8px; }
 .line { white-space: pre-wrap; overflow-wrap: anywhere; }
-.time { color: var(--dim); }
+.time { color: var(--dim); font-size: 0.8em; margin-right: 8px; }
 .who { color: var(--bright); }
 .sys { color: var(--dim); }
 
@@ -75,8 +94,9 @@ main { flex: 1; overflow-y: auto; min-height: 0; }
 .av img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .av.big { width: 36px; height: 36px; font-size: 13px; vertical-align: middle; margin-right: 0; }
 
-footer { padding-block: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--dim); }
-#form { display: flex; align-items: flex-start; gap: 8px; }
+footer { padding-block: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+#form { display: flex; align-items: center; gap: 4px; border: 1px solid var(--line); padding: 2px 2px 2px 10px; background: color-mix(in srgb, var(--panel) 60%, transparent); }
+#form:focus-within { border-color: var(--dim); }
 .ps1 { color: var(--bright); white-space: pre; margin-right: -8px; }
 textarea {
   flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: transparent;
@@ -113,13 +133,13 @@ textarea::placeholder { color: var(--dim); }
 .rx.mine { border-color: var(--fg); background: rgba(127, 127, 127, 0.15); }
 .rx:hover, .rx:focus-visible { border-color: var(--bright); }
 .acts {
-  position: absolute; top: -4px; right: 4px; display: none; gap: 10px; background: var(--box); border: 1px solid var(--dim);
-  padding: 0 8px; font-size: 17px; z-index: 3; white-space: nowrap;
+  position: absolute; top: -12px; right: 6px; display: none; gap: 0; background: var(--box); border: 1px solid var(--line);
+  padding: 1px; z-index: 3; white-space: nowrap;
 }
 .line:hover .acts, .line.show .acts, .line:focus-within .acts { display: flex; }
-.acts button { all: unset; cursor: pointer; color: var(--dim); }
-.acts button:hover, .acts button:focus-visible { color: var(--bright); }
-.acts button.del:hover, .acts button.del:focus-visible { color: var(--err); }
+.acts .ib { color: var(--dim); }
+.acts .ib:hover, .acts .ib:focus-visible { color: var(--bright); }
+.acts .ib.del:hover, .acts .ib.del:focus-visible { color: var(--err); }
 .picker { position: absolute; right: 4px; top: 22px; z-index: 4; display: flex; gap: 2px; background: var(--box); border: 1px solid var(--fg); padding: 2px 4px; }
 .picker button { all: unset; cursor: pointer; font-size: 20px; padding: 0 3px; }
 .picker button:hover, .picker button:focus-visible { background: rgba(127, 127, 127, 0.25); }
@@ -164,7 +184,7 @@ body.gaming #ytBox { width: 100%; }
 body.gaming #watch { padding: 6px 8px 0; }
 
 aside {
-  width: 220px; flex: none; border-left: 1px solid var(--dim); background: var(--panel);
+  width: 220px; flex: none; border-left: 1px solid var(--line); background: var(--panel);
   display: flex; flex-direction: column; min-height: 0;
   padding-right: env(safe-area-inset-right, 0px);
 }
@@ -193,7 +213,7 @@ aside h2 {
 body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
 
 /* Chamada estilo Discord: grade de videos em cima do chat, barra de controles embaixo */
-#call { flex: 0 0 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: var(--stage); max-height: 62%; min-height: 0; }
+#call { flex: 0 0 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); background: var(--stage); max-height: 62%; min-height: 0; }
 #call.min #tiles { display: none; }
 #tiles {
   flex: 1; min-height: 0; overflow-y: auto; padding: 10px 16px; display: grid; gap: 10px;
@@ -218,7 +238,7 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
 /* Controles do quadro, cada um no seu canto: nome embaixo a esquerda, tela cheia embaixo a direita,
    volume em cima a direita (so ao passar o mouse ou tocar no quadro) */
 .tile .full {
-  position: absolute; bottom: 6px; right: 6px; background: rgba(0, 0, 0, 0.75); padding: 0 6px; font-size: 17px;
+  position: absolute; bottom: 6px; right: 6px; background: rgba(0, 0, 0, 0.7); color: #fff;
   opacity: 0; transition: opacity 0.15s;
 }
 .tile:hover .full, .tile .full:focus-visible, .tile.focus .full, .tile.screen .full { opacity: 1; }
@@ -240,7 +260,7 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
   position: absolute; left: 6px; bottom: 6px; max-width: calc(100% - 12px); display: flex; align-items: center; gap: 8px;
   pointer-events: none; font-size: 19px;
 }
-/* quando o [TELA CHEIA] aparece, o nome encolhe para nao ficar embaixo dele */
+/* quando o Tela cheia aparece, o nome encolhe para nao ficar embaixo dele */
 .tile:hover .label, .tile.focus .label, .tile.screen .label, .tile:focus-within .label { max-width: calc(100% - 128px); }
 @media (hover: none) { .tile .label { max-width: calc(100% - 128px); } }
 .tile .label .n { background: rgba(0, 0, 0, 0.75); color: var(--bright); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -290,7 +310,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .modal .close { font-size: 26px; padding: 0 4px; }
 
 /* Atividade: mesa de poker no estilo PokerStars, com o verde do terminal */
-#activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: var(--stage); max-height: 78%; min-height: 0; overflow-y: auto; }
+#activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); background: var(--stage); max-height: 78%; min-height: 0; overflow-y: auto; }
 .act-head { display: flex; align-items: center; gap: 12px; padding: 8px 16px 0; }
 .act-head .info { color: var(--dim); }
 .act-head h2 { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--bright); margin: 0; flex: 1; }
@@ -362,7 +382,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .dealerlog { margin: 0 16px 10px; padding: 4px 8px; border: 1px solid var(--dim); max-height: 6.2em; overflow-y: auto; color: var(--dim); font-size: 18px; }
 #actList { list-style: none; margin: 0; padding: 0 14px 6px; }
 /* Truco: mesa verde, cartas grandes, gritos animados */
-#truco { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: var(--stage); max-height: 82%; min-height: 0; overflow-y: auto; }
+#truco { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); background: var(--stage); max-height: 82%; min-height: 0; overflow-y: auto; }
 .tr-score { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 6px 16px 0; }
 .tr-score .pts { font-family: var(--pixel); font-size: clamp(11px, 1.6vw, 15px); }
 .tr-score .us { color: var(--fg); }
@@ -499,7 +519,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 /* Barra de servidores (como no Discord) */
 #rail {
   width: 64px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;
-  border-right: 1px solid var(--dim); background: var(--panel); overflow-y: auto;
+  border-right: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, var(--bg)); overflow-y: auto;
 }
 #railList { display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .srv {
@@ -520,7 +540,7 @@ body.ready.gate #gate { display: flex; }
 .gbox { width: min(420px, 100%); border: 2px solid var(--fg); background: var(--panel); padding: 22px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; }
 .gtitle { font-size: 18px; text-align: center; }
 .gform { display: flex; flex-direction: column; gap: 10px; }
-.gform + .gform { border-top: 1px dashed var(--dim); padding-top: 14px; }
+.gform + .gform { border-top: 1px solid var(--line); padding-top: 14px; }
 .gform label, .modal label.inline { display: flex; flex-direction: column; gap: 4px; color: var(--dim); }
 .modal label.inline { flex-direction: row; align-items: center; gap: 8px; }
 .gform input, .modal input[type=text]:not(#watchUrl), .modal input[type=email] {
@@ -600,17 +620,21 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 </style>
 </head>
 <body>
+<!-- icones do site (desenhados aqui, sem depender de outro site) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
 <header>
-  <button type="button" class="cmd" id="railBtn" aria-controls="rail" title="Seus servidores">[#]</button>
+  <button type="button" class="ib" id="railBtn" title="Seus servidores" aria-label="Seus servidores" aria-controls="rail"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
   <div class="title">
     <h1 id="serverName">CHAT PEDRO</h1>
     <span class="sub" id="status">conectando</span>
   </div>
-  <button type="button" class="cmd" id="pokerBtn" hidden>[POKER]</button>
-  <button type="button" class="cmd" id="trucoBtn" hidden>[TRUCO]</button>
-  <button type="button" class="cmd" id="callBtn" hidden>[CALL]</button>
-  <button type="button" class="cmd" id="onlineBtn" aria-controls="sidebar">[ONLINE 0]</button>
-  <button type="button" class="cmd" id="srvBtn" title="Convidar, moderar e mais">[SERVIDOR]</button>
+  <nav class="hbtns" aria-label="Atalhos">
+    <button type="button" class="ib" id="pokerBtn" title="Poker" aria-label="Poker" hidden><svg class="ic" aria-hidden="true"><use href="#i-spade"/></svg></button>
+    <button type="button" class="ib" id="trucoBtn" title="Truco" aria-label="Truco" hidden><svg class="ic" aria-hidden="true"><use href="#i-club"/></svg></button>
+    <button type="button" class="ib" id="callBtn" title="Entrar na call" aria-label="Entrar na call" hidden><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg></button>
+    <button type="button" class="ib" id="onlineBtn" title="Quem esta online" aria-label="Quem esta online" aria-controls="sidebar"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg></button>
+    <button type="button" class="ib" id="srvBtn" title="Servidor: convidar, moderar e mais" aria-label="Servidor: convidar, moderar e mais"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+  </nav>
 </header>
 
 <div class="app">
@@ -623,7 +647,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       <div class="act-head">
         <h2>POKER</h2>
         <span class="info" id="actInfo"></span>
-        <button type="button" class="cmd" id="actClose">[X]</button>
+        <button type="button" class="ib" id="actClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="table-wrap"><div class="felt" id="felt"></div></div>
       <div class="actions" id="actions" hidden></div>
@@ -634,8 +658,8 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       <div class="act-head">
         <h2>TRUCO PAULISTA</h2>
         <span class="info" id="trInfo"></span>
-        <button type="button" class="cmd" id="trSound" title="Liga ou desliga os sons">[SOM ON]</button>
-        <button type="button" class="cmd" id="trClose">[X]</button>
+        <button type="button" class="ib" id="trSound" title="Desligar os sons" aria-label="Desligar os sons"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg></button>
+        <button type="button" class="ib" id="trClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="tr-score" id="trScore"></div>
       <div class="table-wrap"><div class="tr-felt" id="trFelt"></div></div>
@@ -649,40 +673,41 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     <section id="call" aria-label="Chamada" hidden>
       <div id="watch" hidden>
         <div id="ytBox"><div id="ytPlayer"></div></div>
-        <div class="watch-bar"><span id="watchInfo"></span><button type="button" class="cmd" id="watchToggle">[PAUSAR]</button><button type="button" class="cmd danger" id="watchStop">[FECHAR VIDEO]</button></div>
+        <div class="watch-bar"><span id="watchInfo"></span><button type="button" class="ib" id="watchToggle" title="Pausar" aria-label="Pausar"><svg class="ic" aria-hidden="true"><use href="#i-pause"/></svg></button><button type="button" class="ib" id="watchStop" title="Fechar o video" aria-label="Fechar o video"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
       </div>
       <div id="tiles"></div>
       <div class="controls">
-        <button type="button" class="cmd" id="micBtn" title="Ligar ou desligar seu microfone">[MIC]</button>
-        <button type="button" class="cmd" id="deafBtn" title="Parar de ouvir a chamada">[FONE]</button>
-        <button type="button" class="cmd" id="camBtn" title="Ligar ou desligar sua camera">[CAM]</button>
-        <button type="button" class="cmd" id="screenBtn" title="Compartilhar sua tela">[TELA]</button>
-        <button type="button" class="cmd" id="setBtn" title="Configuracoes de audio e video">[CONFIG]</button>
-        <button type="button" class="cmd" id="pttBtn" title="Segure para falar (ou segure ESPACO)" hidden>[SEGURE P/ FALAR]</button>
-        <button type="button" class="cmd" id="sfxBtn" title="Sons para todo mundo da call">[SONS]</button>
-        <button type="button" class="cmd" id="watchBtn" title="Assistir um video do YouTube junto">[YOUTUBE]</button>
-        <button type="button" class="cmd" id="minBtn" title="Esconder ou mostrar os videos">[-]</button>
+        <button type="button" class="ib" id="micBtn" title="Desligar o microfone" aria-label="Desligar o microfone"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
+        <button type="button" class="ib" id="deafBtn" title="Parar de ouvir a call" aria-label="Parar de ouvir a call"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg></button>
+        <button type="button" class="ib" id="camBtn" title="Ligar a camera" aria-label="Ligar a camera"><svg class="ic" aria-hidden="true"><use href="#i-video"/></svg></button>
+        <button type="button" class="ib" id="screenBtn" title="Compartilhar a tela" aria-label="Compartilhar a tela"><svg class="ic" aria-hidden="true"><use href="#i-monitor"/></svg></button>
+        <button type="button" class="ib" id="pttBtn" title="Segure para falar (ou segure ESPACO)" aria-label="Segure para falar (ou segure ESPACO)" hidden><svg class="ic" aria-hidden="true"><use href="#i-hand"/></svg></button>
+        <button type="button" class="ib" id="sfxBtn" title="Sons para todo mundo da call" aria-label="Sons para todo mundo da call"><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg></button>
+        <button type="button" class="ib" id="watchBtn" title="Assistir YouTube junto" aria-label="Assistir YouTube junto"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button type="button" class="ib" id="setBtn" title="Configuracoes de audio e video" aria-label="Configuracoes de audio e video"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+        <button type="button" class="ib" id="minBtn" title="Esconder os videos" aria-label="Esconder os videos"><svg class="ic" aria-hidden="true"><use href="#i-chevron-up"/></svg></button>
         <span class="spacer"></span>
-        <button type="button" class="cmd danger" id="leaveBtn">[SAIR]</button>
+        <button type="button" class="ib leave" id="leaveBtn" title="Sair da call" aria-label="Sair da call"><svg class="ic" aria-hidden="true"><use href="#i-phone-off"/></svg></button>
       </div>
       <div class="controls" id="sfxBar" hidden></div>
       <form class="controls" id="watchForm" hidden>
         <input type="text" id="watchUrl" placeholder="cole o link do YouTube" aria-label="Link do YouTube" autocomplete="off">
-        <button type="submit" class="cmd">[ASSISTIR JUNTO]</button>
+        <button type="submit" class="cmd">Assistir junto</button>
       </form>
     </section>
     <main id="scroller"><div class="pad"><div id="log"></div></div></main>
     <footer class="pad">
-      <button type="button" id="chatPeek" aria-controls="scroller"><span class="lbl">[CHAT]</span><span id="peekText">sem mensagens</span></button>
+      <button type="button" id="chatPeek" aria-controls="scroller"><span class="lbl"><svg class="ic" aria-hidden="true"><use href="#i-message"/></svg></span><span id="peekText">sem mensagens</span></button>
       <div id="typing" aria-live="polite"></div>
       <div id="mentionBox"></div>
-      <div class="replying" id="replying" hidden><span id="replyText"></span><button type="button" class="cmd" id="replyCancel" title="Cancelar resposta">[X]</button></div>
-      <div class="replying rec" id="recBar" hidden><span id="recText">gravando...</span><button type="button" class="cmd" id="recSend">[ENVIAR]</button><button type="button" class="cmd danger" id="recCancel">[CANCELAR]</button></div>
+      <div class="replying" id="replying" hidden><span id="replyText"></span><button type="button" class="ib sm" id="replyCancel" title="Cancelar resposta" aria-label="Cancelar resposta"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <div class="replying rec" id="recBar" hidden><span id="recText">gravando...</span><button type="button" class="cmd" id="recSend">Enviar</button><button type="button" class="cmd danger" id="recCancel">Cancelar</button></div>
       <form id="form">
         <span class="ps1" id="ps1">apelido: </span>
         <textarea id="input" rows="1" placeholder="seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
-        <button type="button" class="cmd" id="audioBtn" title="Gravar mensagem de audio (ate 1 minuto)" hidden>[AUDIO]</button>
-        <button type="button" class="cmd" id="photoBtn" title="Enviar foto" hidden>[FOTO]</button>
+        <button type="button" class="ib" id="audioBtn" title="Gravar audio (ate 1 minuto)" aria-label="Gravar audio (ate 1 minuto)" hidden><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
+        <button type="button" class="ib" id="photoBtn" title="Enviar foto" aria-label="Enviar foto" hidden><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></button>
+        <button type="submit" class="ib" id="sendBtn" title="Enviar" aria-label="Enviar"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg></button>
         <input type="file" id="file" accept="image/*" hidden>
       </form>
       <p id="note">escolha um apelido e aperte ENTER</p>
@@ -693,14 +718,14 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     <h2 id="onlineTitle">ONLINE 0</h2>
     <ul id="people"></ul>
     <h2>POKER</h2>
-    <ul id="actList"><li><span id="actTags">mesa vazia</span><button type="button" class="cmd" id="actOpen">[ABRIR]</button></li></ul>
+    <ul id="actList"><li><span id="actTags">mesa vazia</span><button type="button" class="cmd" id="actOpen">Abrir</button></li></ul>
     <h2>TRUCO</h2>
-    <ul id="trList" class="actList"><li><span id="trTags">sem mesa</span><button type="button" class="cmd" id="trOpen">[ABRIR]</button></li></ul>
+    <ul id="trList" class="actList"><li><span id="trTags">sem mesa</span><button type="button" class="cmd" id="trOpen">Abrir</button></li></ul>
     <h2 id="callTitle">CALL 0</h2>
     <ul id="callPeople"></ul>
-    <div class="callbox"><button type="button" class="cmd" id="joinBtn" hidden>[ENTRAR]</button></div>
+    <div class="callbox"><button type="button" class="cmd" id="joinBtn" hidden>Entrar</button></div>
     <div class="profile" id="profile" hidden>
-      <button type="button" class="cmd" id="profileBtn">[MEU PERFIL]</button>
+      <button type="button" class="cmd withicon" id="profileBtn"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg> Meu perfil</button>
       <input type="file" id="avatarFile" accept="image/*" hidden>
     </div>
   </aside>
@@ -711,7 +736,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 
 <div class="modal" id="admModal" hidden>
   <div class="box" role="dialog" aria-labelledby="admTitle">
-    <div class="row"><h3 id="admTitle">MODERAR</h3><button type="button" class="cmd close" id="admClose" aria-label="Fechar">[X]</button></div>
+    <div class="row"><h3 id="admTitle">MODERAR</h3><button type="button" class="ib" id="admClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="row">
       <label>Silenciar por
         <select id="modMinutes"><option value="5">5 minutos</option><option value="15" selected>15 minutos</option><option value="60">1 hora</option><option value="1440">1 dia</option></select>
@@ -726,31 +751,31 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     <div class="modlist" id="modPunished"></div>
     <b class="lbl2" id="modBansTitle">Banidos</b>
     <div class="modlist" id="modBans"></div>
-    <span class="lbl2">Expulsar tira do servidor (volta so com convite novo). Banir tira e impede de voltar. Para apagar uma mensagem, passe o mouse nela e clique em [APAGAR].</span>
-    <div class="row"><button type="button" class="cmd danger" id="modClear">[LIMPAR O CHAT TODO]</button></div>
+    <span class="lbl2">Expulsar tira do servidor (volta so com convite novo). Banir tira e impede de voltar. Para apagar uma mensagem, passe o mouse nela e clique em Apagar.</span>
+    <div class="row"><button type="button" class="cmd danger" id="modClear">Limpar o chat todo</button></div>
   </div>
 </div>
 
 <div class="modal" id="srvModal" hidden>
   <div class="box" role="dialog" aria-labelledby="srvTitle">
-    <div class="row"><h3 id="srvTitle">SERVIDOR</h3><button type="button" class="cmd close" id="srvClose" aria-label="Fechar">[X]</button></div>
+    <div class="row"><h3 id="srvTitle">SERVIDOR</h3><button type="button" class="ib" id="srvClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sect"><b>Convidar pessoas</b>
       <div class="opts">
         <label class="inline">Link vale por
           <select id="invHours"><option value="1">1 hora</option><option value="24" selected>1 dia</option><option value="168">7 dias</option><option value="0">sempre</option></select>
         </label>
-        <button type="button" class="cmd" id="invMake">[GERAR LINK]</button>
+        <button type="button" class="cmd" id="invMake">Gerar link</button>
       </div>
-      <div class="opts" id="invOut" hidden><input type="text" id="invLink" readonly aria-label="Link do convite"><button type="button" class="cmd" id="invCopy">[COPIAR]</button></div>
+      <div class="opts" id="invOut" hidden><input type="text" id="invLink" readonly aria-label="Link do convite"><button type="button" class="ib" id="invCopy" title="Copiar o link" aria-label="Copiar o link"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
       <span class="lbl2">Quem abrir o link precisa ter conta (ou criar uma) e entra direto neste servidor.</span>
     </div>
     <div class="sect" id="srvRenameBox"><b>Nome do servidor</b>
-      <form class="opts" id="srvRename"><input type="text" id="srvNameInput" maxlength="40" aria-label="Nome do servidor"><button type="submit" class="cmd">[SALVAR]</button></form>
+      <form class="opts" id="srvRename"><input type="text" id="srvNameInput" maxlength="40" aria-label="Nome do servidor"><button type="submit" class="cmd">Salvar</button></form>
     </div>
     <div class="opts">
-      <button type="button" class="cmd" id="srvMod">[MODERAR]</button>
-      <button type="button" class="cmd danger" id="srvLeave">[SAIR DO SERVIDOR]</button>
-      <button type="button" class="cmd danger" id="srvDelete">[APAGAR SERVIDOR]</button>
+      <button type="button" class="cmd" id="srvMod">Moderar</button>
+      <button type="button" class="cmd danger" id="srvLeave">Sair do servidor</button>
+      <button type="button" class="cmd danger" id="srvDelete">Apagar servidor</button>
     </div>
     <p class="err" id="srvMsg"></p>
   </div>
@@ -758,23 +783,23 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 
 <div class="modal" id="profileModal" hidden>
   <div class="box" role="dialog" aria-labelledby="profTitle">
-    <div class="row"><h3 id="profTitle">MEU PERFIL</h3><button type="button" class="cmd close" id="profClose" aria-label="Fechar">[X]</button></div>
+    <div class="row"><h3 id="profTitle">MEU PERFIL</h3><button type="button" class="ib" id="profClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <div class="sect"><b>Conta</b><span id="profEmail" class="lbl2"></span>
-      <form class="opts" id="nickForm"><label class="inline">Apelido <input type="text" id="nickInput" maxlength="20"></label><button type="submit" class="cmd">[SALVAR]</button></form>
+      <form class="opts" id="nickForm"><label class="inline">Apelido <input type="text" id="nickInput" maxlength="20"></label><button type="submit" class="cmd">Salvar</button></form>
     </div>
-    <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">[TROCAR FOTO DE PERFIL]</button></div></div>
+    <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">Trocar foto de perfil</button></div></div>
     <div class="sect"><b>Cor do nome</b><div class="swatches" id="colorPick"></div></div>
     <div class="sect"><b>Status</b><div class="opts" id="statusPick"></div><span style="color: var(--dim)">Ocupado: sem sons nem notificacoes, so as mencoes com @.</span></div>
     <div class="sect"><b>Tema</b><div class="opts" id="themePick"></div></div>
-    <div class="sect"><b>Notificacoes</b><div class="opts"><button type="button" class="cmd" id="notifBtn">[ATIVAR NOTIFICACOES]</button></div><span style="color: var(--dim)" id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</span></div>
+    <div class="sect"><b>Notificacoes</b><div class="opts"><button type="button" class="cmd" id="notifBtn">Ativar notificações</button></div><span style="color: var(--dim)" id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</span></div>
     <p class="err" id="profMsg"></p>
-    <div class="row"><span></span><button type="button" class="cmd danger" id="logoutBtn">[SAIR DA CONTA]</button></div>
+    <div class="row"><span></span><button type="button" class="cmd danger" id="logoutBtn">Sair da conta</button></div>
   </div>
 </div>
 
 <div class="modal" id="settings" hidden>
   <div class="box" role="dialog" aria-labelledby="setTitle">
-    <div class="row"><h3 id="setTitle">CONFIGURACOES</h3><button type="button" class="cmd close" id="setClose" aria-label="Fechar">[X]</button></div>
+    <div class="row"><h3 id="setTitle">CONFIGURACOES</h3><button type="button" class="ib" id="setClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
     <label>Microfone
       <select id="micSelect"></select>
     </label>
@@ -785,7 +810,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     <label>Camera
       <select id="camSelect"></select>
     </label>
-    <label class="check"><input type="checkbox" id="pttCheck"> Apertar para falar: o microfone so liga enquanto voce segura ESPACO (fora do campo de texto) ou o botao [SEGURE P/ FALAR]</label>
+    <label class="check"><input type="checkbox" id="pttCheck"> Apertar para falar: o microfone so liga enquanto voce segura ESPACO (fora do campo de texto) ou o botao Segure p/ falar</label>
     <label><span>Volume geral da chamada: <b id="masterVal">100%</b></span>
       <input type="range" id="master" min="0" max="100" step="5" value="100">
     </label>
@@ -797,26 +822,26 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   <div class="gbox">
     <h1 class="gtitle">CHAT PEDRO</h1>
     <div id="gAuth" hidden>
-      <div class="opts tabs"><button type="button" class="cmd" id="tabLogin" aria-pressed="true">[ENTRAR]</button><button type="button" class="cmd" id="tabSignup" aria-pressed="false">[CRIAR CONTA]</button></div>
+      <div class="opts tabs"><button type="button" class="cmd" id="tabLogin" aria-pressed="true">Entrar</button><button type="button" class="cmd" id="tabSignup" aria-pressed="false">Criar conta</button></div>
       <form id="authForm" class="gform">
         <label>E-mail <input type="email" id="authEmail" autocomplete="email" required></label>
         <label id="nickRow" hidden>Apelido (como vao te ver) <input type="text" id="authNick" maxlength="20" autocomplete="nickname"></label>
         <label>Senha <input type="password" id="authPass" autocomplete="current-password" minlength="6" required></label>
-        <button type="submit" class="cmd big" id="authGo">[ENTRAR]</button>
+        <button type="submit" class="cmd big" id="authGo">Entrar</button>
         <button type="button" class="cmd small" id="forgotBtn">esqueci a senha</button>
       </form>
     </div>
     <div id="gHome" hidden>
       <p class="lbl2">Voce ainda nao esta em nenhum servidor. Crie o seu ou cole um convite que recebeu.</p>
-      <form id="createForm" class="gform"><label>Nome do servidor novo <input type="text" id="createName" maxlength="40" placeholder="ex.: Galera do Pedro"></label><button type="submit" class="cmd big">[CRIAR SERVIDOR]</button></form>
-      <form id="joinForm" class="gform"><label>Link ou codigo do convite <input type="text" id="joinCode" placeholder="https://.../convite/AbC123"></label><button type="submit" class="cmd big">[ENTRAR COM CONVITE]</button></form>
-      <div class="opts"><button type="button" class="cmd" id="homeBack" hidden>[VOLTAR]</button><button type="button" class="cmd danger" id="homeLogout">[SAIR DA CONTA]</button></div>
+      <form id="createForm" class="gform"><label>Nome do servidor novo <input type="text" id="createName" maxlength="40" placeholder="ex.: Galera do Pedro"></label><button type="submit" class="cmd big">Criar servidor</button></form>
+      <form id="joinForm" class="gform"><label>Link ou codigo do convite <input type="text" id="joinCode" placeholder="https://.../convite/AbC123"></label><button type="submit" class="cmd big">Entrar com convite</button></form>
+      <div class="opts"><button type="button" class="cmd" id="homeBack" hidden>Voltar</button><button type="button" class="cmd danger" id="homeLogout">Sair da conta</button></div>
     </div>
     <div id="gInvite" hidden>
       <p class="lbl2">Voce foi convidado para</p>
       <p class="invname" id="invName"></p>
       <p class="lbl2" id="invInfo"></p>
-      <div class="opts"><button type="button" class="cmd big" id="invAccept">[ENTRAR NO SERVIDOR]</button><button type="button" class="cmd" id="invSkip">[AGORA NAO]</button></div>
+      <div class="opts"><button type="button" class="cmd big" id="invAccept">Entrar no servidor</button><button type="button" class="cmd" id="invSkip">Agora não</button></div>
     </div>
     <p class="err" id="gMsg" aria-live="polite"></p>
   </div>
@@ -827,6 +852,20 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 <script src="/socket.io/socket.io.js"></script>
 <script src="/vendor/supabase/supabase.js"></script>
 <script>
+// Icone do sprite: icon("mic") devolve um <svg>; setIcon troca o icone e o texto de ajuda de um botao
+window.icon = (name) => {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  s.setAttribute("class", "ic"); s.setAttribute("aria-hidden", "true");
+  const u = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  u.setAttribute("href", "#i-" + name);
+  s.append(u);
+  return s;
+};
+window.setIcon = (btn, name, label, extra) => {
+  btn.replaceChildren(window.icon(name));
+  if (extra !== undefined && extra !== "") { const n = document.createElement("span"); n.className = "n"; n.textContent = extra; btn.append(n); }
+  if (label) { btn.title = label; btn.setAttribute("aria-label", label); }
+};
 (() => {
   const $ = (id) => document.getElementById(id);
   const log = $("log"), scroller = $("scroller"), input = $("input"), note = $("note"), ps1 = $("ps1");
@@ -834,7 +873,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   const socket = io({ autoConnect: false, auth: (cb) => cb(window.ChatPedroAuth ? window.ChatPedroAuth.handshake() : {}) });
   let nick = null, users = [], avatars = {};
 
-  const HELP = "ENTER envia | SHIFT+ENTER nova linha | [FOTO] ou cole/arraste uma imagem | /nick NOVO muda o apelido | /perfil troca a foto de perfil | /limpar limpa a tela";
+  const HELP = "ENTER envia | SHIFT+ENTER nova linha | Foto ou cole/arraste uma imagem | /nick NOVO muda o apelido | /perfil troca a foto de perfil | /limpar limpa a tela";
   let noteTimer = null;
   // avisos aparecem embaixo do campo de texto e somem sozinhos
   const setNote = (text, err) => {
@@ -930,9 +969,13 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 
   function actionsFor(m, l) {
     const acts = span("acts", "");
-    const btn = (text, fn, cls) => { const b = document.createElement("button"); b.type = "button"; b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); acts.append(b); return b; };
-    btn("[RESPONDER]", () => setReply(m));
-    btn("[REAGIR]", () => {
+    const btn = (ic, label, fn, cls) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "ib sm" + (cls ? " " + cls : "");
+      setIcon(b, ic, label);
+      b.addEventListener("click", (e) => { e.stopPropagation(); fn(); }); acts.append(b); return b;
+    };
+    btn("reply", "Responder", () => setReply(m));
+    btn("smile", "Reagir", () => {
       const open = l.querySelector(".picker");
       document.querySelectorAll(".picker").forEach((x) => x.remove());
       if (open) return;
@@ -944,7 +987,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       }
       l.append(pk);
     });
-    const del = btn("[APAGAR]", () => socket.emit("delete", m.id), "del");
+    const del = btn("trash", "Apagar", () => socket.emit("delete", m.id), "del");
     del.hidden = !canDelete(m);
     return acts;
   }
@@ -957,7 +1000,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     l.className = "line";
     if (m.id) { l.dataset.id = m.id; lineById.set(m.id, { el: l, m }); }
     if (m.type === "sys") {
-      l.append(span("time", "[" + fmtTime(m.ts) + "] "), span("sys", "*** " + m.text));
+      l.append(span("time", fmtTime(m.ts)), span("sys", "*** " + m.text));
     } else {
       if (m.reply) {
         const q = span("quote", "↳ " + m.reply.nick + ": " + m.reply.text);
@@ -965,7 +1008,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
         q.addEventListener("click", () => jumpTo(m.reply.id));
         l.append(q);
       }
-      l.append(span("time", "[" + fmtTime(m.ts) + "] "), avatar(m.nick), whoSpan(m.nick));
+      l.append(span("time", fmtTime(m.ts)), avatar(m.nick), whoSpan(m.nick));
       if (m.type === "img") {
         const box = span("pic", "");
         const img = document.createElement("img");
@@ -1011,7 +1054,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 
   function setReply(m) {
     replyTo = m;
-    const what = m.type === "img" ? "[foto]" : m.type === "audio" ? "[audio]" : m.text;
+    const what = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text;
     $("replyText").textContent = "respondendo " + m.nick + ": " + what;
     $("replying").hidden = !m;
     input.focus();
@@ -1040,7 +1083,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     if (myStatus === "ocupado" && !mentioned) return;
     if (mentioned) ding([880, 1320, 1760]);
     if (notifOn && document.hidden && "Notification" in window && Notification.permission === "granted") {
-      const body = m.type === "img" ? "[foto]" : m.type === "audio" ? "[audio]" : m.text;
+      const body = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text;
       try { new Notification(mentioned ? m.nick + " mencionou voce" : m.nick, { body: body.slice(0, 140), tag: "chatpedro", icon: avatars[keyOf(m.nick)] || undefined }); } catch {}
     }
   }
@@ -1091,12 +1134,12 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   const chatHidden = () => getComputedStyle(scroller).display === "none";
   function peek(m) {
     if (!m || m.type === "sys" && !m.nick) { if (m) $("peekText").textContent = "*** " + m.text; return; }
-    $("peekText").textContent = m.nick + "> " + (m.type === "img" ? "[foto]" : m.text);
+    $("peekText").textContent = m.nick + "> " + (m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text);
     if (chatHidden() && m.nick !== nick) { unread++; peekLabel(); }
   }
   function peekLabel() {
     const lbl = $("chatPeek").querySelector(".lbl");
-    lbl.replaceChildren(document.body.classList.contains("chatopen") ? "[FECHAR CHAT]" : "[CHAT]");
+    lbl.replaceChildren(icon(document.body.classList.contains("chatopen") ? "x" : "message"));
     if (unread) { const b = document.createElement("b"); b.textContent = unread; lbl.append(b); }
   }
   $("chatPeek").addEventListener("click", () => {
@@ -1117,7 +1160,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
 
   function renderPeople() {
     $("onlineTitle").textContent = "ONLINE " + users.length;
-    $("onlineBtn").textContent = "[ONLINE " + users.length + "]";
+    setIcon($("onlineBtn"), "users", users.length + " online", users.length);
     const ul = $("people");
     ul.replaceChildren();
     // voce primeiro, depois os outros em ordem alfabetica
@@ -1355,7 +1398,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     const b = document.createElement("button"); b.type = "button"; b.className = "cmd danger"; b.textContent = text;
     let armed = false;
     b.addEventListener("click", () => {
-      if (!armed) { armed = true; b.textContent = "[CERTEZA?]"; setTimeout(() => { armed = false; b.textContent = text; }, 3000); return; }
+      if (!armed) { armed = true; b.textContent = "Certeza?"; setTimeout(() => { armed = false; b.textContent = text; }, 3000); return; }
       fn();
     });
     return b;
@@ -1371,24 +1414,24 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
       const can = m.role !== "owner" && (myRole === "owner" || m.role === "member");
       const buttons = [];
       if (can) buttons.push(
-        btn("[SILENCIAR]", () => socket.emit("admin:mute", { id: m.id, minutes: Number($("modMinutes").value) })),
-        confirmBtn("[EXPULSAR]", () => socket.emit("admin:kick", { id: m.id })),
-        confirmBtn("[BANIR]", () => socket.emit("admin:ban", { id: m.id, minutes: Number($("banMinutes").value) })),
+        btn("Silenciar", () => socket.emit("admin:mute", { id: m.id, minutes: Number($("modMinutes").value) })),
+        confirmBtn("Expulsar", () => socket.emit("admin:kick", { id: m.id })),
+        confirmBtn("Banir", () => socket.emit("admin:ban", { id: m.id, minutes: Number($("banMinutes").value) })),
       );
-      if (myRole === "owner" && m.role !== "owner") buttons.push(btn(m.role === "admin" ? "[TIRAR ADM]" : "[TORNAR ADM]", () => socket.emit("admin:role", { id: m.id, role: m.role === "admin" ? "member" : "admin" })));
+      if (myRole === "owner" && m.role !== "owner") buttons.push(btn(m.role === "admin" ? "Tirar ADM" : "Tornar ADM", () => socket.emit("admin:role", { id: m.id, role: m.role === "admin" ? "member" : "admin" })));
       return row(nameOf(m), ...buttons);
-    }) : [span("lbl2", "so tem voce aqui. Chame a galera em [SERVIDOR] > [GERAR LINK].")]));
+    }) : [span("lbl2", "so tem voce aqui. Chame a galera em Servidor > Gerar link.")]));
     $("modPunishedTitle").hidden = !muted.length;
-    $("modPunished").replaceChildren(...muted.map((p) => row(span("nm", p.nick + " (" + p.min + " min)"), btn("[LIBERAR]", () => socket.emit("admin:mute", { id: p.id, minutes: 0 })))));
+    $("modPunished").replaceChildren(...muted.map((p) => row(span("nm", p.nick + " (" + p.min + " min)"), btn("Liberar", () => socket.emit("admin:mute", { id: p.id, minutes: 0 })))));
     $("modBansTitle").hidden = !bans.length;
-    $("modBans").replaceChildren(...bans.map((b) => row(span("nm", b.nick + " (" + (b.until ? "ate " + new Date(b.until).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "para sempre") + ")"), btn("[DESBANIR]", () => socket.emit("admin:unban", b.id)))));
+    $("modBans").replaceChildren(...bans.map((b) => row(span("nm", b.nick + " (" + (b.until ? "ate " + new Date(b.until).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "para sempre") + ")"), btn("Desbanir", () => socket.emit("admin:unban", b.id)))));
   }
-  $("modClear").replaceWith(confirmBtn("[LIMPAR O CHAT TODO]", () => socket.emit("admin:clear")));
+  $("modClear").replaceWith(confirmBtn("Limpar o chat todo", () => socket.emit("admin:clear")));
 
   // ---------- MEU PERFIL: cor do nome, status, tema e notificacoes ----------
   const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
-  const STATUS = { online: "[ONLINE]", ausente: "[AUSENTE]", ocupado: "[OCUPADO]" };
-  const THEMES = { verde: "[VERDE]", ambar: "[AMBAR]", azul: "[AZUL]", win95: "[WINDOWS 95]" };
+  const STATUS = { online: "Online", ausente: "Ausente", ocupado: "Ocupado" };
+  const THEMES = { verde: "Verde", ambar: "Âmbar", azul: "Azul", win95: "Windows 95" };
   let myColor = ""; // vem da conta (boot.js)
   let myStatus = store.get("chatpedro-status") || "online";
   let myTheme = store.get("chatpedro-tema") || "verde";
@@ -1414,7 +1457,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     opts("themePick", THEMES, myTheme, (k) => { myTheme = k; store.set("chatpedro-tema", k); applyTheme(); });
     const supported = "Notification" in window;
     $("notifBtn").hidden = !supported;
-    $("notifBtn").textContent = notifOn ? "[DESATIVAR NOTIFICACOES]" : "[ATIVAR NOTIFICACOES]";
+    $("notifBtn").textContent = notifOn ? "Desativar notificações" : "Ativar notificações";
     if (!supported) $("notifHint").textContent = "Seu navegador nao suporta notificacoes.";
     else if (Notification.permission === "denied") $("notifHint").textContent = "As notificacoes estao bloqueadas no navegador: libere no cadeado ao lado do endereco.";
   }

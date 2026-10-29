@@ -220,7 +220,7 @@ function blockedUntil(map, key) {
 function quoteOf(ctx, id) {
   const m = ctx.history.find((x) => x.id === Number(id));
   if (!m || m.type === "sys") return null;
-  const text = m.type === "img" ? "[foto]" : m.type === "audio" ? "[audio]" : m.text.slice(0, 90);
+  const text = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text.slice(0, 90);
   return { id: m.id, nick: m.nick, text };
 }
 

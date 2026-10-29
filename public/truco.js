@@ -148,7 +148,7 @@
       if (s.nick) {
         box.append(avatar(s.nick), el("span", "nm", s.nick + (i === st.me ? " (voce)" : "")));
       } else if (st.me < 0 && app.nick && st.stage !== "gameOver") {
-        const b = el("button", "cmd", st.stage === "lobby" ? "[SENTAR]" : "[ASSUMIR]");
+        const b = el("button", "cmd", st.stage === "lobby" ? "Sentar" : "Assumir");
         b.type = "button"; b.style.width = "100%";
         b.addEventListener("click", () => socket.emit("truco:sit", i, done));
         box.append(b);
@@ -268,7 +268,7 @@
         box.append(el("span", "msg", "SUA VEZ"));
         if (st.canRaise) box.append(bigBtn(st.raiseName + "!", "truco", () => socket.emit("truco:raise", done)));
         if (st.canHide) {
-          const h = el("button", "cmd" + (hideNext ? " on" : ""), hideNext ? "[ENCOBERTA: SIM]" : "[JOGAR ENCOBERTA]");
+          const h = el("button", "cmd" + (hideNext ? " on" : ""), hideNext ? "Encoberta: sim" : "Jogar encoberta");
           h.type = "button"; h.title = "A proxima carta vai virada para baixo (nao ganha de ninguem)";
           h.addEventListener("click", () => { hideNext = !hideNext; render(); });
           box.append(h);
@@ -286,19 +286,19 @@
     box.replaceChildren();
     if (st.me < 0 || ["empty", "lobby"].includes(st.stage)) return;
     const toggle = (name, label) => {
-      const b = el("button", "cmd", (funOpen === name ? "[-] " : "") + label);
+      const b = el("button", "cmd", label + (funOpen === name ? " ▴" : " ▾"));
       b.type = "button";
       b.addEventListener("click", () => { funOpen = funOpen === name ? null : name; renderFun(); });
       return b;
     };
-    box.append(toggle("zoar", "[ZOAR]"), toggle("sinal", "[SINAL PRO PARCEIRO]"));
+    box.append(toggle("zoar", "Zoar"), toggle("sinal", "Sinal pro parceiro"));
     if (funOpen === "zoar") st.phrases.forEach((p, i) => {
       const b = el("button", "cmd", "\"" + p + "\""); b.type = "button";
       b.addEventListener("click", () => { socket.emit("truco:shout", i); funOpen = null; renderFun(); });
       box.append(b);
     });
     if (funOpen === "sinal") Object.entries(st.signals).forEach(([code, text]) => {
-      const b = el("button", "cmd", "[" + text + "]"); b.type = "button";
+      const b = el("button", "cmd chip", text); b.type = "button";
       b.addEventListener("click", () => { socket.emit("truco:signal", code); funOpen = null; renderFun(); setNote("Sinal enviado: " + text); });
       box.append(b);
     });
@@ -309,22 +309,22 @@
     bar.replaceChildren();
     const cmd = (text, fn, cls) => { const b = el("button", "cmd" + (cls ? " " + cls : ""), text); b.type = "button"; b.addEventListener("click", fn); return b; };
     if (st.stage === "empty") {
-      if (app.nick) bar.append(cmd("[CRIAR MESA DE 4]", () => socket.emit("truco:create", 4, done)), cmd("[CRIAR MESA DE 6]", () => socket.emit("truco:create", 6, done)));
+      if (app.nick) bar.append(cmd("Criar mesa de 4", () => socket.emit("truco:create", 4, done)), cmd("Criar mesa de 6", () => socket.emit("truco:create", 6, done)));
     } else {
       if (st.isHost && st.stage === "lobby") {
-        bar.append(cmd(st.size === 4 ? "[MESA DE 4 *]" : "[MESA DE 4]", () => socket.emit("truco:size", 4, done), st.size === 4 ? "on" : ""));
-        bar.append(cmd(st.size === 6 ? "[MESA DE 6 *]" : "[MESA DE 6]", () => socket.emit("truco:size", 6, done), st.size === 6 ? "on" : ""));
+        bar.append(cmd(st.size === 4 ? "Mesa de 4 ✓" : "Mesa de 4", () => socket.emit("truco:size", 4, done), st.size === 4 ? "on" : ""));
+        bar.append(cmd(st.size === 6 ? "Mesa de 6 ✓" : "Mesa de 6", () => socket.emit("truco:size", 6, done), st.size === 6 ? "on" : ""));
         const full = st.seats.every((s) => s.nick);
-        bar.append(cmd(full ? "[COMECAR]" : "[COMECAR (falta gente)]", () => socket.emit("truco:start", done), full ? "on" : ""));
+        bar.append(cmd(full ? "Começar" : "Começar (falta gente)", () => socket.emit("truco:start", done), full ? "on" : ""));
       }
-      if (st.isHost && st.stage === "gameOver") bar.append(cmd("[NOVA PARTIDA]", () => socket.emit("truco:start", done), "on"));
-      if (st.me >= 0) bar.append(cmd("[LEVANTAR]", () => socket.emit("truco:stand", done)));
-      else if (st.stage === "lobby") bar.append(el("span", "", "clique em [SENTAR]: os times alternam (frente a frente e parceiro)"));
-      if (st.isHost || st.isAdmin) bar.append(cmd("[ENCERRAR MESA]", () => socket.emit("truco:close", done)));
+      if (st.isHost && st.stage === "gameOver") bar.append(cmd("Nova partida", () => socket.emit("truco:start", done), "on"));
+      if (st.me >= 0) bar.append(cmd("Levantar", () => socket.emit("truco:stand", done)));
+      else if (st.stage === "lobby") bar.append(el("span", "", "clique em Sentar: os times alternam (frente a frente e parceiro)"));
+      if (st.isHost || st.isAdmin) bar.append(cmd("Encerrar mesa", () => socket.emit("truco:close", done)));
     }
     bar.append(el("span", "spacer"));
     const log = $("trLog");
-    bar.append(cmd(log.hidden ? "[HISTORICO]" : "[ESCONDER HISTORICO]", () => { log.hidden = !log.hidden; renderBar(); log.scrollTop = log.scrollHeight; }));
+    bar.append(cmd(log.hidden ? "Histórico" : "Esconder histórico", () => { log.hidden = !log.hidden; renderBar(); log.scrollTop = log.scrollHeight; }));
   }
 
   function done(r) { if (r && !r.ok) setNote("ERRO: " + r.error, true); }
@@ -353,7 +353,7 @@
     if (e.type === "raise") {
       beep(SFX.raise);
       if (open()) shout(e.text, "", (e.nick || "") + " pediu " + e.to);
-      else if (st.me >= 0 && !mine) setNote("[TRUCO] " + e.text + " Abra o [TRUCO] pra responder!", true);
+      else if (st.me >= 0 && !mine) setNote("Truco " + e.text + " Abra o Truco pra responder!", true);
       return;
     }
     if (e.type === "accept") { beep(SFX.accept); if (open()) shout(e.text, "ok", e.nick ? e.nick + " aceitou" : ""); return; }
@@ -377,7 +377,7 @@
     clockSkew = s.serverNow - Date.now();
     if (s.turnEndsAt !== lastEnds) { lastEnds = s.turnEndsAt; lastTick = -1; } // relogio novo
     const myTurn = s.stage === "playing" && s.toPlay === s.me && s.me >= 0 && !s.pending;
-    if (myTurn && !wasMyTurn) { beep(SFX.turn); if (!open()) setNote("[TRUCO] Sua vez de jogar!"); }
+    if (myTurn && !wasMyTurn) { beep(SFX.turn); if (!open()) setNote("Truco Sua vez de jogar!"); }
     if (!s.canHide) hideNext = false;
     sidebar();
     if (open()) render(); else hopNow = false;
@@ -399,10 +399,11 @@
   $("trucoBtn").addEventListener("click", () => (open() ? ($("truco").hidden = true) : show()));
   $("trOpen").addEventListener("click", show);
   $("trClose").addEventListener("click", () => { $("truco").hidden = true; });
-  $("trSound").textContent = sound ? "[SOM ON]" : "[SOM OFF]";
+  const soundIcon = () => setIcon($("trSound"), sound ? "volume" : "volume-off", sound ? "Desligar os sons" : "Ligar os sons");
+  soundIcon();
   $("trSound").addEventListener("click", () => {
     sound = !sound; store.set("chatpedro-trucosom", sound ? "on" : "off");
-    $("trSound").textContent = sound ? "[SOM ON]" : "[SOM OFF]";
+    soundIcon();
     if (sound) beep(SFX.accept);
   });
   window.addEventListener("resize", () => { if (open()) render(); });

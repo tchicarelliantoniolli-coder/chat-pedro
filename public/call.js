@@ -30,20 +30,22 @@
   const volumeOf = (nick) => Number(store.get("cp-vol-" + nick.toLowerCase()) || 100);
 
   // ---------- botoes ----------
-  const btn = (id, text, off) => { $(id).textContent = text; $(id).classList.toggle("off", !!off); };
+  // o botao mostra o estado: icone riscado/vermelho = desligado, fundo aceso = ligado
+  const btn = (id, ic, label, cls) => { setIcon($(id), ic, label); $(id).classList.remove("on", "off"); if (cls) $(id).classList.add(cls); };
   function refreshButtons() {
     // desligado fica vermelho; ligado mostra ON
-    btn("micBtn", micOn ? "[MIC]" : "[MIC OFF]", !micOn);
-    btn("deafBtn", deaf ? "[FONE OFF]" : "[FONE]", deaf);
-    btn("camBtn", camStream ? "[CAM ON]" : "[CAM]", false);
-    btn("screenBtn", screenStream ? "[TELA ON]" : "[TELA]", false);
+    btn("micBtn", micOn ? "mic" : "mic-off", !micOn ? "Ligar o microfone" : prefs.ptt ? "Microfone no modo segurar para falar" : "Desligar o microfone", micOn ? "" : "off");
+    btn("deafBtn", deaf ? "headphones-off" : "headphones", deaf ? "Voltar a ouvir a call" : "Parar de ouvir a call", deaf ? "off" : "");
+    btn("camBtn", camStream ? "video" : "video-off", camStream ? "Desligar a camera" : "Ligar a camera", camStream ? "on" : "");
+    btn("screenBtn", "monitor", screenStream ? "Parar de compartilhar a tela" : "Compartilhar a tela", screenStream ? "on" : "");
     $("screenBtn").hidden = !canShareScreen;
     $("pttBtn").hidden = !(inCall && prefs.ptt);
-    $("micBtn").textContent = !micOn ? "[MIC OFF]" : prefs.ptt ? "[MIC: SEGURAR]" : "[MIC]";
-    $("minBtn").textContent = $("call").classList.contains("min") ? "[+]" : "[-]";
+    const min = $("call").classList.contains("min");
+    setIcon($("minBtn"), min ? "chevron-down" : "chevron-up", min ? "Mostrar os videos" : "Esconder os videos");
     $("minBtn").title = $("call").classList.contains("min") ? "Mostrar os videos" : "Esconder os videos";
     const n = members.length;
-    $("callBtn").textContent = n ? "[CALL " + n + "]" : "[CALL]";
+    setIcon($("callBtn"), "headphones", inCall ? "Voce esta na call (" + n + ")" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call", n || "");
+    $("callBtn").classList.toggle("on", inCall);
     $("joinBtn").hidden = inCall || !app.nick;
     $("callBtn").hidden = !app.nick;
   }
@@ -347,7 +349,7 @@
       });
       el.addEventListener("dblclick", (e) => { if (!e.target.closest(".vol, .full")) toggleFull(el); });
       const fb = document.createElement("button");
-      fb.type = "button"; fb.className = "cmd full"; fb.textContent = "[TELA CHEIA]";
+      fb.type = "button"; fb.className = "ib sm full"; setIcon(fb, "maximize", "Tela cheia");
       fb.addEventListener("click", (e) => { e.stopPropagation(); toggleFull(el); });
       el.append(fb);
       tiles.set(key, el);
@@ -411,7 +413,7 @@
   function syncFullButtons() {
     for (const el of tiles.values()) {
       const b = el.querySelector(".full");
-      if (b) b.textContent = isFull(el) ? "[SAIR DA TELA CHEIA]" : "[TELA CHEIA]";
+      if (b) setIcon(b, isFull(el) ? "minimize" : "maximize", isFull(el) ? "Sair da tela cheia" : "Tela cheia");
     }
   }
   document.addEventListener("fullscreenchange", syncFullButtons);
@@ -459,7 +461,7 @@
       if (m.deaf) tags.push("surdo"); else if (!m.mic) tags.push("mudo");
       if (m.cam) tags.push("cam");
       if (m.screen) tags.push("ao vivo");
-      const t = document.createElement("span"); t.className = "tags"; t.textContent = tags.length ? "[" + tags.join("|") + "]" : "";
+      const t = document.createElement("span"); t.className = "tags"; t.textContent = tags.join(" · ");
       li.append(avatar(m.nick), name, t);
       ul.append(li);
     }
@@ -516,7 +518,7 @@
   });
 
   // ---------- soundboard: sons 8-bit feitos na hora, tocam para todo mundo da call ----------
-  const SFX_LABEL = { buzina: "[BUZINA]", ihhh: "[IHHH]", risada: "[RISADA]", aplausos: "[APLAUSOS]", tambor: "[BA DUM TSS]", erro: "[ERRO]" };
+  const SFX_LABEL = { buzina: "Buzina", ihhh: "Ihhh", risada: "Risada", aplausos: "Aplausos", tambor: "Ba dum tss", erro: "Erro" };
   $("sfxBar").replaceChildren(...Object.entries(SFX_LABEL).map(([k, label]) => {
     const b = document.createElement("button"); b.type = "button"; b.className = "cmd"; b.textContent = label;
     b.addEventListener("click", () => socket.emit("call:sfx", k));
@@ -583,7 +585,7 @@
     if (!inCall || !watchState) { box.hidden = true; if (player) { try { player.destroy(); } catch {} player = null; playerVid = null; $("ytBox").replaceChildren(Object.assign(document.createElement("div"), { id: "ytPlayer" })); } return; }
     box.hidden = false;
     $("watchInfo").textContent = (watchState.playing ? "assistindo junto" : "pausado") + " | colocado por " + watchState.by;
-    $("watchToggle").textContent = watchState.playing ? "[PAUSAR]" : "[TOCAR]";
+    setIcon($("watchToggle"), watchState.playing ? "pause" : "play", watchState.playing ? "Pausar" : "Tocar");
     await loadYT();
     if (!watchState) return;
     if (!player) {
