@@ -84,7 +84,7 @@ function handName(v) {
     case 7: return "Quadra de " + RANK_PLURAL[a];
     case 6: return "Full House, " + RANK_PLURAL[a] + " com " + RANK_PLURAL[b];
     case 5: return "Flush, " + RANK_NAME[a] + " alto";
-    case 4: return "Sequencia, " + RANK_NAME[a] + " alto";
+    case 4: return "Sequência, " + RANK_NAME[a] + " alto";
     case 3: return "Trinca de " + RANK_PLURAL[a];
     case 2: return "Dois Pares, " + RANK_PLURAL[a] + " e " + RANK_PLURAL[b];
     case 1: return "Par de " + RANK_PLURAL[a];
@@ -167,7 +167,7 @@ function createPoker(io, helpers, timing) {
     // Mano a mano: o botao paga o small blind e age primeiro no pre-flop
     t.sb = headsUp ? t.button : nextSeat(t.button, (p) => p && p.inHand);
     t.bb = nextSeat(t.sb, (p) => p && p.inHand);
-    say("--- Mao #" + t.handNo + " ---");
+    say("--- Mão #" + t.handNo + " ---");
     post(t.sb, SMALL_BLIND, "small blind");
     post(t.bb, BIG_BLIND, "big blind");
     t.currentBet = BIG_BLIND;
@@ -227,14 +227,14 @@ function createPoker(io, helpers, timing) {
   // action: fold | check | call | raise (amount = valor total "aumentar para")
   function act(seat, action, amount, auto) {
     const p = t.seats[seat];
-    if (!p || t.toAct !== seat || !canAct(p)) return "Nao e sua vez.";
+    if (!p || t.toAct !== seat || !canAct(p)) return "Não é sua vez.";
     const toCall = t.currentBet - p.bet;
 
     if (action === "fold") {
       p.folded = true; p.lastAction = "FOLD";
       say(p.nick + " desiste");
     } else if (action === "check") {
-      if (toCall > 0) return "Nao da para passar: tem aposta de " + toCall + ".";
+      if (toCall > 0) return "Não dá para passar: tem aposta de " + toCall + ".";
       p.lastAction = "CHECK";
       say(p.nick + " passa");
     } else if (action === "call") {
@@ -247,12 +247,12 @@ function createPoker(io, helpers, timing) {
     } else if (action === "raise") {
       const maxTo = p.bet + p.chips;
       let to = Math.floor(Number(amount));
-      if (!Number.isFinite(to)) return "Valor invalido.";
-      if (p.raiseLocked) return "Voce ja agiu e o all-in curto nao reabre as apostas: so pagar ou desistir.";
-      if (maxTo <= t.currentBet) return "Voce nao tem fichas para aumentar.";
+      if (!Number.isFinite(to)) return "Valor inválido.";
+      if (p.raiseLocked) return "Você já agiu e o all-in curto não reabre as apostas: só pagar ou desistir.";
+      if (maxTo <= t.currentBet) return "Você não tem fichas para aumentar.";
       const minTo = t.currentBet + t.minRaise;
       if (to > maxTo) to = maxTo;
-      if (to < minTo && to !== maxTo) return "O minimo e " + minTo + ".";
+      if (to < minTo && to !== maxTo) return "O mínimo é " + minTo + ".";
       const raiseBy = to - t.currentBet;
       const opening = t.currentBet === 0;
       const amt = to - p.bet;
@@ -268,7 +268,7 @@ function createPoker(io, helpers, timing) {
       t.currentBet = to;
       p.lastAction = p.allIn ? "ALL-IN " + to : (opening ? "BET " : "RAISE ") + to;
       say(p.nick + (opening ? " aposta " : " aumenta para ") + to + (p.allIn ? " (all-in)" : ""));
-    } else return "Acao invalida.";
+    } else return "Ação inválida.";
 
     p.acted = true;
     p.raiseLocked = false;
@@ -378,7 +378,7 @@ function createPoker(io, helpers, timing) {
       // pote com uma pessoa so e aposta nao paga que volta: nao conta como premio
       if (pot.players.length > 1) for (const [w, amt] of paid) totals.set(w, (totals.get(w) || 0) + amt);
       const label = pots.length > 1 ? (i === 0 ? "pote principal" : "side pot " + i) : "pote";
-      if (pot.players.length === 1) say(winners[0].nick + " recebe de volta " + pot.amount + " nao pago");
+      if (pot.players.length === 1) say(winners[0].nick + " recebe de volta " + pot.amount + " não pago");
       else say(winners.map((w) => w.nick).join(" e ") + " ganha" + (winners.length > 1 ? "m" : "") + " o " + label + " (" + pot.amount + ") com " + winners[0].best.name);
     });
     t.result = { winners: [...totals].map(([w, amt]) => ({ nick: w.nick, amount: amt, hand: w.best.name })), losers: [] };
@@ -463,7 +463,7 @@ function createPoker(io, helpers, timing) {
       if (!(seat >= 0 && seat < SEATS) || t.seats[seat]) return reply(cb, "Lugar ocupado.");
       const already = seatOfKey(key);
       if (already >= 0) {
-        if (t.seats[already].inHand) return reply(cb, "Espere a mao acabar para trocar de lugar.");
+        if (t.seats[already].inHand) return reply(cb, "Espere a mão acabar para trocar de lugar.");
         t.seats[seat] = t.seats[already]; t.seats[already] = null;
         reply(cb); broadcast(); return;
       }
@@ -497,7 +497,7 @@ function createPoker(io, helpers, timing) {
       const req = t.requests.get(String(msg.key));
       if (!req) return;
       if (msg.accept) approve(String(msg.key));
-      else { t.requests.delete(String(msg.key)); say(req.nick + " nao foi aceito"); }
+      else { t.requests.delete(String(msg.key)); say(req.nick + " não foi aceito"); }
       broadcast();
     });
 
@@ -527,7 +527,7 @@ function createPoker(io, helpers, timing) {
     socket.on("poker:act", (msg, cb) => {
       const nick = nickNow(); if (!nick) return reply(cb, "Escolha um apelido primeiro.");
       const s = seatOfKey(keyOf(nick));
-      if (s < 0) return reply(cb, "Voce nao esta na mesa.");
+      if (s < 0) return reply(cb, "Você não está na mesa.");
       const err = act(s, msg && msg.action, msg && msg.amount, false);
       reply(cb, err);
       if (err) broadcast();
@@ -546,10 +546,10 @@ function createPoker(io, helpers, timing) {
     socket.on("poker:rebuy", (cb) => {
       const nick = nickNow(); if (!nick) return reply(cb);
       const key = keyOf(nick);
-      const s = seatOfKey(key); if (s < 0) return reply(cb, "Voce nao esta na mesa.");
+      const s = seatOfKey(key); if (s < 0) return reply(cb, "Você não está na mesa.");
       const p = t.seats[s];
-      if (p.inHand && t.stage !== "waiting") return reply(cb, "Espere a mao acabar.");
-      if (p.chips >= BIG_BLIND) return reply(cb, "Voce ainda tem fichas.");
+      if (p.inHand && t.stage !== "waiting") return reply(cb, "Espere a mão acabar.");
+      if (p.chips >= BIG_BLIND) return reply(cb, "Você ainda tem fichas.");
       if (!isAdmin(socket.id)) {
         t.requests.set(key, { nick, type: "rebuy", seat: s });
         say(nick + " pediu para recomprar");
@@ -584,7 +584,7 @@ function createPoker(io, helpers, timing) {
     t.requests.delete(key);
     if (!req || !isOnline(key)) return;
     if (req.type === "sit" || seatOfKey(key) < 0) {
-      if (!t.seats.some((x) => !x)) { say("Mesa cheia: " + req.nick + " nao conseguiu sentar"); return; }
+      if (!t.seats.some((x) => !x)) { say("Mesa cheia: " + req.nick + " não conseguiu sentar"); return; }
       doSit(key, req.nick, req.seat); // quem tinha perdido tudo volta com fichas novas
     } else {
       const s = seatOfKey(key);

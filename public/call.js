@@ -36,15 +36,15 @@
     // desligado fica vermelho; ligado mostra ON
     btn("micBtn", micOn ? "mic" : "mic-off", !micOn ? "Ligar o microfone" : prefs.ptt ? "Microfone no modo segurar para falar" : "Desligar o microfone", micOn ? "" : "off");
     btn("deafBtn", deaf ? "headphones-off" : "headphones", deaf ? "Voltar a ouvir a call" : "Parar de ouvir a call", deaf ? "off" : "");
-    btn("camBtn", camStream ? "video" : "video-off", camStream ? "Desligar a camera" : "Ligar a camera", camStream ? "on" : "");
+    btn("camBtn", camStream ? "video" : "video-off", camStream ? "Desligar a câmera" : "Ligar a câmera", camStream ? "on" : "");
     btn("screenBtn", "monitor", screenStream ? "Parar de compartilhar a tela" : "Compartilhar a tela", screenStream ? "on" : "");
     $("screenBtn").hidden = !canShareScreen;
     $("pttBtn").hidden = !(inCall && prefs.ptt);
     const min = $("call").classList.contains("min");
-    setIcon($("minBtn"), min ? "chevron-down" : "chevron-up", min ? "Mostrar os videos" : "Esconder os videos");
-    $("minBtn").title = $("call").classList.contains("min") ? "Mostrar os videos" : "Esconder os videos";
+    setIcon($("minBtn"), min ? "chevron-down" : "chevron-up", min ? "Mostrar os vídeos" : "Esconder os vídeos");
+    $("minBtn").title = $("call").classList.contains("min") ? "Mostrar os vídeos" : "Esconder os vídeos";
     const n = members.length;
-    setIcon($("callBtn"), "headphones", inCall ? "Voce esta na call (" + n + ")" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call", n || "");
+    setIcon($("callBtn"), "headphones", inCall ? "Você está na call (" + n + ")" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call", n || "");
     $("callBtn").classList.toggle("on", inCall);
     $("joinBtn").hidden = inCall || !app.nick;
     $("callBtn").hidden = !app.nick;
@@ -186,13 +186,13 @@
 
   async function join() {
     if (inCall || !app.nick) return;
-    if (!window.RTCPeerConnection || !navigator.mediaDevices) { setNote("ERRO: seu navegador nao suporta chamadas. Tente o Chrome.", true); return; }
+    if (!window.RTCPeerConnection || !navigator.mediaDevices) { setNote("ERRO: seu navegador não suporta chamadas. Tente o Chrome.", true); return; }
     buildAudioGraph();
     try { await startMic(); }
-    catch { micOn = false; setNote("Sem acesso ao microfone. Voce entrou mudo; libere o microfone no navegador para falar.", true); }
+    catch { micOn = false; setNote("Sem acesso ao microfone. Você entrou mudo; libere o microfone no navegador para falar.", true); }
     applyMic();
     socket.emit("call:join", myState(), (res) => {
-      if (!res || !res.ok) { setNote("ERRO: nao deu para entrar na chamada.", true); cleanup(); return; }
+      if (!res || !res.ok) { setNote("ERRO: não deu para entrar na chamada.", true); cleanup(); return; }
       inCall = true;
       applyMic();
       syncWatch();
@@ -229,7 +229,7 @@
   }
 
   // Se a conexao com o servidor cair, a chamada acaba; e preciso entrar de novo.
-  socket.on("disconnect", () => { if (inCall) { cleanup(); refreshButtons(); setNote("A conexao caiu e voce saiu da chamada. Entre de novo.", true); } });
+  socket.on("disconnect", () => { if (inCall) { cleanup(); refreshButtons(); setNote("A conexão caiu e você saiu da chamada. Entre de novo.", true); } });
 
   // ---------- controles ----------
   async function toggleCam() {
@@ -242,7 +242,7 @@
         camStream = await navigator.mediaDevices.getUserMedia({
           video: { deviceId: prefs.camId ? { ideal: prefs.camId } : undefined, width: { ideal: 640 }, height: { ideal: 360 } },
         });
-      } catch { setNote("ERRO: sem acesso a camera. Libere a camera no navegador.", true); return; }
+      } catch { setNote("ERRO: sem acesso a câmera. Libere a câmera no navegador.", true); return; }
       addTrackToAll(camStream.getVideoTracks()[0], camStream);
       fillDevices();
     }
@@ -297,14 +297,14 @@
       if (current && list.some((d) => d.deviceId === current)) sel.value = current;
     };
     fill($("micSelect"), "audioinput", micRaw && micRaw.getAudioTracks()[0].getSettings().deviceId || prefs.micId, "Microfone");
-    fill($("camSelect"), "videoinput", camStream && camStream.getVideoTracks()[0].getSettings().deviceId || prefs.camId, "Camera");
+    fill($("camSelect"), "videoinput", camStream && camStream.getVideoTracks()[0].getSettings().deviceId || prefs.camId, "Câmera");
   }
 
   $("micSelect").addEventListener("change", async (e) => {
     prefs.micId = e.target.value; store.set("cp-mic", prefs.micId);
     if (!inCall) return;
     try { await startMic(); applyMic(); } // o som enviado passa pelo mesmo ganho, sem renegociar
-    catch { setNote("ERRO: nao deu para usar esse microfone.", true); }
+    catch { setNote("ERRO: não deu para usar esse microfone.", true); }
   });
   $("camSelect").addEventListener("change", async (e) => {
     prefs.camId = e.target.value; store.set("cp-cam", prefs.camId);
@@ -318,7 +318,7 @@
       }
       camStream.removeTrack(oldTrack); oldTrack.stop(); camStream.addTrack(newTrack);
       renderTiles();
-    } catch { setNote("ERRO: nao deu para usar essa camera.", true); }
+    } catch { setNote("ERRO: não deu para usar essa câmera.", true); }
   });
   $("micGain").value = prefs.micGain;
   $("micGainVal").textContent = prefs.micGain + "%";
@@ -432,9 +432,9 @@
       const scr = me ? screenStream : p && m.screen ? p.streams[m.screen] : null;
       const muted = !m.mic || m.deaf;
       want.push(videoTile(m.id + ":main", cam, {
-        id: m.id, nick: m.nick, title: m.nick + (me ? " (voce)" : ""), mirror: me, muted, deaf: m.deaf, volume: !me,
+        id: m.id, nick: m.nick, title: m.nick + (me ? " (você)" : ""), mirror: me, muted, deaf: m.deaf, volume: !me,
       }));
-      if (scr) want.push(videoTile(m.id + ":screen", scr, { id: m.id, nick: m.nick, title: "Tela de " + m.nick + (me ? " (voce)" : ""), screen: true }));
+      if (scr) want.push(videoTile(m.id + ":screen", scr, { id: m.id, nick: m.nick, title: "Tela de " + m.nick + (me ? " (você)" : ""), screen: true }));
     }
     for (const [key, el] of tiles) if (!want.includes(el)) { el.remove(); tiles.delete(key); focused.delete(key); }
     // so mexe na ordem quando ela muda de verdade: tirar um quadro da pagina fecha a tela cheia dele

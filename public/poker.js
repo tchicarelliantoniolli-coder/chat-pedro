@@ -51,7 +51,7 @@
     if (st.result) center.append(el("div", "banner", st.result.winners.map((w) => w.nick + " ganha " + w.amount + (w.hand ? " - " + w.hand : "")).join(" | ")));
     else if (st.stage === "waiting") {
       const sitting = st.seats.filter(Boolean).length;
-      center.append(el("div", "banner", sitting < 2 ? "Esperando jogadores (minimo 2)" : "Proxima mao comecando..."));
+      center.append(el("div", "banner", sitting < 2 ? "Esperando jogadores (mínimo 2)" : "Próxima mão começando..."));
     }
     felt.append(center);
 
@@ -82,7 +82,7 @@
       seat.append(cards);
       const box = el("div", "box");
       const info = el("div", "info");
-      const nm = el("div", "nm", s.nick + (i === st.mySeat ? " (voce)" : ""));
+      const nm = el("div", "nm", s.nick + (i === st.mySeat ? " (você)" : ""));
       if (s.admin) { const c = el("span", "crown", "\u2605 "); c.title = "ADM"; nm.prepend(c); }
       info.append(nm, el("div", "ch", s.allIn && s.chips === 0 ? "ALL-IN" : s.chips + ""));
       box.append(avatar(s.nick), info);
@@ -161,17 +161,17 @@
   }
 
   function renderBar() {
-    $("actInfo").textContent = "blinds " + st.blinds.join("/") + (st.handNo ? "  mao " + st.handNo : "") + (st.locked ? "  trancada" : "");
+    $("actInfo").textContent = "blinds " + st.blinds.join("/") + (st.handNo ? "  mão " + st.handNo : "") + (st.locked ? "  trancada" : "");
     const bar = $("tablebar");
     bar.replaceChildren();
     const me = st.mySeat >= 0 ? st.seats[st.mySeat] : null;
     const cmd = (text, fn, cls) => { const b = el("button", "cmd" + (cls ? " " + cls : ""), text); b.type = "button"; b.addEventListener("click", fn); return b; };
     if (st.myRequest) {
-      bar.append(el("span", "", "esperando o ADM " + (st.myRequest === "rebuy" ? "liberar fichas novas" : "aceitar voce") + (st.adminOnline ? "" : " (nenhum ADM online agora)")));
+      bar.append(el("span", "", "esperando o ADM " + (st.myRequest === "rebuy" ? "liberar fichas novas" : "aceitar você") + (st.adminOnline ? "" : " (nenhum ADM online agora)")));
       bar.append(cmd("Cancelar", () => socket.emit("poker:cancel")));
     } else if (!me) {
       bar.append(el("span", "", !app.nick ? "escolha um apelido para jogar"
-        : st.busted && !st.isAdmin ? "voce perdeu tudo: clique em Pedir para o ADM liberar fichas novas"
+        : st.busted && !st.isAdmin ? "você perdeu tudo: clique em Pedir para o ADM liberar fichas novas"
         : st.locked && !st.isAdmin ? "mesa trancada: clique em Pedir num lugar" : "clique em Sentar num lugar vazio"));
     } else {
       if (me.chips < st.blinds[1] && !(me.inHand && st.stage !== "waiting")) {
@@ -202,7 +202,7 @@
     box.replaceChildren(...reqs.map((r) => {
       const card = el("div", "invite");
       const tx = el("div", "t", r.nick + (r.type === "rebuy" ? " quer " + st.startChips + " fichas novas" : " quer entrar na mesa"));
-      tx.append(el("small", "", r.type === "rebuy" ? "perdeu tudo no poker" : "a mesa de poker esta trancada"));
+      tx.append(el("small", "", r.type === "rebuy" ? "perdeu tudo no poker" : "a mesa de poker está trancada"));
       const row = el("div", "row");
       const yes = el("button", "cmd", "Aceitar"); yes.type = "button";
       const no = el("button", "cmd danger", "Recusar"); no.type = "button";
@@ -225,6 +225,7 @@
   function sidebar() {
     const players = st ? st.seats.filter(Boolean) : [];
     $("actTags").textContent = players.length ? players.length + " jogando" + (st.locked ? ", trancada" : "") : "mesa vazia";
+    $("actOpen").classList.toggle("on", players.length > 0);
     app.pokerNicks = new Set(players.map((p) => p.nick.toLowerCase()));
     app.renderPeople();
   }
@@ -239,7 +240,7 @@
     sidebar();
     renderInvites();
     if (!$("activity").hidden) render();
-    if (s.me && !wasMyTurn && $("activity").hidden) setNote("Poker Sua vez de jogar! Clique em Poker la em cima.");
+    if (s.me && !wasMyTurn && $("activity").hidden) setNote("Poker: sua vez de jogar! Clique nas espadas lá em cima.");
   });
 
   function fodeu() {

@@ -95,8 +95,8 @@
       el("span", "pts them", st.score[them] + " " + teamLabel(them)),
       el("span", "val", "VALE " + st.value),
     );
-    if (st.special === "onze") box.append(el("span", "val", "MAO DE ONZE"));
-    if (st.special === "ferro") box.append(el("span", "val", "MAO DE FERRO"));
+    if (st.special === "onze") box.append(el("span", "val", "MÃO DE ONZE"));
+    if (st.special === "ferro") box.append(el("span", "val", "MÃO DE FERRO"));
     const rounds = el("span", "rounds", "rodadas ");
     for (let i = 0; i < 3; i++) {
       const r = st.rounds[i];
@@ -112,7 +112,7 @@
     felt.replaceChildren();
     if (st.stage === "empty") {
       const c = el("div", "tr-center");
-      c.append(el("div", "lbl", app.nick ? "Ninguem abriu mesa ainda. Crie uma la embaixo!" : "Escolha um apelido para jogar"));
+      c.append(el("div", "lbl", app.nick ? "Ninguém abriu mesa ainda. Crie uma lá embaixo!" : "Escolha um apelido para jogar"));
       felt.append(c);
       return;
     }
@@ -128,11 +128,11 @@
       center.lastChild.style.whiteSpace = "pre";
     } else if (st.stage === "lobby") {
       const n = st.seats.filter((s) => s.nick).length;
-      center.append(el("div", "lbl", n + " de " + st.size + " sentados\n" + (n < st.size ? "esperando a galera..." : "pronto para comecar!")));
+      center.append(el("div", "lbl", n + " de " + st.size + " sentados\n" + (n < st.size ? "esperando a galera..." : "pronto para começar!")));
       center.lastChild.style.whiteSpace = "pre";
     }
     if (st.stage === "gameOver") {
-      center.replaceChildren(el("div", "lbl", (st.winner === st.myTeam ? "VOCES GANHARAM!" : st.myTeam === null ? teamLabel(st.winner) + " GANHOU!" : "PERDERAM...") + "\n" + st.score[usTeam()] + " x " + st.score[1 - usTeam()]));
+      center.replaceChildren(el("div", "lbl", (st.winner === st.myTeam ? "VOCÊS GANHARAM!" : st.myTeam === null ? teamLabel(st.winner) + " GANHOU!" : "PERDERAM...") + "\n" + st.score[usTeam()] + " x " + st.score[1 - usTeam()]));
       center.lastChild.style.whiteSpace = "pre";
     }
     felt.append(center);
@@ -146,7 +146,7 @@
       else if (s.cards && i !== st.me) { const bk = el("div", "backs"); for (let k = 0; k < s.cards; k++) bk.append(hopCard(card("??"), i + 1)); seat.append(bk); }
       const box = el("div", "box");
       if (s.nick) {
-        box.append(avatar(s.nick), el("span", "nm", s.nick + (i === st.me ? " (voce)" : "")));
+        box.append(avatar(s.nick), el("span", "nm", s.nick + (i === st.me ? " (você)" : "")));
       } else if (st.me < 0 && app.nick && st.stage !== "gameOver") {
         const b = el("button", "cmd", st.stage === "lobby" ? "Sentar" : "Assumir");
         b.type = "button"; b.style.width = "100%";
@@ -248,10 +248,10 @@
     const nameOf = (i) => (st.seats[i] && st.seats[i].nick) || "lugar vazio";
     if (st.stage === "eleven") {
       if (st.elevenTeam === st.myTeam) {
-        box.append(el("span", "msg", "MAO DE ONZE: olhe as cartas do parceiro e decida"));
+        box.append(el("span", "msg", "MÃO DE ONZE: olhe as cartas do parceiro e decida"));
         box.append(bigBtn("JOGAR (vale 3)", "", () => socket.emit("truco:eleven", true, done)));
         box.append(bigBtn("CORRER (eles ganham 1)", "no", () => socket.emit("truco:eleven", false, done)));
-      } else box.append(el("span", "msg", "mao de onze: esperando eles decidirem se jogam..."));
+      } else box.append(el("span", "msg", "mão de onze: esperando eles decidirem se jogam..."));
       return;
     }
     if (st.pending) {
@@ -269,14 +269,14 @@
         if (st.canRaise) box.append(bigBtn(st.raiseName + "!", "truco", () => socket.emit("truco:raise", done)));
         if (st.canHide) {
           const h = el("button", "cmd" + (hideNext ? " on" : ""), hideNext ? "Encoberta: sim" : "Jogar encoberta");
-          h.type = "button"; h.title = "A proxima carta vai virada para baixo (nao ganha de ninguem)";
+          h.type = "button"; h.title = "A próxima carta vai virada para baixo (não ganha de ninguém)";
           h.addEventListener("click", () => { hideNext = !hideNext; render(); });
           box.append(h);
         }
       } else box.append(el("span", "msg", "vez de " + nameOf(st.toPlay)));
     } else if (st.stage === "handEnd" && st.lastHand) {
       const t = st.lastHand.team;
-      box.append(el("span", "msg", t === null ? "ninguem pontuou" : teamLabel(t) + " +" + st.lastHand.points));
+      box.append(el("span", "msg", t === null ? "ninguém pontuou" : teamLabel(t) + " +" + st.lastHand.points));
     }
   }
   const nextName = (v) => ({ 3: "SEIS", 6: "NOVE", 9: "DOZE" })[v];
@@ -377,7 +377,7 @@
     clockSkew = s.serverNow - Date.now();
     if (s.turnEndsAt !== lastEnds) { lastEnds = s.turnEndsAt; lastTick = -1; } // relogio novo
     const myTurn = s.stage === "playing" && s.toPlay === s.me && s.me >= 0 && !s.pending;
-    if (myTurn && !wasMyTurn) { beep(SFX.turn); if (!open()) setNote("Truco Sua vez de jogar!"); }
+    if (myTurn && !wasMyTurn) { beep(SFX.turn); if (!open()) setNote("Truco: sua vez de jogar!"); }
     if (!s.canHide) hideNext = false;
     sidebar();
     if (open()) render(); else hopNow = false;
@@ -386,6 +386,7 @@
   function sidebar() {
     const n = st.seats.filter((x) => x.nick).length;
     $("trTags").textContent = st.stage === "empty" ? "sem mesa" : st.stage === "lobby" ? n + "/" + st.size + " na sala" : n + " jogando";
+    $("trOpen").classList.toggle("on", st.stage !== "empty");
     app.trucoNicks = new Set(st.seats.filter((x) => x.nick).map((x) => x.nick.toLowerCase()));
     app.renderPeople();
   }

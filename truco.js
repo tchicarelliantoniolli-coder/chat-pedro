@@ -27,10 +27,10 @@ const SHOUTS = {
   run: ["CORREU!", "FUGIU, GALINHA!", "PEDIU PRA SAIR!", "CORRE, CORRE!"],
 };
 const PHRASES = [
-  "Ta com medo?", "Mao de alface!", "Essa ja e nossa", "Joga logo!", "Vixe...", "Cai dentro!",
-  "Que carta e essa?!", "Hoje nao, filhao", "Confia no parceiro", "Ta facil demais",
+  "Tá com medo?", "Mão de alface!", "Essa já é nossa", "Joga logo!", "Vixe...", "Cai dentro!",
+  "Que carta e essa?!", "Hoje não, filhão", "Confia no parceiro", "Tá fácil demais",
 ];
-const SIGNALS = { zap: "ZAP", copas: "COPAS", espadilha: "ESPADILHA", picafumo: "PICA-FUMO", tres: "TEM 3", manilha: "TEM MANILHA", nada: "NAO TENHO NADA", truca: "PODE TRUCAR" };
+const SIGNALS = { zap: "ZAP", copas: "COPAS", espadilha: "ESPADILHA", picafumo: "PICA-FUMO", tres: "TEM 3", manilha: "TEM MANILHA", nada: "NÃO TENHO NADA", truca: "PODE TRUCAR" };
 
 const pick = (list) => list[crypto.randomInt(list.length)];
 
@@ -122,21 +122,21 @@ function createTruco(io, helpers, timing) {
     const at11 = [0, 1].filter((t) => g.score[t] === WIN_POINTS - 1);
     if (at11.length === 2) {
       g.special = "ferro";
-      say("MAO DE FERRO: todo mundo joga no escuro");
-      event("ferro", "MAO DE FERRO!");
+      say("MÃO DE FERRO: todo mundo joga no escuro");
+      event("ferro", "MÃO DE FERRO!");
       setTurn();
     } else if (at11.length === 1) {
       g.special = "onze";
       g.elevenTeam = at11[0];
       g.value = 3;
       g.stage = "eleven";
-      say("Mao de onze para " + teamNames(g.elevenTeam) + ": joga valendo 3 ou corre");
-      event("onze", "MAO DE ONZE!");
+      say("Mão de onze para " + teamNames(g.elevenTeam) + ": joga valendo 3 ou corre");
+      event("onze", "MÃO DE ONZE!");
       g.turnEndsAt = Date.now() + ELEVEN_MS;
       timer = setTimeout(() => decideEleven(g.elevenTeam, true), ELEVEN_MS);
       broadcast();
     } else {
-      say("Mao " + g.handNo + ": vira " + g.vira + ", manilha " + RANK_NAME[g.manilha]);
+      say("Mão " + g.handNo + ": vira " + g.vira + ", manilha " + RANK_NAME[g.manilha]);
       setTurn();
     }
   }
@@ -145,11 +145,11 @@ function createTruco(io, helpers, timing) {
     if (g.stage !== "eleven" || t !== g.elevenTeam) return;
     clearTimer();
     if (!play) {
-      say(teamNames(t) + " correu da mao de onze");
+      say(teamNames(t) + " correu da mão de onze");
       event("run", pick(SHOUTS.run), { team: t });
       return endHand(1 - t, 1);
     }
-    say(teamNames(t) + " vai jogar a mao de onze valendo 3");
+    say(teamNames(t) + " vai jogar a mão de onze valendo 3");
     event("accept", "VAI JOGAR!", { team: t });
     setTurn();
   }
@@ -176,9 +176,9 @@ function createTruco(io, helpers, timing) {
 
   function play(seat, idx, hidden) {
     const s = g.seats[seat];
-    if (g.stage !== "playing" || g.pending || seat !== g.toPlay) return "Nao e sua vez.";
-    if (!(idx >= 0 && idx < s.hand.length)) return "Carta invalida.";
-    if (hidden && g.rounds.length === 0) return "Na primeira rodada nao pode jogar encoberta.";
+    if (g.stage !== "playing" || g.pending || seat !== g.toPlay) return "Não é sua vez.";
+    if (!(idx >= 0 && idx < s.hand.length)) return "Carta inválida.";
+    if (hidden && g.rounds.length === 0) return "Na primeira rodada não pode jogar encoberta.";
     if (hidden && g.special === "ferro") hidden = false;
     const card = s.hand.splice(idx, 1)[0];
     g.table.push({ seat, card, hidden: !!hidden });
@@ -219,7 +219,7 @@ function createTruco(io, helpers, timing) {
     g.table = [];
     const w = handWinner(g.rounds);
     if (w === undefined) return setTurn();
-    if (w === "none") { say("Empatou tudo: ninguem pontua"); return endHand(null, 0); }
+    if (w === "none") { say("Empatou tudo: ninguém pontua"); return endHand(null, 0); }
     endHand(w, g.value);
   }
 
@@ -256,7 +256,7 @@ function createTruco(io, helpers, timing) {
   }
 
   function raise(seat) {
-    if (!canRaise(seat)) return "Agora nao da para pedir.";
+    if (!canRaise(seat)) return "Agora não dá para pedir.";
     const to = nextRaise();
     clearTimer();
     g.pending = { team: team(seat), seat, to };
@@ -277,12 +277,12 @@ function createTruco(io, helpers, timing) {
 
   function answer(t, choice, nick, auto) {
     const p = g.pending;
-    if (!p || t === p.team) return "Nao e voce que responde.";
+    if (!p || t === p.team) return "Não é você que responde.";
     clearTimer();
     const who = nick || teamNames(t);
     if (choice === "run") {
       g.pending = null;
-      say(who + (auto ? " nao respondeu e correu" : " correu"));
+      say(who + (auto ? " não respondeu e correu" : " correu"));
       event("run", pick(SHOUTS.run), { team: t, nick: who });
       return endHand(p.team, g.value), null; // quem pediu ganha o que valia antes
     }
@@ -355,7 +355,7 @@ function createTruco(io, helpers, timing) {
     socket.on("truco:create", (size, cb) => {
       const u = me(); if (!u) return reply(cb, "Escolha um apelido primeiro.");
       resetIfAbandoned();
-      if (g.stage !== "empty") return reply(cb, "Ja tem uma mesa criada.");
+      if (g.stage !== "empty") return reply(cb, "Já tem uma mesa criada.");
       g = blank();
       g.size = Number(size) === 6 ? 6 : 4;
       g.host = u.key;
@@ -367,7 +367,7 @@ function createTruco(io, helpers, timing) {
     });
 
     socket.on("truco:size", (size, cb) => {
-      const u = me(); if (!u || u.key !== g.host || g.stage !== "lobby") return reply(cb, "So quem criou a mesa muda isso.");
+      const u = me(); if (!u || u.key !== g.host || g.stage !== "lobby") return reply(cb, "Só quem criou a mesa muda isso.");
       const n = Number(size) === 6 ? 6 : 4;
       const people = g.seats.filter(Boolean);
       if (people.length > n) return reply(cb, "Tem gente demais sentada para uma mesa de " + n + ".");
@@ -375,19 +375,19 @@ function createTruco(io, helpers, timing) {
       // quem estava num lugar que deixou de existir vai para o primeiro vazio
       for (const p of g.seats.slice(n)) if (p) seats[seats.indexOf(null)] = p;
       g.seats = seats; g.size = n;
-      say("Mesa agora e de " + n);
+      say("Mesa agora é de " + n);
       reply(cb); broadcast();
     });
 
     socket.on("truco:sit", (seat, cb) => {
       const u = me(); if (!u) return reply(cb, "Escolha um apelido primeiro.");
       seat = Number(seat);
-      if (!(seat >= 0 && seat < g.size) || g.stage === "empty") return reply(cb, "Lugar invalido.");
+      if (!(seat >= 0 && seat < g.size) || g.stage === "empty") return reply(cb, "Lugar inválido.");
       const s = g.seats[seat];
       if (s && s.key) return reply(cb, "Lugar ocupado.");
       const was = seatOfKey(u.key);
       if (was >= 0) {
-        if (inGame()) return reply(cb, "Voce ja esta jogando.");
+        if (inGame()) return reply(cb, "Você já está jogando.");
         g.seats[was] = null;
       }
       if (inGame()) { s.key = u.key; s.nick = u.nick; say(u.nick + " assumiu um lugar vazio"); }
@@ -403,8 +403,8 @@ function createTruco(io, helpers, timing) {
     });
 
     socket.on("truco:start", (cb) => {
-      const u = me(); if (!u || u.key !== g.host) return reply(cb, "So quem criou a mesa comeca o jogo.");
-      if (g.stage !== "lobby" && g.stage !== "gameOver") return reply(cb, "O jogo ja comecou.");
+      const u = me(); if (!u || u.key !== g.host) return reply(cb, "Só quem criou a mesa começa o jogo.");
+      if (g.stage !== "lobby" && g.stage !== "gameOver") return reply(cb, "O jogo já começou.");
       if (g.seats.some((s) => !s || !s.key)) return reply(cb, "Precisa de " + g.size + " jogadores sentados.");
       for (const s of g.seats) s.hand = [];
       startGame();
@@ -412,7 +412,7 @@ function createTruco(io, helpers, timing) {
     });
 
     socket.on("truco:close", (cb) => {
-      const u = me(); if (!u || (u.key !== g.host && !isAdmin(socket.id))) return reply(cb, "So quem criou a mesa (ou o ADM) encerra.");
+      const u = me(); if (!u || (u.key !== g.host && !isAdmin(socket.id))) return reply(cb, "Só quem criou a mesa (ou o ADM) encerra.");
       clearTimer();
       say("Mesa encerrada");
       g = blank();
@@ -421,27 +421,27 @@ function createTruco(io, helpers, timing) {
 
     socket.on("truco:play", (msg, cb) => {
       const u = me(); if (!u) return reply(cb);
-      const i = seatOfKey(u.key); if (i < 0) return reply(cb, "Voce nao esta na mesa.");
+      const i = seatOfKey(u.key); if (i < 0) return reply(cb, "Você não está na mesa.");
       reply(cb, play(i, Number(msg && msg.index), !!(msg && msg.hidden)));
     });
 
     socket.on("truco:raise", (cb) => {
       const u = me(); if (!u) return reply(cb);
-      const i = seatOfKey(u.key); if (i < 0) return reply(cb, "Voce nao esta na mesa.");
+      const i = seatOfKey(u.key); if (i < 0) return reply(cb, "Você não está na mesa.");
       reply(cb, raise(i));
     });
 
     socket.on("truco:answer", (choice, cb) => {
       const u = me(); if (!u) return reply(cb);
-      const i = seatOfKey(u.key); if (i < 0) return reply(cb, "Voce nao esta na mesa.");
-      if (!["accept", "run", "raise"].includes(choice)) return reply(cb, "Resposta invalida.");
+      const i = seatOfKey(u.key); if (i < 0) return reply(cb, "Você não está na mesa.");
+      if (!["accept", "run", "raise"].includes(choice)) return reply(cb, "Resposta inválida.");
       reply(cb, answer(team(i), choice, u.nick, false));
     });
 
     socket.on("truco:eleven", (playIt, cb) => {
       const u = me(); if (!u) return reply(cb);
       const i = seatOfKey(u.key);
-      if (i < 0 || g.stage !== "eleven" || team(i) !== g.elevenTeam) return reply(cb, "Nao e voce que decide.");
+      if (i < 0 || g.stage !== "eleven" || team(i) !== g.elevenTeam) return reply(cb, "Não é você que decide.");
       decideEleven(team(i), !!playIt);
       reply(cb);
     });
@@ -482,7 +482,7 @@ function createTruco(io, helpers, timing) {
       say(s.nick + " saiu da mesa");
       if (!g.seats.some(Boolean)) { clearTimer(); g = blank(); }
     } else if (g.stage !== "empty") {
-      say(s.nick + " saiu: o lugar joga sozinho ate alguem assumir");
+      say(s.nick + " saiu: o lugar joga sozinho até alguém assumir");
       const wasHost = s.key === g.host;
       s.key = null; s.nick = null;
       if (wasHost) { const next = g.seats.find((x) => x && x.key); g.host = next ? next.key : null; }

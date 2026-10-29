@@ -116,7 +116,7 @@ function getCtx(serverId) {
 
 async function buildCtx(serverId) {
   const [srv] = await db.select("servers", { select: "id,name,owner_id", id: "eq." + serverId });
-  if (!srv) throw new Error("servidor nao existe");
+  if (!srv) throw new Error("servidor não existe");
   const ctx = {
     id: serverId, name: srv.name, ownerId: srv.owner_id, room: "srv:" + serverId,
     history: [], nextId: 1, storage: createStorage(serverId),
@@ -136,7 +136,7 @@ async function buildCtx(serverId) {
       ctx.history = saved.history;
       ctx.nextId = Math.max(saved.nextId, ...ctx.history.map((m) => m.id + 1), 1);
     } catch (e) {
-      console.error("Nao deu para carregar o chat do servidor " + serverId + ":", e.message);
+      console.error("Não deu para carregar o chat do servidor " + serverId + ":", e.message);
     }
   }
   // os jogos enxergam so quem esta neste servidor
@@ -252,10 +252,10 @@ const wrap = (fn) => (req, res) => fn(req, res).catch((e) => {
 const fail = (res, status, error) => res.status(status).json({ error });
 
 async function requireUser(req, res) {
-  if (!ready()) { fail(res, 503, "O site ainda nao foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); return null; }
+  if (!ready()) { fail(res, 503, "O site ainda não foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); return null; }
   const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   const user = await userFromToken(token);
-  if (!user) { fail(res, 401, "Sua sessao acabou. Entre de novo."); return null; }
+  if (!user) { fail(res, 401, "Sua sessão acabou. Entre de novo."); return null; }
   return user;
 }
 
@@ -263,22 +263,22 @@ api.get("/config", (req, res) => res.json({ supabaseUrl: SUPABASE_URL, publishab
 
 const signups = new Map(); // endereco -> [horarios]
 api.post("/signup", wrap(async (req, res) => {
-  if (!ready()) return fail(res, 503, "O site ainda nao foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render).");
+  if (!ready()) return fail(res, 503, "O site ainda não foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render).");
   const now = Date.now();
   const times = (signups.get(req.ip) || []).filter((t) => now - t < 3600000);
   if (times.length >= 5) return fail(res, 429, "Muitas contas criadas daqui. Tente de novo em 1 hora.");
   const email = String(req.body.email || "").trim().toLowerCase();
   const password = String(req.body.password || "");
   const nick = cleanNick(req.body.nick);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return fail(res, 400, "E-mail invalido.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return fail(res, 400, "E-mail inválido.");
   if (password.length < 6 || password.length > 72) return fail(res, 400, "A senha precisa ter de 6 a 72 caracteres.");
   if (!nick) return fail(res, 400, "Escolha um apelido.");
-  if (NICK_BAD.test(nick)) return fail(res, 400, "O apelido nao pode ter estes caracteres: * % _ , ( ) \" \\ : @ < >");
-  if (await nickTaken(nick)) return fail(res, 409, "Esse apelido ja tem dono. Escolha outro.");
+  if (NICK_BAD.test(nick)) return fail(res, 400, "O apelido não pode ter estes caracteres: * % _ , ( ) \" \\ : @ < >");
+  if (await nickTaken(nick)) return fail(res, 409, "Esse apelido já tem dono. Escolha outro.");
   let user;
   try { user = await auth.createUser(email, password); }
   catch (e) {
-    if (/already|registered|exists/i.test(e.message)) return fail(res, 409, "Ja existe uma conta com esse e-mail. Use [ENTRAR].");
+    if (/already|registered|exists/i.test(e.message)) return fail(res, 409, "Já existe uma conta com esse e-mail. Use a aba Entrar.");
     if (/password/i.test(e.message)) return fail(res, 400, "Senha fraca demais. Use pelo menos 6 caracteres, misturando letras e numeros.");
     throw e;
   }
@@ -286,7 +286,7 @@ api.post("/signup", wrap(async (req, res) => {
     await db.insert("profiles", [{ id: user.id, nick }], false);
   } catch (e) {
     await auth.deleteUser(user.id).catch(() => {}); // alguem pegou o apelido no mesmo segundo
-    return fail(res, 409, "Esse apelido ja tem dono. Escolha outro.");
+    return fail(res, 409, "Esse apelido já tem dono. Escolha outro.");
   }
   times.push(now); signups.set(req.ip, times);
   res.json({ ok: true });
@@ -308,21 +308,21 @@ api.patch("/me", wrap(async (req, res) => {
   const patch = {};
   if (req.body.nick !== undefined) {
     const nick = cleanNick(req.body.nick);
-    if (!nick || NICK_BAD.test(nick)) return fail(res, 400, "Apelido invalido.");
+    if (!nick || NICK_BAD.test(nick)) return fail(res, 400, "Apelido inválido.");
     if (nick !== old.nick) {
-      if (await nickTaken(nick, user.id)) return fail(res, 409, "Esse apelido ja tem dono.");
+      if (await nickTaken(nick, user.id)) return fail(res, 409, "Esse apelido já tem dono.");
       patch.nick = nick;
     }
   }
-  if (req.body.color !== undefined) { if (!NAME_COLORS.includes(req.body.color)) return fail(res, 400, "Cor invalida."); patch.color = req.body.color; }
+  if (req.body.color !== undefined) { if (!NAME_COLORS.includes(req.body.color)) return fail(res, 400, "Cor inválida."); patch.color = req.body.color; }
   if (req.body.avatar !== undefined) {
     const a = String(req.body.avatar);
-    if (a.length > MAX_AVATAR || !IMAGE_RE.test(a)) return fail(res, 400, "Foto invalida.");
+    if (a.length > MAX_AVATAR || !IMAGE_RE.test(a)) return fail(res, 400, "Foto inválida.");
     patch.avatar = a;
   }
   if (!Object.keys(patch).length) return res.json({ profile: old });
   try { await db.update("profiles", { id: "eq." + user.id }, patch); }
-  catch (e) { if (patch.nick) return fail(res, 409, "Esse apelido ja tem dono."); throw e; }
+  catch (e) { if (patch.nick) return fail(res, 409, "Esse apelido já tem dono."); throw e; }
   const profile = { ...old, ...patch };
   profileCache.set(user.id, profile);
   // avisa todos os servidores onde a pessoa esta
@@ -355,7 +355,7 @@ api.post("/servers", wrap(async (req, res) => {
   const name = String(req.body.name || "").replace(/\s+/g, " ").trim().slice(0, MAX_SERVER_NAME);
   if (!name) return fail(res, 400, "De um nome para o servidor.");
   const owned = await db.select("servers", { select: "id", owner_id: "eq." + user.id });
-  if (owned.length >= MAX_SERVERS_OWNED) return fail(res, 400, "Voce ja e dono de " + MAX_SERVERS_OWNED + " servidores.");
+  if (owned.length >= MAX_SERVERS_OWNED) return fail(res, 400, "Você já é dono de " + MAX_SERVERS_OWNED + " servidores.");
   const [srv] = await db.insert("servers", [{ name, owner_id: user.id }]);
   await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "owner" }], false);
   res.json({ server: { id: srv.id, name: srv.name, role: "owner" } });
@@ -363,9 +363,9 @@ api.post("/servers", wrap(async (req, res) => {
 
 async function requireRole(req, res, user, roles) {
   const id = req.params.id;
-  if (!UUID_RE.test(id)) { fail(res, 404, "Servidor nao encontrado."); return null; }
+  if (!UUID_RE.test(id)) { fail(res, 404, "Servidor não encontrado."); return null; }
   const role = await membership(id, user.id);
-  if (!role || !roles.includes(role)) { fail(res, 403, "Voce nao tem permissao para isso nesse servidor."); return null; }
+  if (!role || !roles.includes(role)) { fail(res, 403, "Você não tem permissão para isso nesse servidor."); return null; }
   return role;
 }
 
@@ -400,11 +400,11 @@ api.delete("/servers/:id", wrap(async (req, res) => {
 api.post("/servers/:id/leave", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const role = await requireRole(req, res, user, ["admin", "member", "owner"]); if (!role) return;
-  if (role === "owner") return fail(res, 400, "O dono nao pode sair. Apague o servidor se nao quiser mais ele.");
+  if (role === "owner") return fail(res, 400, "O dono não pode sair. Apague o servidor se não quiser mais ele.");
   await db.remove("server_members", { server_id: "eq." + req.params.id, user_id: "eq." + user.id });
   if (contexts.has(req.params.id)) {
     const ctx = await contexts.get(req.params.id);
-    removeUserFromCtx(ctx, user.id, "Voce saiu do servidor.");
+    removeUserFromCtx(ctx, user.id, "Você saiu do servidor.");
     await loadMembers(ctx); sendUsers(ctx);
   }
   res.json({ ok: true });
@@ -430,7 +430,7 @@ async function findInvite(code) {
 api.get("/invites/:code", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const inv = await findInvite(req.params.code);
-  if (!inv) return fail(res, 404, "Esse convite nao existe ou ja venceu.");
+  if (!inv) return fail(res, 404, "Esse convite não existe ou já venceu.");
   const members = await db.select("server_members", { select: "user_id", server_id: "eq." + inv.server_id });
   res.json({ server: inv.server, members: members.length, already: members.some((m) => m.user_id === user.id) });
 }));
@@ -438,9 +438,9 @@ api.get("/invites/:code", wrap(async (req, res) => {
 api.post("/invites/:code/accept", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const inv = await findInvite(req.params.code);
-  if (!inv) return fail(res, 404, "Esse convite nao existe ou ja venceu.");
+  if (!inv) return fail(res, 404, "Esse convite não existe ou já venceu.");
   const ban = await activeBan(inv.server_id, user.id);
-  if (ban) return fail(res, 403, ban.until ? "Voce esta banido desse servidor ate " + new Date(ban.until).toLocaleString("pt-BR") + "." : "Voce foi banido desse servidor.");
+  if (ban) return fail(res, 403, ban.until ? "Você está banido desse servidor até " + new Date(ban.until).toLocaleString("pt-BR") + "." : "Você foi banido desse servidor.");
   if (!(await membership(inv.server_id, user.id))) {
     await db.insert("server_members", [{ server_id: inv.server_id, user_id: user.id, role: "member" }], false);
     await db.update("server_invites", { code: "eq." + inv.code }, { uses: inv.uses + 1 });
@@ -515,9 +515,9 @@ io.on("connection", (socket) => {
     const lines = text.split("\n");
     const norm = text.toLowerCase().replace(/\s+/g, " ").trim();
     if (flood.times.length >= 5) why = "Calma! Muitas mensagens seguidas. Espere uns segundos.";
-    else if (lines.length > MAX_LINES) why = "Mensagem com linhas demais (maximo " + MAX_LINES + ").";
-    else if (lines.length >= 4 && new Set(lines.map((l) => l.trim())).size === 1) why = "Nada de repetir a mesma linha varias vezes.";
-    else if (norm === flood.last && now - flood.lastAt < 30000 && flood.repeats >= 1) why = "Voce ja mandou essa mensagem.";
+    else if (lines.length > MAX_LINES) why = "Mensagem com linhas demais (máximo " + MAX_LINES + ").";
+    else if (lines.length >= 4 && new Set(lines.map((l) => l.trim())).size === 1) why = "Nada de repetir a mesma linha várias vezes.";
+    else if (norm === flood.last && now - flood.lastAt < 30000 && flood.repeats >= 1) why = "Você já mandou essa mensagem.";
     if (why) {
       flood.strikes = flood.strikes.filter((t) => now - t < 60000);
       flood.strikes.push(now);
@@ -527,7 +527,7 @@ io.on("connection", (socket) => {
         ctx.floodMuted.add(uid);
         flood.strikes = [];
         sys(ctx, nickNow() + " foi silenciado por 2 min (flood)");
-        return "Voce foi silenciado por 2 min por flood.";
+        return "Você foi silenciado por 2 min por flood.";
       }
       return why;
     }
@@ -540,20 +540,23 @@ io.on("connection", (socket) => {
   // Confere se pode mandar algo no chat (silenciado, flood)
   function canPost(text) {
     const muted = blockedUntil(ctx.mutes, uid);
-    if (muted) { notice("Voce esta silenciado " + (ctx.floodMuted.has(uid) ? "por flood" : "pela moderacao") + " por mais " + minutesLeft(muted) + " min."); return null; }
+    if (muted) { notice("Você está silenciado " + (ctx.floodMuted.has(uid) ? "por flood" : "pela moderação") + " por mais " + minutesLeft(muted) + " min."); return null; }
     const err = floodCheck(text);
     if (err) { notice(err); return null; }
     return nickNow();
   }
 
-  socket.on("message", (msg) => {
+  // ack(false) avisa o navegador para tirar da tela a mensagem que ele ja mostrou
+  socket.on("message", (msg, ack) => {
+    const done = typeof ack === "function" ? ack : () => {};
     const raw = typeof msg === "string" ? msg : msg && msg.text;
     const text = String(raw || "").replace(/\r/g, "").trim().slice(0, MAX_TEXT);
-    if (!text) return;
+    if (!text) return done(false);
     const nick = canPost(text);
-    if (!nick) return;
+    if (!nick) return done(false);
     const reply = msg && typeof msg === "object" && msg.replyTo ? quoteOf(ctx, msg.replyTo) : null;
     pushMessage(ctx, { type: "msg", nick, uid, text, ts: Date.now(), reply: reply || undefined });
+    done(true);
   });
 
   socket.on("image", (data, replyTo) => {
@@ -564,8 +567,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("audio", (data, replyTo) => {
-    if (typeof data !== "string" || data.length > MAX_AUDIO || !AUDIO_RE.test(data)) return notice("Audio muito grande ou invalido (maximo 1 minuto).");
-    const nick = canPost("[audio " + Date.now() + "]");
+    if (typeof data !== "string" || data.length > MAX_AUDIO || !AUDIO_RE.test(data)) return notice("Áudio muito grande ou inválido (máximo 1 minuto).");
+    const nick = canPost("[áudio " + Date.now() + "]");
     if (!nick) return;
     pushMessage(ctx, { type: "audio", nick, uid, src: data, ts: Date.now(), reply: quoteOf(ctx, replyTo) || undefined });
   });
@@ -574,7 +577,7 @@ io.on("connection", (socket) => {
   socket.on("react", (msg) => {
     const nick = nickNow();
     if (!msg || !REACTIONS.includes(msg.emoji)) return;
-    if (blockedUntil(ctx.mutes, uid)) return notice("Voce esta silenciado.");
+    if (blockedUntil(ctx.mutes, uid)) return notice("Você está silenciado.");
     const m = ctx.history.find((x) => x.id === Number(msg.id));
     if (!m || m.type === "sys") return;
     m.reactions = m.reactions || {};
@@ -625,7 +628,7 @@ io.on("connection", (socket) => {
   socket.on("admin:mute", (msg) => {
     if (!isMod() || !msg) return;
     const t = target(msg.id);
-    if (!canTouch(t)) return notice("Voce nao pode silenciar essa pessoa.");
+    if (!canTouch(t)) return notice("Você não pode silenciar essa pessoa.");
     const min = Math.min(24 * 60, Math.max(0, Number(msg.minutes) || 0));
     ctx.floodMuted.delete(t.id);
     if (min) { ctx.mutes.set(t.id, Date.now() + min * 60000); sys(ctx, t.nick + " foi silenciado por " + min + " min"); }
@@ -637,9 +640,9 @@ io.on("connection", (socket) => {
   socket.on("admin:kick", wrapAsync(async (msg) => {
     if (!isMod() || !msg) return;
     const t = target(msg.id);
-    if (!canTouch(t)) return notice("Voce nao pode expulsar essa pessoa.");
+    if (!canTouch(t)) return notice("Você não pode expulsar essa pessoa.");
     await db.remove("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id });
-    removeUserFromCtx(ctx, t.id, "Voce foi expulso do servidor " + ctx.name + ". So volta com um convite novo.");
+    removeUserFromCtx(ctx, t.id, "Você foi expulso do servidor " + ctx.name + ". Só volta com um convite novo.");
     sys(ctx, t.nick + " foi expulso do servidor");
     await loadMembers(ctx); sendUsers(ctx);
   }));
@@ -647,12 +650,12 @@ io.on("connection", (socket) => {
   socket.on("admin:ban", wrapAsync(async (msg) => {
     if (!isMod() || !msg) return;
     const t = target(msg.id);
-    if (!canTouch(t)) return notice("Voce nao pode banir essa pessoa.");
+    if (!canTouch(t)) return notice("Você não pode banir essa pessoa.");
     const min = Math.max(0, Number(msg.minutes) || 0); // 0 = para sempre
     const until = min ? new Date(Date.now() + min * 60000).toISOString() : null;
     await db.upsert("server_bans", [{ server_id: ctx.id, user_id: t.id, until }], "server_id,user_id");
     await db.remove("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id });
-    removeUserFromCtx(ctx, t.id, "Voce foi banido do servidor " + ctx.name + (min ? " por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : " para sempre") + ".");
+    removeUserFromCtx(ctx, t.id, "Você foi banido do servidor " + ctx.name + (min ? " por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : " para sempre") + ".");
     sys(ctx, t.nick + " foi banido " + (min ? "por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : "para sempre"));
     await loadMembers(ctx); sendUsers(ctx);
     sendBans();
@@ -681,14 +684,14 @@ io.on("connection", (socket) => {
     if (!t || t.role === "owner") return;
     await db.update("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id }, { role: msg.role });
     for (const s of ctx.sockets.values()) if (s.data.user.id === t.id) { s.data.role = msg.role; s.emit("me", meOf(ctx, s)); }
-    sys(ctx, t.nick + (msg.role === "admin" ? " agora e ADM do servidor" : " nao e mais ADM"));
+    sys(ctx, t.nick + (msg.role === "admin" ? " agora é ADM do servidor" : " não é mais ADM"));
     await loadMembers(ctx); sendUsers(ctx);
     ctx.poker.broadcast(); ctx.truco.broadcast();
     sendModeration(ctx);
   }));
 
   function wrapAsync(fn) {
-    return (...args) => fn(...args).catch((e) => { console.error("Erro na moderacao:", e.message); notice("Deu erro. Tente de novo."); });
+    return (...args) => fn(...args).catch((e) => { console.error("Erro na moderação:", e.message); notice("Deu erro. Tente de novo."); });
   }
 
   // ---------- call ----------
@@ -728,7 +731,7 @@ io.on("connection", (socket) => {
     const member = ctx.callMembers.get(socket.id);
     const m = String(url || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([A-Za-z0-9_-]{11})/) || String(url || "").match(/^([A-Za-z0-9_-]{11})$/);
     if (!member) return;
-    if (!m) return notice("Esse link nao parece ser do YouTube.");
+    if (!m) return notice("Esse link não parece ser do YouTube.");
     ctx.watch = { id: m[1], playing: true, pos: 0, at: Date.now(), by: member.nick };
     toRoom(ctx, "watch:state", watchMsg(ctx));
   });
@@ -769,6 +772,6 @@ io.on("connection", (socket) => {
   });
 });
 
-if (!ready()) console.log("ATENCAO: falta SUPABASE_SECRET_KEY no Render. Sem ela ninguem consegue entrar no site.");
+if (!ready()) console.log("ATENÇÃO: falta SUPABASE_SECRET_KEY no Render. Sem ela ninguém consegue entrar no site.");
 cleanupExpired();
 server.listen(PORT, () => console.log(`Chat Pedro rodando na porta ${PORT}`));

@@ -75,7 +75,7 @@
   $("tabLogin").addEventListener("click", () => { setMode("login"); gmsg(""); });
   $("tabSignup").addEventListener("click", () => { setMode("signup"); gmsg(""); });
 
-  const authErr = (m) => (/invalid login/i.test(m) ? "E-mail ou senha errados." : /email not confirmed/i.test(m) ? "Esse e-mail ainda nao foi confirmado." : /rate|too many/i.test(m) ? "Muitas tentativas. Espere um pouco." : m);
+  const authErr = (m) => (/invalid login/i.test(m) ? "E-mail ou senha errados." : /email not confirmed/i.test(m) ? "Esse e-mail ainda não foi confirmado." : /rate|too many/i.test(m) ? "Muitas tentativas. Espere um pouco." : m);
 
   $("authForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -105,7 +105,7 @@
     const email = $("authEmail").value.trim();
     if (!email) return gmsg("Escreva seu e-mail no campo acima e clique de novo.");
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/" });
-    gmsg(error ? authErr(error.message) : "Se esse e-mail tiver conta, chega um link para criar uma senha nova. Olhe tambem o spam.");
+    gmsg(error ? authErr(error.message) : "Se esse e-mail tiver conta, chega um link para criar uma senha nova. Olhe também o spam.");
   });
 
   // ---------- depois do login: para qual servidor ir ----------
@@ -127,7 +127,7 @@
       const last = store.get("chatpedro-server");
       target = (servers.find((x) => x.id === last) || servers[0] || {}).id;
     }
-    if (!target) { if (sm) gmsg("Voce nao esta nesse servidor. Peca um convite."); return showHome(false); }
+    if (!target) { if (sm) gmsg("Você não está nesse servidor. Peça um convite."); return showHome(false); }
     enterServer(target);
   }
 
@@ -160,7 +160,7 @@
     e.preventDefault();
     const v = $("joinCode").value.trim();
     const code = (v.match(/convite\/([A-Za-z0-9_-]+)/) || v.match(/^([A-Za-z0-9_-]{6,20})$/) || [])[1];
-    if (!code) return gmsg("Cole o link inteiro do convite (ou so o codigo do final).");
+    if (!code) return gmsg("Cole o link inteiro do convite (ou só o código do final).");
     location.href = "/convite/" + code;
   });
   const logout = async () => { await sb.auth.signOut().catch(() => {}); store.set("chatpedro-server", ""); location.href = "/"; };
@@ -176,7 +176,7 @@
     try {
       const r = await api("/api/invites/" + code);
       $("invName").textContent = r.server.name;
-      $("invInfo").textContent = r.members + (r.members === 1 ? " membro" : " membros") + (r.already ? " | voce ja esta nele" : "");
+      $("invInfo").textContent = r.members + (r.members === 1 ? " membro" : " membros") + (r.already ? " | você já está nele" : "");
       $("invAccept").textContent = r.already ? "Ir para o servidor" : "Entrar no servidor";
       $("invAccept").hidden = false;
       $("invAccept").onclick = async () => {
@@ -184,7 +184,7 @@
         catch (err) { gmsg(err.message); }
       };
     } catch (err) {
-      $("invName").textContent = "Convite invalido";
+      $("invName").textContent = "Convite inválido";
       $("invAccept").hidden = true;
       gmsg(err.message);
     }
@@ -284,18 +284,18 @@
         if (data && data.session) { session = data.session; return socket.connect(); }
       }
       await sb.auth.signOut().catch(() => {});
-      return showAuth("Sua sessao acabou. Entre de novo.");
+      return showAuth("Sua sessão acabou. Entre de novo.");
     }
     if (err.message === "nao_membro" || err.message === "banido") {
       servers = servers.filter((x) => x.id !== current);
       current = null; store.set("chatpedro-server", "");
       history.replaceState(null, "", "/");
       renderRail();
-      gmsg(err.message === "banido" ? "Voce esta banido desse servidor." : "Voce nao esta mais nesse servidor.");
+      gmsg(err.message === "banido" ? "Você está banido desse servidor." : "Você não está mais nesse servidor.");
       return showHome(false);
     }
-    if (err.message === "sem_banco") { showGate("gAuth"); return gmsg("O site ainda nao foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); }
-    app.setNote("Nao deu para conectar. Tentando de novo...", true);
+    if (err.message === "sem_banco") { showGate("gAuth"); return gmsg("O site ainda não foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); }
+    app.setNote("Não deu para conectar. Tentando de novo...", true);
     setTimeout(() => socket.connect(), 3000);
   });
   socket.on("server:removed", (reason) => {
@@ -313,14 +313,14 @@
     setMode("login");
     let cfg;
     try { cfg = await (await fetch("/api/config")).json(); }
-    catch { showGate("gAuth"); return gmsg("Nao deu para falar com o servidor. Recarregue a pagina."); }
-    if (!window.supabase) { showGate("gAuth"); return gmsg("Nao deu para carregar o login. Recarregue a pagina."); }
+    catch { showGate("gAuth"); return gmsg("Não deu para falar com o servidor. Recarregue a página."); }
+    if (!window.supabase) { showGate("gAuth"); return gmsg("Não deu para carregar o login. Recarregue a página."); }
     sb = window.supabase.createClient(cfg.supabaseUrl, cfg.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
     sb.auth.onAuthStateChange((event, s) => {
       session = s;
       if (event === "PASSWORD_RECOVERY") { setMode("newpass"); showAuth("Escolha uma senha nova."); }
     });
-    if (!cfg.ready) { showGate("gAuth"); return gmsg("O site ainda nao foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); }
+    if (!cfg.ready) { showGate("gAuth"); return gmsg("O site ainda não foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); }
     const { data } = await sb.auth.getSession();
     session = data.session;
     if (mode === "newpass") return;
