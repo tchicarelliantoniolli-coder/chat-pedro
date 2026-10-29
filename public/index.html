@@ -9,48 +9,29 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
 <style>
 :root {
-  --bg: #000000;
-  --panel: #031a0a;
-  --fg: #33ff66;
-  --dim: #1f9940;
-  --bright: #b6ffc8;
-  --err: #ff5555;
+  /* Cores no estilo do Discord (tema escuro) */
+  --bg: #313338;       /* area do chat */
+  --panel: #2b2d31;    /* barras laterais e janelas */
+  --rail: #1e1f22;     /* barra de servidores */
+  --stage: #232428;    /* call e jogos */
+  --box: #383a40;      /* campos de texto e caixinhas */
+  --fg: #dbdee1;       /* texto */
+  --dim: #949ba4;      /* texto secundario */
+  --bright: #f2f3f5;   /* nomes e titulos */
+  --line: #3f4147;     /* divisorias */
+  --hover: #2e3035;    /* mensagem com o mouse em cima */
+  --accent: #5865f2;   /* azul do Discord: botoes principais */
+  --accent-hover: #4752c4;
+  --on-accent: #ffffff;
+  --ok: #23a55a;       /* verde de online */
+  --err: #f23f43;
+  --gold: #f0b232;
+  --pink: #eb459e;
   --pixel: "Press Start 2P", "Courier New", monospace;
   --mono: "VT323", "Courier New", monospace;
-  --box: #000000;     /* fundo de caixinhas (lugares, convites, campos) */
-  --stage: #020d05;   /* fundo das areas de jogo e call */
-  --gold: #ffd84d;
+  --radius: 8px;
   color-scheme: dark;
 }
-/* Cores derivadas ficam no body: assim acompanham o tema (no :root elas ficariam presas no verde) */
-body {
-  --line: color-mix(in srgb, var(--dim) 45%, transparent); /* divisorias suaves */
-  --accent: var(--fg);      /* botoes principais e destaques */
-  --on-accent: var(--bg);   /* texto em cima do destaque */
-  --ok: var(--fg);          /* ponto de online */
-  --rail: color-mix(in srgb, var(--panel) 70%, var(--bg));
-  --hover: color-mix(in srgb, var(--fg) 8%, transparent);
-}
-/* Temas escolhidos no MEU PERFIL */
-body[data-tema="pb"] {
-  --bg: #000000; --panel: #0e0e0e; --stage: #070707; --box: #000000; --fg: #e8e8e8; --dim: #8c8c8c; --bright: #ffffff;
-  --gold: #ffffff; --ok: #ffffff;
-}
-body[data-tema="discord"] {
-  --bg: #313338; --panel: #2b2d31; --stage: #232428; --box: #383a40; --fg: #dbdee1; --dim: #949ba4; --bright: #f2f3f5;
-  --err: #f23f43; --gold: #f0b232; --line: #3f4147; --accent: #5865f2; --on-accent: #ffffff; --ok: #23a55a; --rail: #1e1f22;
-  --hover: rgba(78, 80, 88, 0.3);
-}
-body[data-tema="discord"] .modal .box, body[data-tema="discord"] .gbox { border-color: var(--line); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
-body[data-tema="discord"] #rail, body[data-tema="discord"] header { border-color: #1e1f22; }
-body[data-tema="ambar"] { --fg: #ffb000; --dim: #9a6a00; --bright: #ffe3a3; --panel: #170f00; --stage: #0c0700; }
-body[data-tema="azul"] { --fg: #5fd7ff; --dim: #2b7c99; --bright: #d3f5ff; --panel: #03121c; --stage: #020a10; }
-body[data-tema="win95"] {
-  --bg: #c0c0c0; --panel: #d4d0c8; --stage: #b9b9b9; --box: #ffffff; --fg: #000000; --dim: #4a4a4a;
-  --bright: #000080; --err: #b00000; --gold: #806000; color-scheme: light;
-}
-body[data-tema="win95"] h1, body[data-tema="win95"] .act-head h2 { color: #000080; }
-body[data-tema="win95"] .mention.me { color: #ffffff; }
 html, body { height: 100%; margin: 0; }
 [hidden] { display: none !important; }
 body {
@@ -807,7 +788,7 @@ footer { position: relative; }
   background: var(--accent); color: var(--on-accent); font-size: 19px; white-space: nowrap; flex: none; align-self: center;
   transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
 }
-.callpill:hover { background: color-mix(in srgb, var(--accent) 82%, white); }
+.callpill:hover { background: var(--accent-hover); }
 .callpill:active { transform: scale(0.96); }
 .callpill:focus-visible { outline: 2px solid var(--bright); outline-offset: 2px; }
 .callpill .cnt { background: var(--bg); color: var(--fg); padding: 0 6px; font-size: 16px; line-height: 1.3; }
@@ -864,6 +845,68 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* ===== Acabamento no estilo do Discord: cantos arredondados, sombras e icones de servidor que viram "squircle" ===== */
+header { background: var(--bg); box-shadow: 0 1px 0 rgba(4, 4, 5, 0.2), 0 2px 6px rgba(0, 0, 0, 0.15); border-bottom-color: transparent; position: relative; z-index: 2; }
+#rail { border-right: 0; }
+aside { border-left: 0; }
+.modal .box, .gbox { border: 0; border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55); }
+.modal { background: rgba(0, 0, 0, 0.7); }
+button.ib, button.cmd, .callpill, .mrow, .game, .rx, #jumpNew, .picker, .acts, #tip, .linkbox, #form, .diag, .logo, h1.site .mark, #empty .big, .game .gi, .tile, .pic img, .invite, .replying, #mentionBox button { border-radius: 6px; }
+.gform input, .modal input, .modal select, .namerow input { border-radius: 4px; border-color: transparent !important; background: #1e1f22 !important; }
+#form { background: var(--box); border-color: transparent; padding-left: 14px; }
+#form:focus-within { border-color: transparent; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent); }
+button.cmd.big { border: 0; background: var(--accent); color: var(--on-accent); padding: 6px 16px; }
+button.cmd.big:hover, button.cmd.big:focus-visible { background: var(--accent-hover); }
+button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err); color: #fff; }
+.callpill { border-radius: 6px; }
+.callpill.busy { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.6); animation: callGlow 2s infinite; }
+@keyframes callGlow { 0% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.55); } 70%, 100% { box-shadow: 0 0 0 10px rgba(88, 101, 242, 0); } }
+.callpill .cnt { border-radius: 4px; background: rgba(0, 0, 0, 0.25); color: #fff; }
+.callpill.in { color: #fff; background: var(--ok); box-shadow: none; }
+.callpill.in:hover { background: #1a8b4c; }
+.callpill.in .cnt { background: rgba(0, 0, 0, 0.25); color: #fff; }
+.av { border-radius: 50%; border: 0; }
+.tile .av.big, .line .gut .av.big, #people .av.big { border-radius: 50%; }
+.pres::after { border-radius: 50%; right: -2px; bottom: -2px; width: 10px; height: 10px; border: 3px solid var(--panel); }
+.srv { border-radius: 50%; border: 0; transition: border-radius 0.2s var(--ease), background-color 0.15s, transform 0.1s; }
+.srv:hover, .srv:focus-visible, .srv.on { border-radius: 16px; }
+.srv.add { border: 0; background: var(--bg); color: var(--ok); }
+.srv.add:hover, .srv.add:focus-visible { background: var(--ok); color: #fff; border: 0; }
+.srv::before { background: #fff; border-radius: 0 4px 4px 0; left: -10px; }
+.srvicon { border-radius: 30%; }
+.mention { color: #c9cdfb; background: rgba(88, 101, 242, 0.3); border-radius: 3px; padding: 0 2px; }
+.mention.me { color: #fff; background: rgba(88, 101, 242, 0.55); }
+.line.mentioned { background: rgba(240, 178, 50, 0.08); box-shadow: inset 2px 0 0 var(--gold); }
+.rx { border: 1px solid transparent; background: #2b2d31; }
+.rx.mine { border-color: var(--accent); background: rgba(88, 101, 242, 0.15); }
+.game { border: 0; background: #2e3035; }
+.game:hover, .game:focus-visible { background: #35373c; }
+.game .gi { border: 0; background: var(--accent); color: #fff; border-radius: 12px; }
+#games .game:nth-child(2) .gi { background: var(--ok); }
+.logo, h1.site .mark, #empty .big { background: var(--accent); color: #fff; }
+h1.site { color: var(--bright); }
+.who { font-weight: 400; }
+aside h2, .offTitle { color: var(--dim); }
+.day::before, .day::after { background: var(--line); }
+#jumpNew { background: var(--accent); color: #fff; }
+button.ib.on { background: var(--accent); color: #fff; }
+.controls { background: transparent; }
+#call { background: var(--stage); }
+.tile { border: 0; background: #2b2d31; }
+.tile.speaking { box-shadow: 0 0 0 3px var(--ok); }
+.dots i { background: var(--dim); border-radius: 50%; }
+.meter { border: 0; background: #1e1f22; border-radius: 4px; overflow: hidden; }
+.meter i { background: var(--ok); }
+input[type=range] { accent-color: var(--accent); }
+#tip { background: #111214; border: 0; color: #dbdee1; }
+.acts { background: var(--panel); border-color: #26282c; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+.picker { background: var(--panel); border: 0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45); }
+.swatches button { border-radius: 50%; border-color: transparent; }
+.opts .cmd[aria-pressed="true"] { background: var(--accent); color: #fff; }
+::-webkit-scrollbar { width: 12px; }
+::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 8px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
 </style>
 </head>
 <body>
@@ -1052,7 +1095,6 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
     <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">Trocar foto de perfil</button></div></div>
     <div class="sect"><b>Cor do nome</b><div class="swatches" id="colorPick"></div></div>
     <div class="sect"><b>Status</b><div class="opts" id="statusPick"></div><span style="color: var(--dim)">Ocupado: sem sons nem notificações, só as menções com @.</span></div>
-    <div class="sect"><b>Tema</b><div class="opts" id="themePick"></div></div>
     <div class="sect"><b>Notificações</b><div class="opts"><button type="button" class="cmd" id="notifBtn">Ativar notificações</button></div><span style="color: var(--dim)" id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</span></div>
     <p class="err" id="profMsg"></p>
     <div class="row"><span></span><button type="button" class="cmd danger" id="logoutBtn">Sair da conta</button></div>
@@ -1868,14 +1910,10 @@ window.setIcon = (btn, name, label, extra) => {
   $("modClear").replaceWith(confirmBtn("Limpar o chat todo", () => socket.emit("admin:clear")));
 
   // ---------- MEU PERFIL: cor do nome, status, tema e notificacoes ----------
-  const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
+  const NAME_COLORS = ["#f2f3f5", "#5865f2", "#57f287", "#fee75c", "#eb459e", "#ed4245", "#f0b232", "#3ba55c", "#00a8fc", "#9b84ee", "#e67e22", "#1abc9c"];
   const STATUS = { online: "Online", ausente: "Ausente", ocupado: "Ocupado" };
-  const THEMES = { verde: "Verde", ambar: "Âmbar", azul: "Azul", pb: "Preto e branco", discord: "Discord", win95: "Windows 95" };
   let myColor = ""; // vem da conta (boot.js)
   let myStatus = store.get("chatpedro-status") || "online";
-  let myTheme = store.get("chatpedro-tema") || "verde";
-  const applyTheme = () => { if (myTheme === "verde") delete document.body.dataset.tema; else document.body.dataset.tema = myTheme; };
-  applyTheme();
   function sendProfile() { if (nick) socket.emit("profile", { status: myStatus }); }
   function renderProfile() {
     $("colorPick").replaceChildren(...NAME_COLORS.map((c) => {
@@ -1893,7 +1931,6 @@ window.setIcon = (btn, name, label, extra) => {
       return b;
     }));
     opts("statusPick", STATUS, myStatus, (k) => { myStatus = k; store.set("chatpedro-status", k); sendProfile(); });
-    opts("themePick", THEMES, myTheme, (k) => { myTheme = k; store.set("chatpedro-tema", k); applyTheme(); });
     const supported = "Notification" in window;
     $("notifBtn").hidden = !supported;
     $("notifBtn").textContent = notifOn ? "Desativar notificações" : "Ativar notificações";

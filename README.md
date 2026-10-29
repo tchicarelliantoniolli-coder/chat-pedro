@@ -75,7 +75,7 @@ Compre um dominio (ex.: no Registro.br para `.com.br`). No Render, em **Settings
 - Fotos: ícone de imagem ao lado do campo de mensagem, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande.
 - Áudio: ícone de microfone ao lado do campo de mensagem, grava até 1 minuto.
 - Chat: passe o mouse numa mensagem para responder, reagir ou apagar. `@nome` menciona alguém (Tab completa).
-- Meu perfil (canto de baixo da barra da direita): foto, apelido, cor do nome, status, tema (verde, âmbar, azul, Windows 95) e notificações.
+- Meu perfil (canto de baixo da barra da direita): foto, apelido, cor do nome, status e notificações. O site usa as cores do Discord (tema escuro).
 - Call: microfone, fone, câmera, tela, YouTube junto e configurações (volume e apertar para falar com ESPAÇO). Áudio e vídeo vão direto entre os navegadores (WebRTC).
 - Poker: Texas Hold'em No-Limit, até 9 jogadores, blinds 10/20, 1000 fichas iniciais. Só o dono e os ADMs trancam a mesa e liberam fichas novas.
 - Truco: Truco Paulista, mesa de 4 ou 6, partida até 12.
