@@ -347,7 +347,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 @keyframes shout { 0% { transform: translate(-50%, -50%) scale(0.3); } 15% { transform: translate(-50%, -50%) scale(1.15) rotate(-3deg); } 25% { transform: translate(-50%, -50%) scale(1) rotate(2deg); } 85% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }
 .tr-felt.shake { animation: shake 0.4s steps(4); }
 @keyframes shake { 25% { transform: translate(-6px, 3px); } 50% { transform: translate(5px, -4px); } 75% { transform: translate(-3px, 2px); } }
-.tr-hand { display: flex; justify-content: center; gap: 10px; padding: 8px 16px 4px; --tw: clamp(52px, 9vw, 78px); min-height: calc(var(--tw) * 1.45); }
+.tr-hand { display: flex; justify-content: center; gap: 10px; padding: 8px 16px 4px; --tw: clamp(40px, min(9vw, 8.5vh), 74px); min-height: calc(var(--tw) * 1.45); }
 .tr-hand button.tcard { cursor: pointer; transition: transform 0.1s; }
 .tr-hand button.tcard:hover:not(:disabled), .tr-hand button.tcard:focus-visible { transform: translateY(-8px); outline: none; }
 .tr-hand button.tcard:disabled { cursor: default; filter: brightness(0.7); }
@@ -401,7 +401,42 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 }
 
 /* Celular: a lista de online vira uma gaveta que abre pelo botao [ONLINE n] */
+/* Jogo aberto: o jogo ocupa a area toda, sem rolar; o chat vira uma coluna ao lado (como atividade no Discord) */
+body.gaming .chat {
+  display: grid; grid-template-columns: minmax(0, 1fr) clamp(250px, 26vw, 340px);
+  grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "game call" "game log" "game input";
+}
+body.gaming #activity, body.gaming #truco {
+  grid-area: game; max-height: none; height: 100%; min-height: 0; overflow: hidden; border-bottom: 0; border-right: 1px solid var(--dim);
+}
+body.gaming #activity > *, body.gaming #truco > * { flex: none; }
+body.gaming #activity > .table-wrap, body.gaming #truco > .table-wrap { flex: 1 1 0; } /* so a mesa cresce e encolhe */
+body.gaming #call { grid-area: call; max-height: 45vh; }
+body.gaming main { grid-area: log; }
+body.gaming footer { grid-area: input; }
+/* a mesa usa o espaco que sobra e encolhe para caber na altura */
+body.gaming .table-wrap { flex: 1 1 0; min-height: 0; container-type: size; display: flex; align-items: center; justify-content: center; padding: 6px 16px; }
+body.gaming .felt { width: min(100cqw, calc(100cqh * 2.1)); max-height: none; container-type: inline-size; }
+body.gaming .tr-felt { width: min(100cqw, 100cqh); }
+@container (max-width: 520px) { body.gaming .felt { width: min(100cqw, calc(100cqh * 0.8)); } }
+#chatPeek { display: none; }
+
 @media (max-width: 760px) {
+  /* celular com jogo aberto: o chat vira uma linha com a ultima mensagem; tocando, abre por cima do jogo */
+  body.gaming .chat { grid-template-columns: minmax(0, 1fr); grid-template-areas: "call" "game" "input"; }
+  body.gaming #activity, body.gaming #truco { border-right: 0; }
+  body.gaming main { display: none; }
+  body.gaming.chatopen main {
+    display: block; grid-area: game; align-self: end; height: 60%; z-index: 12;
+    background: rgba(0, 0, 0, 0.95); border-top: 1px solid var(--dim);
+  }
+  body.gaming #chatPeek {
+    all: unset; display: flex; gap: 8px; align-items: baseline; width: 100%; cursor: pointer; margin-bottom: 6px; min-width: 0;
+  }
+  body.gaming #chatPeek .lbl { color: var(--bright); flex: none; }
+  body.gaming #chatPeek .lbl b { color: #000; background: #ffd84d; font-weight: 400; padding: 0 4px; margin-left: 4px; }
+  body.gaming #chatPeek #peekText { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
   #onlineBtn { display: inline; }
   header { gap: 4px 12px; }
   header .title { flex-basis: auto; }
@@ -477,6 +512,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
     </section>
     <main id="scroller"><div class="pad"><div id="log"></div></div></main>
     <footer class="pad">
+      <button type="button" id="chatPeek" aria-controls="scroller"><span class="lbl">[CHAT]</span><span id="peekText">sem mensagens</span></button>
       <form id="form">
         <span class="ps1" id="ps1">apelido: </span>
         <textarea id="input" rows="1" placeholder="seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
@@ -613,7 +649,37 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
     else l.append(avatar(m.nick), span("who", m.nick + "> "), document.createTextNode(m.text));
     log.append(l);
     if (atBottom) scroller.scrollTop = scroller.scrollHeight;
+    peek(m);
   }
+
+  // Jogo aberto: a pagina troca para o layout com o chat ao lado (ou recolhido no celular)
+  let unread = 0;
+  const chatHidden = () => getComputedStyle(scroller).display === "none";
+  function peek(m) {
+    if (!m || m.type === "sys" && !m.nick) { if (m) $("peekText").textContent = "*** " + m.text; return; }
+    $("peekText").textContent = m.nick + "> " + (m.type === "img" ? "[foto]" : m.text);
+    if (chatHidden() && m.nick !== nick) { unread++; peekLabel(); }
+  }
+  function peekLabel() {
+    const lbl = $("chatPeek").querySelector(".lbl");
+    lbl.replaceChildren(document.body.classList.contains("chatopen") ? "[FECHAR CHAT]" : "[CHAT]");
+    if (unread) { const b = document.createElement("b"); b.textContent = unread; lbl.append(b); }
+  }
+  $("chatPeek").addEventListener("click", () => {
+    document.body.classList.toggle("chatopen");
+    unread = 0; peekLabel();
+    scroller.scrollTop = scroller.scrollHeight;
+  });
+  function syncGaming() {
+    const on = !$("activity").hidden || !$("truco").hidden;
+    document.body.classList.toggle("gaming", on);
+    if (!on) document.body.classList.remove("chatopen");
+    unread = 0; peekLabel();
+    scroller.scrollTop = scroller.scrollHeight;
+  }
+  const gameWatch = new MutationObserver(syncGaming);
+  gameWatch.observe($("activity"), { attributes: true, attributeFilter: ["hidden"] });
+  gameWatch.observe($("truco"), { attributes: true, attributeFilter: ["hidden"] });
 
   function renderPeople() {
     $("onlineTitle").textContent = "ONLINE " + users.length;
