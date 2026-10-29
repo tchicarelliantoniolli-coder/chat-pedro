@@ -584,7 +584,9 @@
       else if (inCall && prefs.ptt && !pttHeld) text = "Apertar para falar está ligado: os outros só te ouvem enquanto você segura ESPAÇO.";
       else if (inCall && !micOn) { text = "Seu microfone está desligado na call: clique no microfone da barra para ligar."; warn = true; }
       else if (prefs.micGain === 0) { text = "O volume do microfone está em 0%."; warn = true; }
-      else if (Date.now() - lastHeard > 4000) { text = "Não estou ouvindo nada. Escolha outro microfone na lista ou confira se ele está ligado."; warn = true; }
+      else if (!rawTrack() || rawTrack().readyState === "ended") { text = "O microfone parou de funcionar. Escolha ele de novo na lista."; warn = true; }
+      else if (rawTrack().muted) { text = "O sistema está mandando silêncio: o microfone está mutado no fone (botão ou haste levantada) ou nas configurações de som do Windows."; warn = true; }
+      else if (Date.now() - lastHeard > 4000) { text = "Não estou ouvindo nada de \"" + rawTrack().label + "\". Confira se o microfone do fone não está mutado e teste a opção \"Padrão\" da lista."; warn = true; }
       if (hint.textContent !== text) { hint.textContent = text; hint.className = "hint" + (warn ? " warn" : ""); }
     }
     if (!inCall) return;
