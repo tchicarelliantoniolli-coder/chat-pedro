@@ -29,14 +29,16 @@
   // ---------- botoes ----------
   const btn = (id, text, off) => { $(id).textContent = text; $(id).classList.toggle("off", !!off); };
   function refreshButtons() {
-    btn("micBtn", micOn ? "[MIC ON]" : "[MIC OFF]", !micOn);
-    btn("deafBtn", deaf ? "[FONE OFF]" : "[FONE ON]", deaf);
-    btn("camBtn", camStream ? "[CAMERA ON]" : "[CAMERA OFF]", !camStream);
-    btn("screenBtn", screenStream ? "[PARAR TELA]" : "[TELA]", false);
+    // desligado fica vermelho; ligado mostra ON
+    btn("micBtn", micOn ? "[MIC]" : "[MIC OFF]", !micOn);
+    btn("deafBtn", deaf ? "[FONE OFF]" : "[FONE]", deaf);
+    btn("camBtn", camStream ? "[CAM ON]" : "[CAM]", false);
+    btn("screenBtn", screenStream ? "[TELA ON]" : "[TELA]", false);
     $("screenBtn").hidden = !canShareScreen;
-    $("minBtn").textContent = $("call").classList.contains("min") ? "[MOSTRAR]" : "[ESCONDER]";
+    $("minBtn").textContent = $("call").classList.contains("min") ? "[+]" : "[-]";
+    $("minBtn").title = $("call").classList.contains("min") ? "Mostrar os videos" : "Esconder os videos";
     const n = members.length;
-    $("callBtn").textContent = inCall ? "[CHAMADA " + n + "]" : n ? "[ENTRAR NA CHAMADA " + n + "]" : "[ENTRAR NA CHAMADA]";
+    $("callBtn").textContent = n ? "[CALL " + n + "]" : "[CALL]";
     $("joinBtn").hidden = inCall || !app.nick;
     $("callBtn").hidden = !app.nick;
   }
@@ -399,12 +401,12 @@
   }
 
   function renderSidebar() {
-    $("callTitle").textContent = "CHAMADA - " + members.length;
+    $("callTitle").textContent = "CALL " + members.length;
     const ul = $("callPeople");
     ul.replaceChildren();
     if (!members.length) {
       const li = document.createElement("li");
-      li.style.color = "var(--dim)"; li.textContent = "ninguem na chamada";
+      li.style.color = "var(--dim)"; li.textContent = "vazia";
       ul.append(li);
     }
     for (const m of members) {

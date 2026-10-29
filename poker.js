@@ -95,7 +95,7 @@ function handName(v) {
 // ---------- mesa ----------
 function createPoker(io, helpers, timing) {
   if (timing) ({ TURN_MS = TURN_MS, AWAY_TURN_MS = AWAY_TURN_MS, NEXT_HAND_MS = NEXT_HAND_MS, RUNOUT_MS = RUNOUT_MS } = timing); // usado nos testes
-  const { nickOf, announce } = helpers; // nickOf(socket.id) -> apelido ou undefined
+  const { nickOf } = helpers; // nickOf(socket.id) -> apelido ou undefined
   const bank = new Map(); // apelido(minusculo) -> fichas guardadas quando a pessoa levanta
 
   const t = {
@@ -112,6 +112,9 @@ function createPoker(io, helpers, timing) {
     result: null,
     log: [],
     sb: -1, bb: -1,
+    owner: null,        // quem criou a mesa (primeiro a sentar); continua dono mesmo sem jogar
+    locked: false,      // trancada: quem nao e o dono precisa de permissao para sentar ou recomprar
+    requests: new Map(), // apelido(minusculo) -> { nick, type: "sit" | "rebuy", seat }
   };
   let timer = null;
 
@@ -384,8 +387,6 @@ function createPoker(io, helpers, timing) {
     for (const p of t.seats) if (p) p.bet = 0;
     const busted = t.seats.filter((p) => p && p.inHand && p.chips === 0);
     for (const p of busted) say(p.nick + " ficou sem fichas. Clique em RECOMPRAR para voltar.");
-    const winners = t.result.winners;
-    if (winners.length) announce("[POKER] " + winners.map((w) => w.nick + " ganhou " + w.amount + (w.hand ? " com " + w.hand : "")).join(" | "));
     broadcast();
     timer = setTimeout(() => {
       timer = null;
@@ -413,11 +414,15 @@ function createPoker(io, helpers, timing) {
         seat: i, nick: p.nick, chips: p.chips, bet: p.bet, folded: p.folded, allIn: p.allIn, inHand: p.inHand,
         sittingOut: p.sittingOut, leaving: p.leaving, lastAction: p.lastAction,
         cards: p.inHand ? (p.key === key || p.shown ? p.hole : p.folded ? [] : ["??", "??"]) : [],
-        best: p.shown && p.best ? p.best.cards : null,
+        best: p.shown && p.best ? p.best.cards : null, owner: p.key === t.owner,
       }),
       board: t.board, stage: t.stage, button: t.button, sb: t.sb, bb: t.bb, toAct: t.toAct, turnEndsAt: t.turnEndsAt,
       turnMs: TURN_MS, pot: collected, handNo: t.handNo, result: t.result, log: t.log,
       blinds: [SMALL_BLIND, BIG_BLIND], startChips: START_CHIPS, mySeat, serverNow: Date.now(),
+      locked: t.locked, isOwner: !!key && key === t.owner,
+      ownerNick: t.owner ? (t.seats.find((p) => p && p.key === t.owner) || {}).nick || [...io.sockets.sockets.values()].map((x) => nickOf(x.id)).find((n) => n && keyOf(n) === t.owner) || null : null,
+      myRequest: key && t.requests.has(key) ? t.requests.get(key).type : null,
+      requests: key && key === t.owner ? [...t.requests].map(([k, r]) => ({ key: k, nick: r.nick, type: r.type })) : [],
     };
     if (me && t.toAct === mySeat) {
       const toCall = Math.min(t.currentBet - me.bet, me.chips);
@@ -453,14 +458,38 @@ function createPoker(io, helpers, timing) {
       if (already >= 0) {
         if (t.seats[already].inHand) return reply(cb, "Espere a mao acabar para trocar de lugar.");
         t.seats[seat] = t.seats[already]; t.seats[already] = null;
-      } else {
-        const chips = bank.has(key) && bank.get(key) > 0 ? bank.get(key) : START_CHIPS;
-        t.seats[seat] = { key, nick, chips, inHand: false, hole: [], bet: 0, total: 0, sittingOut: false, leaving: false, lastAction: "" };
-        say(nick + " sentou com " + chips + " fichas");
-        announce("[POKER] " + nick + " sentou na mesa");
+        reply(cb); broadcast(); return;
+      }
+      if (!t.seats.some(Boolean) && !(t.owner && isOnline(t.owner))) { t.owner = key; t.locked = false; t.requests.clear(); }
+      if (t.locked && key !== t.owner) {
+        t.requests.set(key, { nick, type: "sit", seat });
+        say(nick + " pediu para entrar");
+        if (typeof cb === "function") cb({ ok: false, pending: true });
+        broadcast(); return;
       }
       reply(cb);
-      maybeStart();
+      doSit(key, nick, seat);
+    });
+
+    socket.on("poker:cancel", () => {
+      const nick = nickNow(); if (!nick) return;
+      if (t.requests.delete(keyOf(nick))) broadcast();
+    });
+
+    socket.on("poker:lock", (locked) => {
+      const nick = nickNow(); if (!nick || keyOf(nick) !== t.owner) return;
+      t.locked = !!locked;
+      say(t.locked ? "A mesa foi trancada pelo dono" : "A mesa foi aberta pelo dono");
+      if (!t.locked) for (const k of [...t.requests.keys()]) approve(k); // abrir a mesa aceita quem estava esperando
+      broadcast();
+    });
+
+    socket.on("poker:answer", (msg) => {
+      const nick = nickNow(); if (!nick || keyOf(nick) !== t.owner || !msg) return;
+      const req = t.requests.get(String(msg.key));
+      if (!req) return;
+      if (msg.accept) approve(String(msg.key));
+      else { t.requests.delete(String(msg.key)); say(req.nick + " nao foi aceito"); }
       broadcast();
     });
 
@@ -508,30 +537,82 @@ function createPoker(io, helpers, timing) {
 
     socket.on("poker:rebuy", (cb) => {
       const nick = nickNow(); if (!nick) return reply(cb);
-      const s = seatOfKey(keyOf(nick)); if (s < 0) return reply(cb, "Voce nao esta na mesa.");
+      const key = keyOf(nick);
+      const s = seatOfKey(key); if (s < 0) return reply(cb, "Voce nao esta na mesa.");
       const p = t.seats[s];
       if (p.inHand && t.stage !== "waiting") return reply(cb, "Espere a mao acabar.");
       if (p.chips >= BIG_BLIND) return reply(cb, "Voce ainda tem fichas.");
-      p.chips = START_CHIPS; p.sittingOut = false;
-      say(p.nick + " recomprou " + START_CHIPS + " fichas");
+      if (t.locked && key !== t.owner) {
+        t.requests.set(key, { nick, type: "rebuy", seat: s });
+        say(nick + " pediu para recomprar");
+        if (typeof cb === "function") cb({ ok: false, pending: true });
+        broadcast(); return;
+      }
       reply(cb);
-      maybeStart();
-      broadcast();
+      doRebuy(p);
     });
+  }
+
+  function doSit(key, nick, seat) {
+    if (seatOfKey(key) >= 0) return;
+    if (!(seat >= 0 && seat < SEATS) || t.seats[seat]) seat = t.seats.findIndex((x) => !x);
+    if (seat < 0) return;
+    const chips = bank.has(key) && bank.get(key) > 0 ? bank.get(key) : START_CHIPS;
+    t.seats[seat] = { key, nick, chips, inHand: false, hole: [], bet: 0, total: 0, sittingOut: false, leaving: false, lastAction: "" };
+    say(nick + " sentou com " + chips + " fichas");
+    maybeStart();
+    broadcast();
+  }
+
+  function doRebuy(p) {
+    p.chips = START_CHIPS; p.sittingOut = false;
+    say(p.nick + " recomprou " + START_CHIPS + " fichas");
+    maybeStart();
+    broadcast();
+  }
+
+  function approve(key) {
+    const req = t.requests.get(key);
+    t.requests.delete(key);
+    if (!req || !isOnline(key)) return;
+    if (req.type === "sit") {
+      if (!t.seats.some((x) => !x)) { say("Mesa cheia: " + req.nick + " nao conseguiu sentar"); return; }
+      doSit(key, req.nick, req.seat);
+    } else {
+      const s = seatOfKey(key);
+      const p = s >= 0 ? t.seats[s] : null;
+      if (p && p.chips < BIG_BLIND && !(p.inHand && t.stage !== "waiting")) doRebuy(p);
+    }
+  }
+
+  // Dono saiu do site: a mesa passa para alguem que esta jogando (ou fica sem dono)
+  function checkOwner() {
+    if (!t.owner || isOnline(t.owner)) return;
+    const next = t.seats.find((p) => p && isOnline(p.key));
+    t.owner = next ? next.key : null;
+    if (next) say(next.nick + " agora e o dono da mesa");
+    else { t.locked = false; t.requests.clear(); }
   }
 
   // Quando alguem troca de apelido, o lugar acompanha
   function rename(oldNick, newNick) {
     const s = seatOfKey(keyOf(oldNick));
-    if (s >= 0) { t.seats[s].nick = newNick; t.seats[s].key = keyOf(newNick); broadcast(); }
+    if (s >= 0) { t.seats[s].nick = newNick; t.seats[s].key = keyOf(newNick); }
+    if (t.owner === keyOf(oldNick)) t.owner = keyOf(newNick);
+    const req = t.requests.get(keyOf(oldNick));
+    if (req) { t.requests.delete(keyOf(oldNick)); t.requests.set(keyOf(newNick), { ...req, nick: newNick }); }
+    broadcast();
   }
 
   // Quem fecha a pagina sai da mesa (se estiver numa mao, sai quando ela acabar)
   function left(nick) {
+    t.requests.delete(keyOf(nick));
     const s = seatOfKey(keyOf(nick));
-    if (s < 0) return;
-    const p = t.seats[s];
-    if (!p.inHand || t.stage === "waiting") { bank.set(p.key, p.chips); t.seats[s] = null; say(p.nick + " saiu da mesa"); }
+    if (s >= 0) {
+      const p = t.seats[s];
+      if (!p.inHand || t.stage === "waiting") { bank.set(p.key, p.chips); t.seats[s] = null; say(p.nick + " saiu da mesa"); }
+    }
+    setTimeout(() => { checkOwner(); broadcast(); }, 20000); // tempo para quem so recarregou a pagina voltar
     broadcast();
   }
 

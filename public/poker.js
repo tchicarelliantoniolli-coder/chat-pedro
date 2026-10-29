@@ -63,10 +63,15 @@
       seat.style.left = pos.x + "%"; seat.style.top = pos.y + "%";
       if (!s) {
         seat.classList.add("empty");
-        if (st.mySeat < 0 && app.nick) {
-          const b = el("button", "", "[SENTAR]");
+        if (st.mySeat < 0 && app.nick && !st.myRequest) {
+          const ask = st.locked && !st.isOwner;
+          const b = el("button", "", ask ? "[PEDIR]" : "[SENTAR]");
           b.type = "button";
-          b.addEventListener("click", () => socket.emit("poker:sit", i, (r) => r && !r.ok && setNote("ERRO: " + r.error, true)));
+          b.title = ask ? "A mesa esta trancada: o dono precisa aceitar" : "Sentar neste lugar";
+          b.addEventListener("click", () => socket.emit("poker:sit", i, (r) => {
+            if (r && r.pending) setNote("Pedido enviado. Esperando " + (st.ownerNick || "o dono") + " aceitar.");
+            else if (r && !r.ok) setNote("ERRO: " + r.error, true);
+          }));
           seat.append(b);
         } else seat.append(el("span", "", "vazio"));
         felt.append(seat);
@@ -80,7 +85,9 @@
       seat.append(cards);
       const box = el("div", "box");
       const info = el("div", "info");
-      info.append(el("div", "nm", s.nick + (i === st.mySeat ? " (voce)" : "")), el("div", "ch", s.allIn && s.chips === 0 ? "ALL-IN" : s.chips + ""));
+      const nm = el("div", "nm", s.nick + (i === st.mySeat ? " (voce)" : ""));
+      if (s.owner) { const c = el("span", "crown", " \u2605"); c.title = "Dono da mesa"; nm.prepend(c); }
+      info.append(nm, el("div", "ch", s.allIn && s.chips === 0 ? "ALL-IN" : s.chips + ""));
       box.append(avatar(s.nick), info);
       seat.append(box);
       if (st.toAct === i) { const tm = el("div", "timer"); tm.append(el("i")); seat.append(tm); }
@@ -156,22 +163,56 @@
   }
 
   function renderBar() {
+    $("actInfo").textContent = "blinds " + st.blinds.join("/") + (st.handNo ? "  mao " + st.handNo : "") + (st.locked ? "  trancada" : "");
     const bar = $("tablebar");
     bar.replaceChildren();
-    bar.append(el("span", "", "Blinds " + st.blinds[0] + "/" + st.blinds[1] + " | fichas iniciais " + st.startChips + (st.handNo ? " | mao #" + st.handNo : "")));
-    bar.append(el("span", "spacer"));
     const me = st.mySeat >= 0 ? st.seats[st.mySeat] : null;
     const cmd = (text, fn, cls) => { const b = el("button", "cmd" + (cls ? " " + cls : ""), text); b.type = "button"; b.addEventListener("click", fn); return b; };
-    const done = (r) => r && !r.ok && setNote("ERRO: " + r.error, true);
-    if (!me) {
-      bar.append(el("span", "", app.nick ? "Clique em [SENTAR] num lugar vazio para jogar" : "Escolha um apelido para jogar"));
-      return;
+    const done = (r) => {
+      if (r && r.pending) setNote("Pedido enviado. Esperando " + (st.ownerNick || "o dono") + " aceitar.");
+      else if (r && !r.ok) setNote("ERRO: " + r.error, true);
+    };
+
+    if (st.myRequest) {
+      bar.append(el("span", "", "esperando " + (st.ownerNick || "o dono") + (st.myRequest === "rebuy" ? " liberar a recompra" : " aceitar voce")));
+      bar.append(cmd("[CANCELAR]", () => socket.emit("poker:cancel")));
+    } else if (!me) {
+      bar.append(el("span", "", !app.nick ? "escolha um apelido para jogar"
+        : st.locked && !st.isOwner ? "mesa trancada: clique em [PEDIR] num lugar" : "clique em [SENTAR] num lugar vazio"));
+    } else {
+      if (me.chips < st.blinds[1] && !(me.inHand && st.stage !== "waiting")) {
+        bar.append(cmd(st.locked && !st.isOwner ? "[PEDIR RECOMPRA]" : "[RECOMPRAR " + st.startChips + "]", () => socket.emit("poker:rebuy", done)));
+      }
+      bar.append(me.sittingOut
+        ? cmd("[VOLTAR]", () => socket.emit("poker:away", false, done), "on")
+        : cmd("[AUSENTE]", () => socket.emit("poker:away", true, done)));
+      bar.append(cmd(me.leaving ? "[SAINDO...]" : "[LEVANTAR]", () => socket.emit("poker:stand", done)));
     }
-    if (me.chips < st.blinds[1] && !(me.inHand && st.stage !== "waiting")) bar.append(cmd("[RECOMPRAR " + st.startChips + "]", () => socket.emit("poker:rebuy", done)));
-    bar.append(me.sittingOut
-      ? cmd("[VOLTAR A JOGAR]", () => socket.emit("poker:away", false, done))
-      : cmd("[FICAR AUSENTE]", () => socket.emit("poker:away", true, done)));
-    bar.append(cmd(me.leaving ? "[SAINDO...]" : "[LEVANTAR]", () => socket.emit("poker:stand", done), "danger"));
+    bar.append(el("span", "spacer"));
+    if (st.isOwner) {
+      bar.append(cmd(st.locked ? "[DESTRANCAR MESA]" : "[TRANCAR MESA]", () => socket.emit("poker:lock", !st.locked), st.locked ? "on" : ""));
+    }
+    const log = $("dealerlog");
+    bar.append(cmd(log.hidden ? "[HISTORICO]" : "[ESCONDER HISTORICO]", () => { log.hidden = !log.hidden; renderBar(); log.scrollTop = log.scrollHeight; }));
+  }
+
+  // Convites para o dono: aparecem em qualquer tela, mesmo com o poker fechado
+  function renderInvites() {
+    const box = $("invites");
+    const reqs = st && st.isOwner ? st.requests : [];
+    box.replaceChildren(...reqs.map((r) => {
+      const card = el("div", "invite");
+      const tx = el("div", "t", r.nick + (r.type === "rebuy" ? " quer recomprar " + st.startChips + " fichas" : " quer entrar na mesa"));
+      tx.append(el("small", "", "a mesa de poker esta trancada"));
+      const row = el("div", "row");
+      const yes = el("button", "cmd", "[ACEITAR]"); yes.type = "button";
+      const no = el("button", "cmd danger", "[RECUSAR]"); no.type = "button";
+      yes.addEventListener("click", () => socket.emit("poker:answer", { key: r.key, accept: true }));
+      no.addEventListener("click", () => socket.emit("poker:answer", { key: r.key, accept: false }));
+      row.append(yes, no);
+      card.append(tx, row);
+      return card;
+    }));
   }
 
   // barra de tempo de quem esta jogando
@@ -184,7 +225,7 @@
 
   function sidebar() {
     const players = st ? st.seats.filter(Boolean) : [];
-    $("actTags").textContent = players.length ? "[" + players.length + " na mesa]" : "[mesa vazia]";
+    $("actTags").textContent = players.length ? players.length + " jogando" + (st.locked ? ", trancada" : "") : "mesa vazia";
     app.pokerNicks = new Set(players.map((p) => p.nick.toLowerCase()));
     app.renderPeople();
   }
@@ -194,6 +235,7 @@
     st = s;
     clockSkew = s.serverNow - Date.now();
     sidebar();
+    renderInvites();
     if (!$("activity").hidden) render();
     if (s.me && !wasMyTurn && $("activity").hidden) setNote("[POKER] Sua vez de jogar! Clique em [POKER] la em cima.");
   });

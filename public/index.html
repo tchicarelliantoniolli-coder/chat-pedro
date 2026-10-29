@@ -21,21 +21,24 @@
 html, body { height: 100%; margin: 0; }
 [hidden] { display: none !important; }
 body {
-  background: var(--bg); color: var(--fg); font-family: var(--mono); font-size: 22px; line-height: 1.2;
+  background: var(--bg); color: var(--fg); font-family: var(--mono); font-size: 20px; line-height: 1.25;
   display: flex; flex-direction: column;
 }
 button.cmd { all: unset; cursor: pointer; color: var(--bright); white-space: pre; }
 button.cmd:hover, button.cmd:focus-visible { color: var(--bg); background: var(--fg); }
 
 header {
-  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 12px; border-bottom: 2px solid var(--dim);
-  padding-block: 12px 6px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; border-bottom: 1px solid var(--dim);
+  padding-block: 10px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-header .title { flex: 1 1 220px; min-width: 0; }
+header .title { flex: 1 1 200px; min-width: 0; display: flex; align-items: baseline; gap: 14px; }
+header .cmd { color: var(--fg); }
 h1 { font-family: var(--pixel); font-size: 14px; font-weight: 400; margin: 0; color: var(--bright); }
-.sub { color: var(--dim); margin-top: 6px; overflow-wrap: anywhere; }
+.sub { color: var(--dim); white-space: nowrap; }
+.sub::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; background: var(--dim); }
+.sub.on::before { background: var(--fg); }
 #onlineBtn { display: none; }
 
 .app { flex: 1; min-height: 0; display: flex; }
@@ -61,7 +64,7 @@ main { flex: 1; overflow-y: auto; min-height: 0; }
 .av img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .av.big { width: 36px; height: 36px; font-size: 13px; vertical-align: middle; margin-right: 0; }
 
-footer { padding-block: 6px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px dashed var(--dim); }
+footer { padding-block: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--dim); }
 form { display: flex; align-items: flex-start; gap: 8px; }
 .ps1 { color: var(--bright); white-space: pre; margin-right: -8px; }
 textarea {
@@ -69,7 +72,8 @@ textarea {
   color: var(--fg); font: inherit; caret-color: var(--fg); padding: 0; margin: 0; max-height: 6em;
 }
 textarea::placeholder { color: var(--dim); }
-#note { color: var(--dim); min-height: 1.2em; margin: 4px 0 0; }
+#note { color: var(--dim); margin: 4px 0 0; }
+#note:empty { display: none; }
 #note.err { color: var(--err); }
 
 .pic { display: block; margin: 4px 0 6px; }
@@ -80,13 +84,13 @@ textarea::placeholder { color: var(--dim); }
 .pic img:hover { border-color: var(--fg); }
 
 aside {
-  width: 230px; flex: none; border-left: 2px solid var(--dim); background: var(--panel);
+  width: 220px; flex: none; border-left: 1px solid var(--dim); background: var(--panel);
   display: flex; flex-direction: column; min-height: 0;
   padding-right: env(safe-area-inset-right, 0px);
 }
 aside h2 {
   font-family: var(--pixel); font-size: 10px; font-weight: 400; color: var(--dim);
-  letter-spacing: 0.05em; margin: 0; padding: 14px 14px 10px;
+  letter-spacing: 0.05em; margin: 0; padding: 18px 14px 10px; display: flex; justify-content: space-between;
 }
 #people { list-style: none; margin: 0; padding: 0 14px 6px; overflow-y: auto; flex: 0 1 auto; display: flex; flex-direction: column; gap: 10px; }
 #people li { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -97,8 +101,8 @@ aside h2 {
   content: ""; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px;
   background: var(--fg); border: 2px solid var(--panel);
 }
-.profile { margin-top: auto; border-top: 1px dashed var(--dim); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
-.profile .hint { color: var(--dim); font-size: 18px; }
+.profile { margin-top: auto; padding: 12px 14px; }
+.profile .cmd { color: var(--dim); }
 
 #viewer {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92); display: flex; align-items: center;
@@ -109,7 +113,7 @@ aside h2 {
 body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
 
 /* Chamada estilo Discord: grade de videos em cima do chat, barra de controles embaixo */
-#call { flex: 0 0 auto; display: flex; flex-direction: column; border-bottom: 2px solid var(--dim); background: #020d05; max-height: 62%; min-height: 0; }
+#call { flex: 0 0 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: #020d05; max-height: 62%; min-height: 0; }
 #call.min #tiles { display: none; }
 #tiles {
   flex: 1; min-height: 0; overflow-y: auto; padding: 10px 16px; display: grid; gap: 10px;
@@ -138,7 +142,7 @@ body.dragging main { outline: 2px dashed var(--fg); outline-offset: -8px; }
 .tile .vol input { width: 90px; accent-color: var(--fg); }
 .controls {
   display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding-block: 8px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; border-top: 1px dashed var(--dim);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px;
 }
 .controls .spacer { flex: 1; }
 button.cmd.off { color: var(--err); }
@@ -152,7 +156,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 #callPeople li.speaking .av { outline: 2px solid var(--fg); outline-offset: 1px; }
 #callPeople .tags { color: var(--dim); font-size: 17px; flex: none; }
 .callbox { padding: 0 14px 12px; }
-.tag { color: var(--dim); font-size: 17px; margin-left: 4px; }
+.tag { color: var(--dim); margin-left: 6px; }
 
 .modal {
   position: fixed; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center;
@@ -174,8 +178,9 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .modal .row { display: flex; justify-content: space-between; gap: 12px; }
 
 /* Atividade: mesa de poker no estilo PokerStars, com o verde do terminal */
-#activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 2px solid var(--dim); background: #020d05; max-height: 78%; min-height: 0; overflow-y: auto; }
-.act-head { display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-bottom: 1px dashed var(--dim); }
+#activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--dim); background: #020d05; max-height: 78%; min-height: 0; overflow-y: auto; }
+.act-head { display: flex; align-items: center; gap: 12px; padding: 8px 16px 0; }
+.act-head .info { color: var(--dim); }
 .act-head h2 { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--bright); margin: 0; flex: 1; }
 .table-wrap { container-type: inline-size; padding: 10px 16px 4px; }
 .felt {
@@ -228,7 +233,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .chipbet { position: absolute; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #ffd84d; padding: 0 5px; white-space: nowrap; font-size: clamp(13px, 2cqw, 19px); display: flex; align-items: center; gap: 4px; }
 .chipbet::before { content: ""; width: 0.6em; height: 0.6em; border-radius: 50%; background: #ffd84d; border: 2px dashed #b8860b; }
 .dealer { position: absolute; transform: translate(-50%, -50%); width: clamp(16px, 2.6cqw, 24px); height: clamp(16px, 2.6cqw, 24px); border-radius: 50%; background: #fff; color: #000; font-family: var(--pixel); font-size: clamp(7px, 1.1cqw, 10px); display: flex; align-items: center; justify-content: center; border: 2px solid #000; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 16px; border-top: 1px dashed var(--dim); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 8px 16px; }
 .actions .big { all: unset; cursor: pointer; border: 2px solid var(--fg); color: var(--bright); padding: 2px 12px; white-space: nowrap; }
 .actions .big:hover, .actions .big:focus-visible { background: var(--fg); color: #000; }
 .actions .big.fold { border-color: var(--err); color: var(--err); }
@@ -240,10 +245,21 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .sizing .cmd { color: var(--dim); }
 .tablebar { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 6px 16px 10px; color: var(--dim); }
 .tablebar .spacer { flex: 1; }
+.tablebar .cmd { color: var(--dim); }
+.tablebar .cmd.on { color: var(--bright); }
 .dealerlog { margin: 0 16px 10px; padding: 4px 8px; border: 1px solid var(--dim); max-height: 6.2em; overflow-y: auto; color: var(--dim); font-size: 18px; }
 #actList { list-style: none; margin: 0; padding: 0 14px 6px; }
-#actList li { display: flex; gap: 8px; align-items: center; color: var(--bright); flex-wrap: wrap; }
-#actList .tags { color: var(--dim); font-size: 17px; }
+/* Convites para entrar na mesa trancada: so o dono ve, em qualquer tela */
+#invites {
+  position: fixed; z-index: 25; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(96px, calc(env(safe-area-inset-bottom, 0px) + 96px));
+  display: flex; flex-direction: column; gap: 8px; width: min(320px, calc(100vw - 32px));
+}
+.invite { background: #000; border: 2px solid #ffd84d; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 4px 0 rgba(0,0,0,0.6); }
+.invite .t { color: var(--bright); }
+.invite .t small { display: block; color: var(--dim); font-size: 17px; }
+.invite .row { display: flex; gap: 16px; }
+.seat .nm .crown { color: #ffd84d; }
+#actList li { display: flex; gap: 8px; align-items: center; color: var(--dim); flex-wrap: wrap; justify-content: space-between; }
 
 @container (max-width: 520px) {
   .felt::before { inset: 9% 12%; }
@@ -256,6 +272,9 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 /* Celular: a lista de online vira uma gaveta que abre pelo botao [ONLINE n] */
 @media (max-width: 760px) {
   #onlineBtn { display: inline; }
+  header { gap: 4px 12px; }
+  header .title { flex-basis: auto; }
+  .sub { font-size: 0; } /* no celular fica so o quadradinho de online */
   #tiles { padding: 8px; }
   .tile .vol input { width: 70px; }
   .pad { padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -274,10 +293,10 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 <header>
   <div class="title">
     <h1>CHAT PEDRO</h1>
-    <div class="sub" id="status">C:\&gt; conectando...</div>
+    <span class="sub" id="status">conectando</span>
   </div>
   <button type="button" class="cmd" id="pokerBtn" hidden>[POKER]</button>
-  <button type="button" class="cmd" id="callBtn" hidden>[ENTRAR NA CHAMADA]</button>
+  <button type="button" class="cmd" id="callBtn" hidden>[CALL]</button>
   <button type="button" class="cmd" id="onlineBtn" aria-controls="sidebar">[ONLINE 0]</button>
 </header>
 
@@ -285,54 +304,56 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   <div class="chat">
     <section id="activity" aria-label="Poker" hidden>
       <div class="act-head">
-        <h2>ATIVIDADE: POKER TEXAS HOLD'EM</h2>
-        <button type="button" class="cmd" id="actClose">[FECHAR]</button>
+        <h2>POKER</h2>
+        <span class="info" id="actInfo"></span>
+        <button type="button" class="cmd" id="actClose">[X]</button>
       </div>
       <div class="table-wrap"><div class="felt" id="felt"></div></div>
       <div class="actions" id="actions" hidden></div>
       <div class="tablebar" id="tablebar"></div>
-      <div class="dealerlog" id="dealerlog" aria-live="polite"></div>
+      <div class="dealerlog" id="dealerlog" aria-live="polite" hidden></div>
     </section>
     <section id="call" aria-label="Chamada" hidden>
       <div id="tiles"></div>
       <div class="controls">
-        <button type="button" class="cmd" id="micBtn" title="Ligar ou desligar seu microfone">[MIC ON]</button>
-        <button type="button" class="cmd" id="deafBtn" title="Parar de ouvir a chamada">[FONE ON]</button>
-        <button type="button" class="cmd" id="camBtn" title="Ligar ou desligar sua camera">[CAMERA]</button>
+        <button type="button" class="cmd" id="micBtn" title="Ligar ou desligar seu microfone">[MIC]</button>
+        <button type="button" class="cmd" id="deafBtn" title="Parar de ouvir a chamada">[FONE]</button>
+        <button type="button" class="cmd" id="camBtn" title="Ligar ou desligar sua camera">[CAM]</button>
         <button type="button" class="cmd" id="screenBtn" title="Compartilhar sua tela">[TELA]</button>
         <button type="button" class="cmd" id="setBtn" title="Configuracoes de audio e video">[CONFIG]</button>
-        <button type="button" class="cmd" id="minBtn" title="Esconder ou mostrar os videos">[ESCONDER]</button>
+        <button type="button" class="cmd" id="minBtn" title="Esconder ou mostrar os videos">[-]</button>
         <span class="spacer"></span>
-        <button type="button" class="cmd danger" id="leaveBtn">[SAIR DA CHAMADA]</button>
+        <button type="button" class="cmd danger" id="leaveBtn">[SAIR]</button>
       </div>
     </section>
     <main id="scroller"><div class="pad"><div id="log"></div></div></main>
     <footer class="pad">
       <form id="form">
         <span class="ps1" id="ps1">apelido: </span>
-        <textarea id="input" rows="1" placeholder="digite seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
+        <textarea id="input" rows="1" placeholder="seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
         <button type="button" class="cmd" id="photoBtn" title="Enviar foto" hidden>[FOTO]</button>
         <input type="file" id="file" accept="image/*" hidden>
       </form>
-      <p id="note">Escolha um apelido e aperte ENTER</p>
+      <p id="note">escolha um apelido e aperte ENTER</p>
     </footer>
   </div>
 
   <aside id="sidebar" aria-label="Quem esta online">
-    <h2 id="onlineTitle">ONLINE - 0</h2>
+    <h2 id="onlineTitle">ONLINE 0</h2>
     <ul id="people"></ul>
-    <h2>ATIVIDADES</h2>
-    <ul id="actList"><li><span>Poker</span><span class="tags" id="actTags">[mesa vazia]</span><button type="button" class="cmd" id="actOpen">[ABRIR]</button></li></ul>
-    <h2 id="callTitle">CHAMADA - 0</h2>
+    <h2>POKER</h2>
+    <ul id="actList"><li><span id="actTags">mesa vazia</span><button type="button" class="cmd" id="actOpen">[ABRIR]</button></li></ul>
+    <h2 id="callTitle">CALL 0</h2>
     <ul id="callPeople"></ul>
-    <div class="callbox"><button type="button" class="cmd" id="joinBtn" hidden>[ENTRAR NA CHAMADA]</button></div>
+    <div class="callbox"><button type="button" class="cmd" id="joinBtn" hidden>[ENTRAR]</button></div>
     <div class="profile" id="profile" hidden>
-      <button type="button" class="cmd" id="avatarBtn">[FOTO DE PERFIL]</button>
-      <span class="hint">aparece ao lado do seu nome</span>
+      <button type="button" class="cmd" id="avatarBtn">[MUDAR FOTO DE PERFIL]</button>
       <input type="file" id="avatarFile" accept="image/*" hidden>
     </div>
   </aside>
 </div>
+
+<div id="invites" aria-live="polite"></div>
 
 <div class="modal" id="settings" hidden>
   <div class="box" role="dialog" aria-labelledby="setTitle">
@@ -364,8 +385,14 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   const socket = io();
   let nick = null, users = [], avatars = {};
 
-  const HELP = "ENTER envia | [FOTO] ou cole/arraste uma imagem | /nick NOVO muda o apelido | /perfil troca a foto de perfil | /limpar limpa a tela";
-  const setNote = (text, err) => { note.textContent = text; note.classList.toggle("err", !!err); };
+  const HELP = "ENTER envia | SHIFT+ENTER nova linha | [FOTO] ou cole/arraste uma imagem | /nick NOVO muda o apelido | /perfil troca a foto de perfil | /limpar limpa a tela";
+  let noteTimer = null;
+  // avisos aparecem embaixo do campo de texto e somem sozinhos
+  const setNote = (text, err) => {
+    note.textContent = text; note.classList.toggle("err", !!err);
+    clearTimeout(noteTimer);
+    if (text) noteTimer = setTimeout(() => { note.textContent = ""; }, err ? 8000 : 5000);
+  };
   const pad = (n) => String(n).padStart(2, "0");
   const fmtTime = (ts) => { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
   const span = (cls, text) => { const s = document.createElement("span"); s.className = cls; s.textContent = text; return s; };
@@ -423,7 +450,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   }
 
   function renderPeople() {
-    $("onlineTitle").textContent = "ONLINE - " + users.length;
+    $("onlineTitle").textContent = "ONLINE " + users.length;
     $("onlineBtn").textContent = "[ONLINE " + users.length + "]";
     const ul = $("people");
     ul.replaceChildren();
@@ -436,17 +463,17 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
       pres.append(avatar(u, true));
       const name = span("name", u);
       if (u === nick) name.append(span("me", " (voce)"));
-      if (window.ChatPedro.callNicks.has(u)) name.append(span("tag", "[CALL]"));
-      if (window.ChatPedro.pokerNicks.has(u.toLowerCase())) name.append(span("tag", "[POKER]"));
+      if (window.ChatPedro.callNicks.has(u)) name.append(span("tag", "\u266A"));
+      if (window.ChatPedro.pokerNicks.has(u.toLowerCase())) name.append(span("tag", "\u2660"));
+      name.title = u + (window.ChatPedro.callNicks.has(u) ? " - na call" : "") + (window.ChatPedro.pokerNicks.has(u.toLowerCase()) ? " - no poker" : "");
       li.append(pres, name);
       ul.append(li);
     }
   }
 
   function updateStatus() {
-    $("status").textContent = socket.connected
-      ? "C:\\> online" + (nick ? " | voce: " + nick : "")
-      : "C:\\> desconectado... tentando reconectar";
+    $("status").textContent = socket.connected ? "online" : "reconectando...";
+    $("status").classList.toggle("on", socket.connected);
   }
 
   function join(name) {
@@ -458,8 +485,8 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
       $("photoBtn").hidden = false;
       $("profile").hidden = false;
       window.ChatPedro.onJoin();
-      input.placeholder = "digite aqui_";
-      setNote(HELP);
+      input.placeholder = "mensagem_   (/ajuda)";
+      setNote("");
       updateStatus();
       renderPeople();
       // o servidor esquece tudo quando reinicia, entao a foto de perfil vai de novo a cada entrada
@@ -467,6 +494,8 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
       if (myAvatar) socket.emit("avatar", myAvatar);
     });
   }
+
+  const localSys = (text) => addLine({ type: "sys", text, ts: Date.now() });
 
   function submit() {
     const text = input.value.trim();
@@ -477,6 +506,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
     if (text.startsWith("/nick ")) return join(text.slice(6));
     if (text === "/perfil") return $("avatarFile").click();
     if (text === "/limpar") { log.replaceChildren(); return; }
+    if (text === "/ajuda") { localSys(HELP); return; }
     socket.emit("message", text);
   }
 
@@ -553,7 +583,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
     setNote("enviando foto...");
     try {
       socket.emit("image", await prepareImage(file));
-      setNote(HELP);
+      setNote("");
     } catch {
       setNote("ERRO: nao deu para enviar essa foto. Tente outra.", true);
     }

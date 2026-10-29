@@ -42,7 +42,6 @@ function pushMessage(msg) {
 
 const poker = createPoker(io, {
   nickOf: (id) => online.get(id),
-  announce: (text) => pushMessage({ type: "sys", text, ts: Date.now() }),
 });
 
 function sendCall() {
@@ -74,7 +73,7 @@ io.on("connection", (socket) => {
     const old = online.get(socket.id);
     online.set(socket.id, nick);
     reply && reply({ ok: true, nick });
-    pushMessage({ type: "sys", text: old ? `${old} agora se chama ${nick}` : `${nick} entrou no chat`, ts: Date.now() });
+    if (old && old !== nick) pushMessage({ type: "sys", text: `${old} agora se chama ${nick}`, ts: Date.now() });
     sendUsers();
     if (callMembers.has(socket.id)) { callMembers.get(socket.id).nick = nick; sendCall(); }
     if (old && old !== nick) poker.rename(old, nick);
@@ -119,10 +118,8 @@ io.on("connection", (socket) => {
     const nick = online.get(socket.id);
     if (!nick || typeof reply !== "function") return;
     const others = [...callMembers.keys()].filter((id) => id !== socket.id);
-    const wasIn = callMembers.has(socket.id);
     callMembers.set(socket.id, { id: socket.id, nick, ...cleanCallState(state) });
     reply({ ok: true, others });
-    if (!wasIn) pushMessage({ type: "sys", text: `${nick} entrou na chamada`, ts: Date.now() });
     sendCall();
   });
 
@@ -143,7 +140,6 @@ io.on("connection", (socket) => {
     const member = callMembers.get(socket.id);
     if (!member) return;
     callMembers.delete(socket.id);
-    pushMessage({ type: "sys", text: `${member.nick} saiu da chamada`, ts: Date.now() });
     sendCall();
   }
   socket.on("call:leave", leaveCall);
@@ -153,7 +149,6 @@ io.on("connection", (socket) => {
     const nick = online.get(socket.id);
     if (!nick) return;
     online.delete(socket.id);
-    pushMessage({ type: "sys", text: `${nick} saiu do chat`, ts: Date.now() });
     sendUsers();
     poker.left(nick);
   });
