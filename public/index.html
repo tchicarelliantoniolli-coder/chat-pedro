@@ -366,6 +366,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .setbox .sect { gap: 8px; }
 .hint { color: var(--dim); font-size: 17px; }
 .hint.warn { color: var(--gold); }
+.diag { margin: 0; padding: 8px; border: 1px solid var(--line); background: var(--box); color: var(--fg); font: inherit; font-size: 16px; white-space: pre-wrap; user-select: text; }
 .modal .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .modal .close { font-size: 26px; padding: 0 4px; }
 
@@ -1071,6 +1072,9 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
       </label>
       <div class="meter"><i id="micMeter"></i></div>
       <span class="hint" id="micHint">Fale e veja a barra se mexer.</span>
+      <label class="check"><input type="checkbox" id="simpleMic"> Microfone sem filtros (desliga cancelamento de eco e redução de ruído; ajuda em alguns fones)</label>
+      <div class="opts"><button type="button" class="cmd withicon" id="micDiag"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> Fazer diagnóstico</button></div>
+      <pre class="diag" id="diagOut" hidden></pre>
     </section>
     <section class="sect"><b>Saída: fone ou caixa de som</b>
       <select id="outSelect" aria-label="Saída de áudio"></select>

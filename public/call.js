@@ -26,6 +26,7 @@
     micGain: Number(store.get("cp-micgain") || 100),
     ptt: store.get("cp-ptt") === "on",
     master: Number(store.get("cp-master") || 100),
+    simple: store.get("cp-simplemic") === "on",
     outId: store.get("cp-out") || "",
   };
   const canPickOutput = "setSinkId" in HTMLMediaElement.prototype;
@@ -62,7 +63,9 @@
   async function startMic() {
     if (micRaw) micRaw.getTracks().forEach((t) => t.stop());
     micRaw = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: prefs.micId ? { ideal: prefs.micId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      audio: prefs.simple
+        ? { deviceId: prefs.micId ? { ideal: prefs.micId } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        : { deviceId: prefs.micId ? { ideal: prefs.micId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
     if (micSource) micSource.disconnect();
     micSource = ctx.createMediaStreamSource(micRaw);
@@ -622,6 +625,78 @@
   const ptt = $("pttBtn");
   ptt.addEventListener("pointerdown", (e) => { e.preventDefault(); ptt.setPointerCapture(e.pointerId); setPtt(true); });
   for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) ptt.addEventListener(ev, () => setPtt(false));
+  $("simpleMic").checked = prefs.simple;
+  $("simpleMic").addEventListener("change", async (e) => {
+    prefs.simple = e.target.checked; store.set("cp-simplemic", prefs.simple ? "on" : "off");
+    if (!inCall && !preview) return;
+    lastHeard = Date.now();
+    try { await startMic(); syncMicTrack(); } catch { setNote("ERRO: não deu para usar esse microfone.", true); }
+  });
+
+  // ---------- diagnostico: testa o microfone de jeitos diferentes e mostra o que chega ----------
+  async function measureStream(stream, ms) {
+    const c = new (window.AudioContext || window.webkitAudioContext)();
+    await c.resume().catch(() => {});
+    const an = c.createAnalyser(); an.fftSize = 512;
+    c.createMediaStreamSource(stream).connect(an);
+    let max = 0;
+    const end = Date.now() + ms;
+    while (Date.now() < end) { await new Promise((r) => setTimeout(r, 100)); max = Math.max(max, level(an)); }
+    const state = c.state;
+    c.close().catch(() => {});
+    return { max, state };
+  }
+  const pct = (v) => Math.round(v * 1000) / 10 + "%";
+  $("micDiag").addEventListener("click", async () => {
+    const out = $("diagOut"), lines = [];
+    const show = () => { out.hidden = false; out.textContent = lines.join("\n"); };
+    const btn = $("micDiag"); btn.disabled = true;
+    lines.push("FALE SEM PARAR durante o teste (uns 9 segundos)...", ""); show();
+    lines.push("Navegador: " + navigator.userAgent.replace(/^.*\) /, ""));
+    if (ctx) lines.push("Som do site: " + ctx.state + (inCall ? " (na call)" : " (teste)"));
+    const t = rawTrack();
+    if (t) lines.push("Microfone em uso: " + t.label + " | ligado: " + t.enabled + " | mudo pelo sistema: " + t.muted + " | estado: " + t.readyState);
+    lines.push("Mic na call: " + (micOn ? "ligado" : "DESLIGADO") + " | apertar para falar: " + (prefs.ptt ? "SIM" : "não") + " | volume: " + prefs.micGain + "%");
+    show();
+    const tests = [
+      ["1. Padrão do Windows, sem filtros", { audio: true }],
+      ["2. Microfone escolhido, sem filtros", { audio: { deviceId: prefs.micId ? { exact: prefs.micId } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false } }],
+      ["3. Microfone escolhido, com filtros", { audio: { deviceId: prefs.micId ? { exact: prefs.micId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }],
+    ];
+    const res = [];
+    for (const [name, c] of tests) {
+      try {
+        const st = await navigator.mediaDevices.getUserMedia(c);
+        const tr = st.getAudioTracks()[0];
+        const m = await measureStream(st, 3000);
+        lines.push(name + ": " + (m.max > 0.01 ? "OUVIU (" + pct(m.max) + ")" : "SILÊNCIO (" + pct(m.max) + ")") + " | " + tr.label + (tr.muted ? " | mudo pelo sistema" : ""));
+        res.push(m.max > 0.01);
+        st.getTracks().forEach((x) => x.stop());
+      } catch (e) { lines.push(name + ": ERRO " + e.name + " " + e.message); res.push(false); }
+      show();
+    }
+    // o que esta saindo de verdade para cada pessoa da call
+    for (const [id, p] of peers) {
+      try {
+        const stats = await p.pc.getStats();
+        let sent = 0, lvl = null;
+        stats.forEach((r) => {
+          if (r.type === "outbound-rtp" && r.kind === "audio") sent += r.bytesSent || 0;
+          if (r.type === "media-source" && r.kind === "audio" && r.audioLevel !== undefined) lvl = r.audioLevel;
+        });
+        const m = members.find((x) => x.id === id);
+        lines.push("Enviando para " + (m ? m.nick : "?") + ": " + Math.round(sent / 1024) + " KB" + (lvl !== null ? " | nível " + pct(lvl) : "") + " | conexão: " + p.pc.connectionState);
+      } catch {}
+    }
+    lines.push("");
+    if (!res.some(Boolean)) lines.push("RESULTADO: o navegador não recebe som de nenhum jeito. O problema está no fone, no Windows ou na permissão do navegador, não no site. Teste em outro navegador (Chrome) ou em outro site de teste de microfone.");
+    else if (res[1] && !res[2]) { lines.push("RESULTADO: o microfone funciona SEM filtros. Liguei a opção \"Microfone sem filtros\" para você."); if (!prefs.simple) $("simpleMic").click(); }
+    else if (res[0] && !res[1]) lines.push("RESULTADO: o padrão do Windows funciona, mas o microfone escolhido não. Escolha \"Padrão\" na lista de entrada.");
+    else lines.push("RESULTADO: o microfone chega no navegador. Se mesmo assim ninguém te ouve, me mande um print deste texto.");
+    show();
+    btn.disabled = false;
+  });
+
   $("pttCheck").checked = prefs.ptt;
   $("pttCheck").addEventListener("change", (e) => {
     prefs.ptt = e.target.checked; store.set("cp-ptt", prefs.ptt ? "on" : "off");
