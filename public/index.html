@@ -20,10 +20,29 @@
   --box: #000000;     /* fundo de caixinhas (lugares, convites, campos) */
   --stage: #020d05;   /* fundo das areas de jogo e call */
   --gold: #ffd84d;
-  --line: color-mix(in srgb, var(--dim) 45%, transparent); /* divisorias suaves */
   color-scheme: dark;
 }
+/* Cores derivadas ficam no body: assim acompanham o tema (no :root elas ficariam presas no verde) */
+body {
+  --line: color-mix(in srgb, var(--dim) 45%, transparent); /* divisorias suaves */
+  --accent: var(--fg);      /* botoes principais e destaques */
+  --on-accent: var(--bg);   /* texto em cima do destaque */
+  --ok: var(--fg);          /* ponto de online */
+  --rail: color-mix(in srgb, var(--panel) 70%, var(--bg));
+  --hover: color-mix(in srgb, var(--fg) 8%, transparent);
+}
 /* Temas escolhidos no MEU PERFIL */
+body[data-tema="pb"] {
+  --bg: #000000; --panel: #0e0e0e; --stage: #070707; --box: #000000; --fg: #e8e8e8; --dim: #8c8c8c; --bright: #ffffff;
+  --gold: #ffffff; --ok: #ffffff;
+}
+body[data-tema="discord"] {
+  --bg: #313338; --panel: #2b2d31; --stage: #232428; --box: #383a40; --fg: #dbdee1; --dim: #949ba4; --bright: #f2f3f5;
+  --err: #f23f43; --gold: #f0b232; --line: #3f4147; --accent: #5865f2; --on-accent: #ffffff; --ok: #23a55a; --rail: #1e1f22;
+  --hover: rgba(78, 80, 88, 0.3);
+}
+body[data-tema="discord"] .modal .box, body[data-tema="discord"] .gbox { border-color: var(--line); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+body[data-tema="discord"] #rail, body[data-tema="discord"] header { border-color: #1e1f22; }
 body[data-tema="ambar"] { --fg: #ffb000; --dim: #9a6a00; --bright: #ffe3a3; --panel: #170f00; --stage: #0c0700; }
 body[data-tema="azul"] { --fg: #5fd7ff; --dim: #2b7c99; --bright: #d3f5ff; --panel: #03121c; --stage: #020a10; }
 body[data-tema="win95"] {
@@ -31,6 +50,7 @@ body[data-tema="win95"] {
   --bright: #000080; --err: #b00000; --gold: #806000; color-scheme: light;
 }
 body[data-tema="win95"] h1, body[data-tema="win95"] .act-head h2 { color: #000080; }
+body[data-tema="win95"] .mention.me { color: #ffffff; }
 html, body { height: 100%; margin: 0; }
 [hidden] { display: none !important; }
 body {
@@ -48,7 +68,7 @@ button.ib {
   min-width: 34px; height: 34px; padding: 0 7px; color: var(--fg); white-space: nowrap; flex: none;
 }
 button.ib:hover { background: color-mix(in srgb, var(--fg) 16%, transparent); }
-button.ib.on { color: var(--bg); background: var(--fg); }
+button.ib.on { color: var(--on-accent); background: var(--accent); }
 button.ib.off { color: var(--err); }
 button.ib .n { font-size: 17px; }
 button.ib.sm { min-width: 26px; height: 26px; padding: 0 4px; }
@@ -69,7 +89,7 @@ header .hbtns { display: flex; align-items: center; gap: 2px; }
 h1 { font-family: var(--pixel); font-size: 14px; font-weight: 400; margin: 0; color: var(--bright); }
 .sub { color: var(--dim); white-space: nowrap; }
 .sub::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; background: var(--dim); }
-.sub.on::before { background: var(--fg); }
+.sub.on::before { background: var(--ok); }
 #onlineBtn { display: none; }
 
 .app { flex: 1; min-height: 0; display: flex; }
@@ -117,12 +137,12 @@ textarea::placeholder { color: var(--dim); }
 
 /* Mensagens: citacao da resposta, reacoes e acoes (aparecem ao passar o mouse) */
 .line { position: relative; padding: 1px 4px; margin: 0 -4px; }
-.line:hover, .line.show { background: rgba(127, 127, 127, 0.08); }
+.line:hover, .line.show { background: var(--hover); }
 .line .quote { display: block; color: var(--dim); font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .line .quote:hover { color: var(--fg); }
 .line.flash { animation: flash 1.2s steps(4); }
-@keyframes flash { 0%, 60% { background: rgba(255, 216, 77, 0.25); } }
-.line.mentioned { background: rgba(255, 216, 77, 0.08); box-shadow: inset 3px 0 0 var(--gold); }
+@keyframes flash { 0%, 60% { background: color-mix(in srgb, var(--gold) 25%, transparent); } }
+.line.mentioned { background: color-mix(in srgb, var(--gold) 9%, transparent); box-shadow: inset 3px 0 0 var(--gold); }
 .mention { color: var(--gold); }
 .mention.me { background: var(--gold); color: #000; padding: 0 2px; }
 .reacts { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 2px 0; white-space: normal; }
@@ -131,7 +151,7 @@ textarea::placeholder { color: var(--dim); }
   all: unset; cursor: pointer; border: 1px solid var(--dim); padding: 0 6px; font-size: 16px; line-height: 1.4;
   display: inline-flex; gap: 4px; align-items: center; color: var(--fg);
 }
-.rx.mine { border-color: var(--fg); background: rgba(127, 127, 127, 0.15); }
+.rx.mine { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .rx:hover, .rx:focus-visible { border-color: var(--bright); }
 .acts {
   position: absolute; top: -12px; right: 6px; display: none; gap: 0; background: var(--box); border: 1px solid var(--line);
@@ -164,7 +184,7 @@ textarea::placeholder { color: var(--dim); }
 .swatches button { all: unset; cursor: pointer; width: 26px; height: 26px; border: 2px solid var(--dim); }
 .swatches button[aria-pressed="true"] { border-color: var(--bright); box-shadow: 0 0 0 2px var(--box), 0 0 0 4px var(--bright); }
 .opts { display: flex; flex-wrap: wrap; gap: 6px 14px; }
-.opts .cmd[aria-pressed="true"] { color: var(--bg); background: var(--fg); }
+.opts .cmd[aria-pressed="true"] { color: var(--on-accent); background: var(--accent); }
 .modal .sect { display: flex; flex-direction: column; gap: 6px; }
 .modal .sect > b { color: var(--dim); font-weight: 400; }
 /* painel de moderacao do ADM */
@@ -178,7 +198,7 @@ textarea::placeholder { color: var(--dim); }
 .watch-bar { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
 #watchInfo { color: var(--dim); min-width: 0; }
 #watchUrl { font: inherit; color: var(--fg); background: var(--box); border: 1px solid var(--dim); padding: 0 6px; flex: 1 1 200px; min-width: 0; }
-#pttBtn.held { background: var(--fg); color: var(--bg); }
+#pttBtn.held { background: var(--accent); color: var(--on-accent); }
 .modal label.check { flex-direction: row; align-items: flex-start; gap: 8px; }
 .modal label.check input { accent-color: var(--fg); margin-top: 4px; }
 body.gaming #ytBox { width: 100%; }
@@ -222,7 +242,7 @@ aside {
 .srvhead .lbl { color: var(--dim); font-size: 15px; }
 .srvhead b { font-family: var(--pixel); font-size: 12px; font-weight: 400; color: var(--bright); line-height: 1.5; overflow-wrap: anywhere; }
 h1.site { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
-h1.site .mark { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; background: var(--fg); color: var(--bg); flex: none; }
+h1.site .mark { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; background: var(--accent); color: var(--on-accent); flex: none; }
 h1.site .mark .ic { width: 15px; height: 15px; }
 aside h2 {
   font-family: var(--pixel); font-size: 10px; font-weight: 400; color: var(--dim);
@@ -235,7 +255,7 @@ aside h2 {
 .pres { position: relative; flex: none; }
 .pres::after {
   content: ""; position: absolute; right: -3px; bottom: -3px; width: 9px; height: 9px;
-  background: var(--fg); border: 2px solid var(--panel);
+  background: var(--ok); border: 2px solid var(--panel);
 }
 .profile { margin-top: auto; padding: 12px 14px; }
 .profile .cmd { color: var(--dim); }
@@ -396,7 +416,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .seat .timer { width: 100%; height: 4px; background: #222; }
 .seat .timer i { display: block; height: 100%; background: #ffd84d; width: 100%; }
 .seat.empty button { all: unset; cursor: pointer; border: 2px dashed var(--dim); color: var(--dim); padding: 6px 4px; width: 100%; text-align: center; box-sizing: border-box; background: rgba(0,0,0,0.5); }
-.seat.empty button:hover, .seat.empty button:focus-visible { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.seat.empty button:hover, .seat.empty button:focus-visible { color: var(--on-accent); background: var(--accent); border-color: var(--fg); }
 .seat.empty span { color: rgba(182,255,200,0.25); border: 1px dashed rgba(182,255,200,0.2); width: 70%; text-align: center; padding: 4px 0; font-size: 0.8em; }
 .chipbet { position: absolute; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: #ffd84d; padding: 0 5px; white-space: nowrap; font-size: clamp(13px, 2cqw, 19px); display: flex; align-items: center; gap: 4px; }
 .chipbet::before { content: ""; width: 0.6em; height: 0.6em; border-radius: 50%; background: #ffd84d; border: 2px dashed #b8860b; }
@@ -555,7 +575,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 /* Barra de servidores (como no Discord) */
 #rail {
   width: 64px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0;
-  border-right: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, var(--bg)); overflow-y: auto;
+  border-right: 1px solid var(--line); background: var(--rail); overflow-y: auto;
 }
 #railList { display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .srv {
@@ -585,7 +605,7 @@ body.ready.gate #gate { display: flex; }
 .gform input:focus-visible, .modal input:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
 button.cmd.big { border: 2px solid var(--fg); padding: 4px 12px; text-align: center; }
 button.cmd.small { color: var(--dim); font-size: 17px; align-self: flex-start; }
-.tabs .cmd[aria-pressed="true"] { color: var(--bg); background: var(--fg); }
+.tabs .cmd[aria-pressed="true"] { color: var(--on-accent); background: var(--accent); }
 .err { color: var(--err); margin: 0; min-height: 0; }
 .err:empty { display: none; }
 .lbl2 { color: var(--dim); font-weight: 400; margin: 0; }
@@ -630,7 +650,7 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
     all: unset; display: flex; gap: 8px; align-items: baseline; width: 100%; cursor: pointer; margin-bottom: 6px; min-width: 0;
   }
   body.gaming #chatPeek .lbl { color: var(--bright); flex: none; }
-  body.gaming #chatPeek .lbl b { color: #000; background: #ffd84d; font-weight: 400; padding: 0 4px; margin-left: 4px; }
+  body.gaming #chatPeek .lbl b { color: #000; background: var(--gold); font-weight: 400; padding: 0 4px; margin-left: 4px; }
   body.gaming #chatPeek #peekText { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
   #onlineBtn { display: inline; }
@@ -702,7 +722,7 @@ button.ib:active, button.cmd:active, .game:active, .rx:active { transform: scale
 .day { display: flex; align-items: center; gap: 12px; margin: 20px 0 4px; color: var(--dim); font-size: 15px; }
 .day::before, .day::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 #empty { padding: 28px 0 8px; display: flex; flex-direction: column; gap: 8px; animation: fadeIn 0.3s; }
-#empty .big { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: var(--fg); color: var(--bg); }
+#empty .big { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: var(--accent); color: var(--on-accent); }
 #empty .big .ic { width: 28px; height: 28px; }
 #empty .t { font-family: var(--pixel); font-size: 13px; color: var(--bright); line-height: 1.6; }
 @media (hover: hover) {
@@ -729,7 +749,7 @@ button.ib:active, button.cmd:active, .game:active, .rx:active { transform: scale
 footer { position: relative; }
 #jumpNew {
   all: unset; box-sizing: border-box; position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); z-index: 4;
-  display: flex; align-items: center; gap: 8px; background: var(--fg); color: var(--bg); padding: 3px 12px; cursor: pointer; font-size: 17px;
+  display: flex; align-items: center; gap: 8px; background: var(--accent); color: var(--on-accent); padding: 3px 12px; cursor: pointer; font-size: 17px;
   white-space: nowrap; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5); animation: pillIn 0.22s var(--ease);
 }
 #jumpNew .ic { width: 16px; height: 16px; }
@@ -745,7 +765,7 @@ footer { position: relative; }
 /* tela de entrada: logo e o "ou" entre criar e entrar */
 .gbox { animation: popIn 0.25s var(--ease); }
 #gAuth:not([hidden]), #gHome:not([hidden]), #gInvite:not([hidden]) { animation: fadeIn 0.2s; }
-.logo { align-self: center; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: var(--fg); color: var(--bg); }
+.logo { align-self: center; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: var(--accent); color: var(--on-accent); }
 .logo .ic { width: 28px; height: 28px; }
 #gHome { display: flex; flex-direction: column; gap: 14px; }
 #gHome[hidden] { display: none; }
@@ -762,7 +782,7 @@ footer { position: relative; }
 .srv:hover::before { height: 18px; }
 .srv.on::before { height: 36px; }
 .srv.add::before { display: none; }
-.srv.add:hover, .srv.add:focus-visible { background: var(--fg); color: var(--bg); border-style: solid; border-color: var(--fg); }
+.srv.add:hover, .srv.add:focus-visible { background: var(--accent); color: var(--on-accent); border-style: solid; border-color: var(--fg); }
 
 /* Atividades na barra da direita */
 #games { display: flex; flex-direction: column; gap: 8px; }
@@ -779,17 +799,17 @@ footer { position: relative; }
 /* botao da call: grande e logo ao lado do nome do servidor */
 .callpill {
   all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px;
-  background: var(--fg); color: var(--bg); font-size: 19px; white-space: nowrap; flex: none; align-self: center;
+  background: var(--accent); color: var(--on-accent); font-size: 19px; white-space: nowrap; flex: none; align-self: center;
   transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.1s;
 }
-.callpill:hover { background: var(--bright); }
+.callpill:hover { background: color-mix(in srgb, var(--accent) 82%, white); }
 .callpill:active { transform: scale(0.96); }
 .callpill:focus-visible { outline: 2px solid var(--bright); outline-offset: 2px; }
 .callpill .cnt { background: var(--bg); color: var(--fg); padding: 0 6px; font-size: 16px; line-height: 1.3; }
 .callpill.busy .cnt { animation: pulse 1.8s infinite; }
-.callpill.in { background: transparent; color: var(--fg); box-shadow: inset 0 0 0 2px var(--fg); }
-.callpill.in:hover { background: color-mix(in srgb, var(--fg) 16%, transparent); }
-.callpill.in .cnt { background: var(--fg); color: var(--bg); }
+.callpill.in { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.callpill.in:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.callpill.in .cnt { background: var(--accent); color: var(--on-accent); }
 .callpill .short { display: none; }
 header .title { align-items: center; }
 #callSect { padding-bottom: 6px; }
@@ -799,7 +819,7 @@ header .title { align-items: center; }
 .game .gt b { font-size: 21px; }
 .game .gt b { font-weight: 400; color: var(--bright); }
 .game .gt small { font-size: 16px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.game .live { width: 8px; height: 8px; flex: none; background: var(--fg); opacity: 0; transition: opacity 0.2s; }
+.game .live { width: 8px; height: 8px; flex: none; background: var(--ok); opacity: 0; transition: opacity 0.2s; }
 .game.on .live { opacity: 1; animation: pulse 1.8s infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--fg) 60%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
 
@@ -1838,7 +1858,7 @@ window.setIcon = (btn, name, label, extra) => {
   // ---------- MEU PERFIL: cor do nome, status, tema e notificacoes ----------
   const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
   const STATUS = { online: "Online", ausente: "Ausente", ocupado: "Ocupado" };
-  const THEMES = { verde: "Verde", ambar: "Âmbar", azul: "Azul", win95: "Windows 95" };
+  const THEMES = { verde: "Verde", ambar: "Âmbar", azul: "Azul", pb: "Preto e branco", discord: "Discord", win95: "Windows 95" };
   let myColor = ""; // vem da conta (boot.js)
   let myStatus = store.get("chatpedro-status") || "online";
   let myTheme = store.get("chatpedro-tema") || "verde";
