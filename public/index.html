@@ -362,6 +362,10 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .modal input[type=range] { accent-color: var(--fg); width: 100%; }
 .meter { height: 10px; border: 1px solid var(--dim); background: var(--box); }
 .meter i { display: block; height: 100%; width: 0; background: var(--fg); }
+.setbox { gap: 18px; }
+.setbox .sect { gap: 8px; }
+.hint { color: var(--dim); font-size: 17px; }
+.hint.warn { color: var(--gold); }
 .modal .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .modal .close { font-size: 26px; padding: 0 4px; }
 
@@ -1046,6 +1050,7 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
     <div class="sect"><b>Conta</b><span id="profEmail" class="lbl2"></span>
       <form class="opts" id="nickForm"><label class="inline">Apelido <input type="text" id="nickInput" maxlength="20"></label><button type="submit" class="cmd">Salvar</button></form>
     </div>
+    <div class="sect"><b>Áudio e vídeo</b><div class="opts"><button type="button" class="cmd withicon" id="avBtn"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg> Microfone, saída de som e câmera</button></div></div>
     <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">Trocar foto de perfil</button></div></div>
     <div class="sect"><b>Cor do nome</b><div class="swatches" id="colorPick"></div></div>
     <div class="sect"><b>Status</b><div class="opts" id="statusPick"></div><span style="color: var(--dim)">Ocupado: sem sons nem notificações, só as menções com @.</span></div>
@@ -1057,23 +1062,29 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
 </div>
 
 <div class="modal" id="settings" hidden>
-  <div class="box" role="dialog" aria-labelledby="setTitle">
-    <div class="row"><h3 id="setTitle">CONFIGURAÇÕES</h3><button type="button" class="ib" id="setClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-    <label>Microfone
-      <select id="micSelect"></select>
-    </label>
-    <label><span>Volume do meu microfone: <b id="micGainVal">100%</b></span>
-      <input type="range" id="micGain" min="0" max="200" step="5" value="100">
-    </label>
-    <div><span style="color: var(--dim)">Teste: fale e veja a barra</span><div class="meter"><i id="micMeter"></i></div></div>
-    <label>Câmera
-      <select id="camSelect"></select>
-    </label>
+  <div class="box setbox" role="dialog" aria-labelledby="setTitle">
+    <div class="row"><h3 id="setTitle">AUDIO E VIDEO</h3><button type="button" class="ib" id="setClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <section class="sect"><b>Entrada: microfone</b>
+      <select id="micSelect" aria-label="Microfone"></select>
+      <label><span>Volume do microfone: <b id="micGainVal">100%</b></span>
+        <input type="range" id="micGain" min="0" max="200" step="5" value="100">
+      </label>
+      <div class="meter"><i id="micMeter"></i></div>
+      <span class="hint" id="micHint">Fale e veja a barra se mexer.</span>
+    </section>
+    <section class="sect"><b>Saída: fone ou caixa de som</b>
+      <select id="outSelect" aria-label="Saída de áudio"></select>
+      <span class="hint" id="outHint" hidden>Seu navegador não deixa escolher a saída aqui. No Chrome ou no Edge do computador dá; no celular, o som sai onde o aparelho mandar.</span>
+      <label><span>Volume da call: <b id="masterVal">100%</b></span>
+        <input type="range" id="master" min="0" max="100" step="5" value="100">
+      </label>
+      <div class="opts"><button type="button" class="cmd withicon" id="outTest"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Testar som</button></div>
+    </section>
+    <section class="sect"><b>Câmera</b>
+      <select id="camSelect" aria-label="Câmera"></select>
+    </section>
     <label class="check"><input type="checkbox" id="pttCheck"> Apertar para falar: o microfone só liga enquanto você segura ESPAÇO (fora do campo de texto) ou o botão da mãozinha na barra da call</label>
-    <label><span>Volume geral da chamada: <b id="masterVal">100%</b></span>
-      <input type="range" id="master" min="0" max="100" step="5" value="100">
-    </label>
-    <span style="color: var(--dim)">O volume de cada pessoa muda no controle VOL em cima do quadro dela.</span>
+    <span class="hint">O volume de cada pessoa muda no VOL em cima do quadro dela.</span>
   </div>
 </div>
 
@@ -1898,6 +1909,7 @@ window.setIcon = (btn, name, label, extra) => {
   });
   $("profileBtn").addEventListener("click", () => { $("profMsg").textContent = ""; renderProfile(); if (window.ChatPedroAuth) window.ChatPedroAuth.fillProfileForm(); $("profileModal").hidden = false; });
   $("profClose").addEventListener("click", () => { $("profileModal").hidden = true; });
+  $("avBtn").addEventListener("click", () => { $("profileModal").hidden = true; window.ChatPedro.openAV(); });
   $("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").hidden = true; });
 
   // ---------- mensagem de audio ----------

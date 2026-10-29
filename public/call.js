@@ -26,7 +26,11 @@
     micGain: Number(store.get("cp-micgain") || 100),
     ptt: store.get("cp-ptt") === "on",
     master: Number(store.get("cp-master") || 100),
+    outId: store.get("cp-out") || "",
   };
+  const canPickOutput = "setSinkId" in HTMLMediaElement.prototype;
+  let micBlocked = false; // o navegador negou o microfone da ultima vez
+  let preview = false;    // microfone ligado so para testar (fora da call)
   const volumeOf = (nick) => Number(store.get("cp-vol-" + nick.toLowerCase()) || 100);
 
   // ---------- botoes ----------
@@ -68,6 +72,9 @@
 
   function buildAudioGraph() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // audio do navegador pausado = os outros nao ouvem nada; garante que esta rodando
+    ctx.resume().catch(() => {});
+    if (prefs.outId && ctx.setSinkId) ctx.setSinkId(prefs.outId).catch(() => {});
     micGain = ctx.createGain();
     micGain.gain.value = prefs.micGain / 100;
     micDest = ctx.createMediaStreamDestination(); // o que os outros ouvem, ja com o volume aplicado
@@ -129,6 +136,7 @@
       document.body.append(p.audio);
     }
     p.audio.srcObject = stream;
+    if (canPickOutput && prefs.outId) p.audio.setSinkId(prefs.outId).catch(() => {});
     applyVolume(id);
     p.audio.play().catch(() => {});
     if (ctx) {
@@ -196,9 +204,11 @@
   }
   async function doJoin() {
     if (!window.RTCPeerConnection || !navigator.mediaDevices) { setNote("ERRO: seu navegador não suporta chamadas. Tente o Chrome.", true); return; }
+    if (preview) stopPreview();
+    if (micBlocked) { micOn = true; micBlocked = false; } // da outra vez nao deu; tenta ligado de novo
     buildAudioGraph();
     try { await startMic(); }
-    catch { micOn = false; setNote("Sem acesso ao microfone. Você entrou mudo; libere o microfone no navegador para falar.", true); }
+    catch { micOn = false; micBlocked = true; setNote("Sem acesso ao microfone. Você entrou mudo; libere o microfone no navegador (no cadeado ao lado do endereço) para falar.", true); }
     applyMic();
     await new Promise((done) => socket.timeout(10000).emit("call:join", myState(), (err, res) => {
       done();
@@ -312,11 +322,63 @@
     };
     fill($("micSelect"), "audioinput", micRaw && micRaw.getAudioTracks()[0].getSettings().deviceId || prefs.micId, "Microfone");
     fill($("camSelect"), "videoinput", camStream && camStream.getVideoTracks()[0].getSettings().deviceId || prefs.camId, "Câmera");
+    fill($("outSelect"), "audiooutput", prefs.outId || "default", "Saída");
+    $("outSelect").hidden = !canPickOutput;
+    $("outHint").hidden = canPickOutput;
   }
+
+  // ---------- saida de audio ----------
+  $("outSelect").addEventListener("change", (e) => {
+    prefs.outId = e.target.value; store.set("cp-out", prefs.outId);
+    for (const p of peers.values()) if (p.audio) p.audio.setSinkId(prefs.outId).catch(() => {});
+    if (ctx && ctx.setSinkId) ctx.setSinkId(prefs.outId).catch(() => {});
+  });
+  // som de teste: um bipe curto na saida escolhida
+  function beepUrl() {
+    const rate = 22050, n = Math.floor(rate * 0.5), buf = new DataView(new ArrayBuffer(44 + n * 2));
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) buf.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, "RIFF"); buf.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt "); buf.setUint32(16, 16, true); buf.setUint16(20, 1, true); buf.setUint16(22, 1, true);
+    buf.setUint32(24, rate, true); buf.setUint32(28, rate * 2, true); buf.setUint16(32, 2, true); buf.setUint16(34, 16, true); str(36, "data"); buf.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) {
+      const t = i / rate, f = t < 0.25 ? 660 : 880, env = Math.min(1, (0.5 - t) * 8, t * 50);
+      buf.setInt16(44 + i * 2, Math.sign(Math.sin(2 * Math.PI * f * t)) * 6000 * env, true);
+    }
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  $("outTest").addEventListener("click", async () => {
+    const a = new Audio(beepUrl());
+    a.volume = prefs.master / 100;
+    if (canPickOutput && prefs.outId) await a.setSinkId(prefs.outId).catch(() => {});
+    a.play().catch(() => setNote("Não deu para tocar o som de teste.", true));
+  });
+
+  // ---------- testar o microfone fora da call ----------
+  async function openSettings() {
+    $("settings").hidden = false;
+    lastHeard = Date.now();
+    if (!inCall && !preview && navigator.mediaDevices) {
+      preview = true;
+      buildAudioGraph();
+      try { await startMic(); } catch { $("micHint").textContent = "Sem acesso ao microfone: libere no cadeado ao lado do endereço."; $("micHint").className = "hint warn"; }
+    }
+    fillDevices();
+  }
+  function stopPreview() {
+    preview = false;
+    if (micRaw) micRaw.getTracks().forEach((t) => t.stop());
+    if (ctx) ctx.close().catch(() => {});
+    micRaw = null; ctx = micSource = micGain = micDest = micAnalyser = null;
+  }
+  // fechou a janela (pelo X, clicando fora ou ESC): desliga o teste
+  new MutationObserver(() => { if ($("settings").hidden && preview) stopPreview(); }).observe($("settings"), { attributes: true, attributeFilter: ["hidden"] });
+  app.openAV = openSettings;
+  // o navegador pode pausar o audio ate a pessoa clicar em algo: retoma no primeiro clique ou tecla
+  for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => { if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); }, true);
 
   $("micSelect").addEventListener("change", async (e) => {
     prefs.micId = e.target.value; store.set("cp-mic", prefs.micId);
-    if (!inCall) return;
+    if (!inCall && !preview) return;
+    lastHeard = Date.now();
     try { await startMic(); applyMic(); } // o som enviado passa pelo mesmo ganho, sem renegociar
     catch { setNote("ERRO: não deu para usar esse microfone.", true); }
   });
@@ -490,14 +552,28 @@
   });
 
   // Indicador de quem esta falando (borda verde), como no Discord
+  let lastHeard = 0;
   setInterval(() => {
+    // barra de teste e dica do microfone (na call ou testando)
+    if (!$("settings").hidden && micAnalyser) {
+      const lv = level(micAnalyser) * (prefs.micGain / 100);
+      $("micMeter").style.width = Math.min(100, lv * 400) + "%";
+      if (lv > 0.02) lastHeard = Date.now();
+      const hint = $("micHint");
+      let text = "Fale e veja a barra se mexer.", warn = false;
+      if (ctx && ctx.state !== "running") { text = "O som do navegador está pausado: clique em qualquer lugar da página."; warn = true; }
+      else if (inCall && prefs.ptt && !pttHeld) text = "Apertar para falar está ligado: os outros só te ouvem enquanto você segura ESPAÇO.";
+      else if (inCall && !micOn) { text = "Seu microfone está desligado na call: clique no microfone da barra para ligar."; warn = true; }
+      else if (prefs.micGain === 0) { text = "O volume do microfone está em 0%."; warn = true; }
+      else if (Date.now() - lastHeard > 4000) { text = "Não estou ouvindo nada. Escolha outro microfone na lista ou confira se ele está ligado."; warn = true; }
+      if (hint.textContent !== text) { hint.textContent = text; hint.className = "hint" + (warn ? " warn" : ""); }
+    }
     if (!inCall) return;
     const speaking = new Set();
     if (micAnalyser && micLive() && level(micAnalyser) * (prefs.micGain / 100) > 0.04) speaking.add(socket.id);
     for (const [id, p] of peers) if (p.analyser && level(p.analyser) > 0.04) speaking.add(id);
     document.querySelectorAll("#tiles .tile").forEach((el) => el.classList.toggle("speaking", !el.classList.contains("screen") && speaking.has(el.dataset.member)));
     document.querySelectorAll("#callPeople li").forEach((li) => li.classList.toggle("speaking", speaking.has(li.dataset.member)));
-    if (!$("settings").hidden && micAnalyser) $("micMeter").style.width = Math.min(100, level(micAnalyser) * 400 * (prefs.micGain / 100)) + "%";
   }, 120);
 
   // ---------- apertar para falar ----------
@@ -656,7 +732,7 @@
   $("camBtn").addEventListener("click", toggleCam);
   $("screenBtn").addEventListener("click", toggleScreen);
   $("minBtn").addEventListener("click", () => { $("call").classList.toggle("min"); refreshButtons(); });
-  $("setBtn").addEventListener("click", () => { fillDevices(); $("settings").hidden = false; });
+  $("setBtn").addEventListener("click", openSettings);
   $("setClose").addEventListener("click", () => { $("settings").hidden = true; });
   $("settings").addEventListener("click", (e) => { if (e.target === $("settings")) $("settings").hidden = true; });
   window.addEventListener("beforeunload", () => { if (inCall) socket.emit("call:leave"); });
