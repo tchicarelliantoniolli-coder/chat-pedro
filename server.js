@@ -603,7 +603,16 @@ io.on("connection", (socket) => {
     m.reactions = m.reactions || {};
     const who = m.reactions[msg.emoji] || [];
     const i = who.indexOf(nick);
-    if (i >= 0) who.splice(i, 1); else who.push(nick);
+    if (i >= 0) who.splice(i, 1);
+    else {
+      // so uma reacao por pessoa: a nova substitui a antiga
+      for (const [emoji, list] of Object.entries(m.reactions)) {
+        const j = list.indexOf(nick);
+        if (j >= 0) list.splice(j, 1);
+        if (!list.length) delete m.reactions[emoji];
+      }
+      who.push(nick);
+    }
     if (who.length) m.reactions[msg.emoji] = who; else delete m.reactions[msg.emoji];
     toRoom(ctx, "message:update", { id: m.id, reactions: m.reactions });
     persist(ctx);

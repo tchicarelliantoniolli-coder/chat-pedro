@@ -189,6 +189,13 @@ aside {
   display: flex; flex-direction: column; min-height: 0;
   padding-right: env(safe-area-inset-right, 0px);
 }
+/* nome do servidor no topo da barra da direita (como no Discord) */
+.srvhead { padding: 14px 14px 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.srvhead .lbl { color: var(--dim); font-size: 15px; }
+.srvhead b { font-family: var(--pixel); font-size: 12px; font-weight: 400; color: var(--bright); line-height: 1.5; overflow-wrap: anywhere; }
+h1.site { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+h1.site .mark { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; background: var(--fg); color: var(--bg); flex: none; }
+h1.site .mark .ic { width: 15px; height: 15px; }
 aside h2 {
   font-family: var(--pixel); font-size: 10px; font-weight: 400; color: var(--dim);
   letter-spacing: 0.05em; margin: 0; padding: 18px 14px 10px; display: flex; justify-content: space-between;
@@ -789,6 +796,9 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
   header { flex-wrap: nowrap; gap: 4px; padding-block: 6px; }
   header .title { flex: 1 1 auto; min-width: 0; gap: 8px; align-items: center; }
   header h1 { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.4; }
+  h1.site .mark { display: none; }
+  h1.site { font-size: 10px; overflow: visible; flex: none; }
+  header .title { gap: 6px; }
   .sub { flex: none; }
   header .hbtns { gap: 0; flex: none; }
   header .hbtns .ib { min-width: 32px; padding: 0 5px; }
@@ -809,7 +819,7 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
 <header>
   <button type="button" class="ib" id="railBtn" title="Seus servidores" aria-label="Seus servidores" aria-controls="rail"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
   <div class="title">
-    <h1 id="serverName">CHAT PEDRO</h1>
+    <h1 class="site"><span class="mark" aria-hidden="true"><svg class="ic"><use href="#i-message"/></svg></span>CHAT PEDRO</h1>
     <span class="sub" id="status">conectando</span>
     <button type="button" class="callpill" id="callBtn" hidden></button>
   </div>
@@ -899,6 +909,7 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
   </div>
 
   <aside id="sidebar" aria-label="Quem está online">
+    <div class="srvhead"><span class="lbl">servidor</span><b id="serverName"></b></div>
     <h2 id="onlineTitle">ONLINE 0</h2>
     <ul id="people"></ul>
     <div id="callSect" hidden>
