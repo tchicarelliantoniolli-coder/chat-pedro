@@ -28,28 +28,29 @@ Abra http://localhost:3000.
 6. Clique em **Deploy Web Service**. Em uns minutos aparece o endereço, algo como `https://chat-pedro.onrender.com`.
 7. Mande esse endereço para os amigos.
 
-## Senha do ADM
+## Contas, servidores e banco (Supabase)
 
-A senha do ADM não fica no código (o repositório é público). Ela fica no Render:
+O site usa o Supabase (projeto `chat-pedro`, regiao Sao Paulo) para:
 
-1. No serviço `chat-pedro`, abra **Environment**.
-2. **Add Environment Variable**: Key `ADMIN_PASSWORD`, Value com a senha.
-3. Salve (**Save Changes**). O Render reinicia o servidor com a senha nova.
+- **contas** com e-mail e senha;
+- **servidores** estilo Discord: cada um tem seu chat, call, poker, truco e moderacao. Quem nao e membro nao ve nada;
+- **convites por link** (`/convite/CODIGO`), com validade de 1 hora, 1 dia, 7 dias ou sempre;
+- guardar o chat de cada servidor (mensagens, reacoes, fotos e audios por 30 dias).
 
-No site, clique em `[ADM]` no canto de cima e digite a senha. Depois de 5 senhas erradas, aquele endereço fica 10 minutos bloqueado.
+As tabelas ja estao criadas, com RLS ligado e sem regras publicas: so o servidor do site acessa, com a chave secreta.
 
-## Guardar o chat (para nao sumir quando o servidor reinicia)
+**Obrigatorio:** no Render, em **Environment**, adicione `SUPABASE_SECRET_KEY` com a chave secreta do projeto
+(Supabase > Project Settings > API Keys > Secret keys, a que comeca com `sb_secret_`). Sem ela ninguem consegue entrar.
+Nunca coloque essa chave no codigo nem mande para ninguem.
 
-Usa o Supabase (projeto `chat-pedro`, regiao Sao Paulo). A tabela `chat_kv` ja esta criada, com RLS ligado e sem regras publicas: so o servidor acessa, com a chave secreta.
+**Cargos em cada servidor:** dono (quem criou), ADM (o dono promove) e membro. Dono e ADMs moderam: silenciar,
+expulsar (volta so com convite novo), banir (por tempo ou para sempre), apagar mensagens e limpar o chat.
+Nas mesas de poker, o dono e os ADMs fazem o papel que antes era do ADM com senha.
 
-No Render, em **Environment**, adicione:
-
-- `SUPABASE_URL`: `https://yvdlkwdmhlvpjmesmkye.supabase.co`
-- `SUPABASE_SECRET_KEY`: a chave secreta do projeto (Supabase > Project Settings > API Keys > Secret keys, a que comeca com `sb_secret_`)
-
-Nunca coloque a chave secreta no codigo nem mande para ninguem: ela da acesso total ao banco.
-
-Ficam guardados: mensagens, reacoes, fotos e audios (30 dias), fotos de perfil e cores dos nomes. As fichas do poker e o truco continuam so na memoria.
+**Esqueci a senha:** o envio de e-mail gratis do Supabase so entrega para quem e da equipe do projeto. Para os
+links de "esqueci a senha" chegarem para todo mundo, configure um SMTP proprio em
+Supabase > Authentication > Emails > SMTP Settings (por exemplo o Resend, que tem plano gratis).
+As contas novas ja sao criadas confirmadas, entao o cadastro funciona mesmo sem SMTP.
 
 ## Call em qualquer rede (servidor TURN)
 
@@ -69,15 +70,15 @@ Compre um dominio (ex.: no Registro.br para `.com.br`). No Render, em **Settings
 ## Bom saber
 
 - No plano grátis o servidor dorme depois de uns 15 minutos sem ninguém. Quem entrar primeiro espera uns 30–60 segundos.
-- As mensagens ficam na memória do servidor (as últimas 200). Quando ele dorme ou reinicia, o histórico é apagado.
+- Cada servidor guarda as últimas 200 mensagens no Supabase.
 - Fotos: botão `[FOTO]`, ou cole (Ctrl+V) / arraste uma imagem no chat. Clique na foto para ver grande. O servidor guarda as últimas 40 fotos.
-- Quem está online aparece na barra da direita (no celular, no botão `[ONLINE n]`). A foto de perfil é escolhida em `[FOTO DE PERFIL]` e fica salva no navegador de cada um.
+- Quem está online aparece na barra da direita (no celular, no botão `[ONLINE n]`). Foto, apelido e cor ficam salvos na conta, em `[MEU PERFIL]`.
 - Chamada: botão `[ENTRAR NA CHAMADA]`. Dá para ligar microfone, câmera e compartilhar a tela; o volume de cada pessoa fica no `VOL` do quadro dela e o resto em `[CONFIG]`. Áudio e vídeo vão direto entre os navegadores (WebRTC); em algumas redes (4G, redes de empresa/escola) a conexão pode não fechar.
-- Poker: botão `[POKER]`. Texas Hold'em No-Limit, até 9 jogadores, blinds 10/20, 1000 fichas iniciais. Só o ADM tranca a mesa e libera fichas novas para quem perdeu tudo. As fichas ficam na memória do servidor e voltam a 1000 quando ele reinicia.
+- Poker: botão `[POKER]`. Texas Hold'em No-Limit, até 9 jogadores, blinds 10/20, 1000 fichas iniciais. Só o dono e os ADMs do servidor trancam a mesa e liberam fichas novas para quem perdeu tudo. As fichas ficam na memória do servidor e voltam a 1000 quando ele reinicia.
 - Truco: botão `[TRUCO]`. Truco Paulista (vira e manilha), mesa de 4 (2x2) ou 6 (3x3) escolhida por quem cria a mesa, partida até 12, com mão de onze, mão de ferro, carta encoberta, zoeira e sinais para o parceiro.
 - Chat: passe o mouse numa mensagem para [RESPONDER], [REAGIR] ou [APAGAR] (a sua; o ADM apaga qualquer uma). `@nome` menciona alguem (Tab completa). [AUDIO] grava ate 1 minuto.
 - [MEU PERFIL]: foto, cor do nome, status (online, ausente, ocupado), tema (verde, ambar, azul, Windows 95) e notificacoes.
 - Call: [SONS] toca sons para todos, [YOUTUBE] assiste um video junto, e em [CONFIG] da para ligar o apertar para falar (segure ESPACO).
-- ADM: no painel [ADM] da para silenciar, expulsar (por 5 min ate 1 dia), liberar e limpar o chat. O anti-flood bloqueia mensagens demais e silencia por 2 min quem insistir.
-- Comandos no chat: `/nick NOVO` muda o apelido, `/perfil` troca a foto de perfil, `/limpar` limpa a tela, `/ajuda` mostra os atalhos.
+- Moderacao: [SERVIDOR] > [MODERAR] (dono e ADMs). O anti-flood bloqueia mensagens demais e silencia por 2 min quem insistir.
+- Comandos no chat: `/nick NOVO` muda o apelido da conta, `/perfil` troca a foto de perfil, `/limpar` limpa a tela, `/ajuda` mostra os atalhos.
 - Qualquer pessoa com o link pode entrar. Não mande para quem você não quer no chat.
