@@ -190,7 +190,35 @@ aside {
   padding-right: env(safe-area-inset-right, 0px);
 }
 /* nome do servidor no topo da barra da direita (como no Discord) */
-.srvhead { padding: 14px 14px 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.srvhead { padding: 12px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; min-width: 0; }
+.srvhead .t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* foto do servidor (ou as iniciais numa cor) */
+.srvicon { width: 36px; height: 36px; flex: none; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; font-family: var(--pixel); font-size: 11px; color: #000; }
+.srvicon img, .srv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.srvicon.big { width: 56px; height: 56px; font-size: 15px; }
+#invIcon { align-self: center; margin-bottom: 6px; }
+#gInvite { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+#gInvite[hidden] { display: none; }
+/* menu do servidor */
+.srvbox { gap: 18px; }
+.srvtop { display: flex; align-items: center; gap: 14px; }
+.srvtop .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.srvtop h3 { overflow-wrap: anywhere; line-height: 1.5; }
+.srvbox .sect { gap: 10px; }
+.invrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.invrow label { color: var(--dim); }
+.linkbox { display: flex; align-items: center; border: 1px solid var(--dim); background: var(--box); animation: slideDown 0.2s var(--ease); }
+.linkbox[hidden] { display: none; }
+.linkbox input { flex: 1; min-width: 0; border: 0 !important; background: transparent !important; padding: 4px 8px; }
+.namerow { display: flex; gap: 8px; }
+.namerow input { flex: 1; min-width: 0; }
+.menu { display: flex; flex-direction: column; border-top: 1px solid var(--line); padding-top: 8px; margin: 0 -8px; }
+.mrow { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px; padding: 7px 10px; cursor: pointer; color: var(--bright); transition: background-color 0.15s; }
+.mrow span { flex: 1; }
+.mrow:hover, .mrow:focus-visible { background: color-mix(in srgb, var(--fg) 12%, transparent); }
+.mrow.danger { color: var(--err); }
+.mrow.danger:hover, .mrow.danger:focus-visible { background: color-mix(in srgb, var(--err) 14%, transparent); }
+.mrow.armed { background: var(--err); color: #000; }
 .srvhead .lbl { color: var(--dim); font-size: 15px; }
 .srvhead b { font-family: var(--pixel); font-size: 12px; font-weight: 400; color: var(--bright); line-height: 1.5; overflow-wrap: anywhere; }
 h1.site { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
@@ -909,7 +937,7 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
   </div>
 
   <aside id="sidebar" aria-label="Quem está online">
-    <div class="srvhead"><span class="lbl">servidor</span><b id="serverName"></b></div>
+    <div class="srvhead"><span class="srvicon" id="headIcon" aria-hidden="true"></span><span class="t"><span class="lbl">servidor</span><b id="serverName"></b></span></div>
     <h2 id="onlineTitle">ONLINE 0</h2>
     <ul id="people"></ul>
     <div id="callSect" hidden>
@@ -960,26 +988,34 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
 </div>
 
 <div class="modal" id="srvModal" hidden>
-  <div class="box" role="dialog" aria-labelledby="srvTitle">
-    <div class="row"><h3 id="srvTitle">SERVIDOR</h3><button type="button" class="ib" id="srvClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-    <div class="sect"><b>Convidar pessoas</b>
-      <div class="opts">
-        <label class="inline">Link vale por
+  <div class="box srvbox" role="dialog" aria-labelledby="srvTitle">
+    <div class="srvtop">
+      <span class="srvicon big" id="srvIcon" aria-hidden="true"></span>
+      <div class="t"><h3 id="srvTitle">SERVIDOR</h3><span class="lbl2" id="srvRole"></span></div>
+      <button type="button" class="ib" id="srvClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <section class="sect"><b>Convidar pessoas</b>
+      <div class="invrow">
+        <button type="button" class="cmd big withicon" id="invMake"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> Gerar link</button>
+        <label class="inline">vale por
           <select id="invHours"><option value="1">1 hora</option><option value="24" selected>1 dia</option><option value="168">7 dias</option><option value="0">sempre</option></select>
         </label>
-        <button type="button" class="cmd" id="invMake">Gerar link</button>
       </div>
-      <div class="opts" id="invOut" hidden><input type="text" id="invLink" readonly aria-label="Link do convite"><button type="button" class="ib" id="invCopy" title="Copiar o link" aria-label="Copiar o link"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
-      <span class="lbl2">Quem abrir o link precisa ter conta (ou criar uma) e entra direto neste servidor.</span>
-    </div>
-    <div class="sect" id="srvRenameBox"><b>Nome do servidor</b>
-      <form class="opts" id="srvRename"><input type="text" id="srvNameInput" maxlength="40" aria-label="Nome do servidor"><button type="submit" class="cmd">Salvar</button></form>
-    </div>
-    <div class="opts">
-      <button type="button" class="cmd" id="srvMod">Moderar</button>
-      <button type="button" class="cmd danger" id="srvLeave">Sair do servidor</button>
-      <button type="button" class="cmd danger" id="srvDelete">Apagar servidor</button>
-    </div>
+      <div class="linkbox" id="invOut" hidden><input type="text" id="invLink" readonly aria-label="Link do convite"><button type="button" class="ib" id="invCopy" title="Copiar o link" aria-label="Copiar o link"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button></div>
+    </section>
+    <section class="sect" id="srvRenameBox"><b>Personalizar</b>
+      <div class="opts">
+        <button type="button" class="cmd withicon" id="srvIconBtn"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg> Trocar foto</button>
+        <button type="button" class="cmd danger" id="srvIconDel">Remover foto</button>
+        <input type="file" id="srvIconFile" accept="image/*" hidden>
+      </div>
+      <form class="namerow" id="srvRename"><input type="text" id="srvNameInput" maxlength="40" aria-label="Nome do servidor" placeholder="nome do servidor"><button type="submit" class="cmd">Salvar nome</button></form>
+    </section>
+    <nav class="menu" aria-label="Opções do servidor">
+      <button type="button" class="mrow" id="srvMod"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg><span>Moderar membros</span><svg class="ic" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+      <button type="button" class="mrow danger" id="srvLeave"><svg class="ic" aria-hidden="true"><use href="#i-log-out"/></svg><span>Sair do servidor</span></button>
+      <button type="button" class="mrow danger" id="srvDelete"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span>Apagar servidor</span></button>
+    </nav>
     <p class="err" id="srvMsg"></p>
   </div>
 </div>
@@ -1043,6 +1079,7 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
       <div class="opts"><button type="button" class="cmd" id="homeBack" hidden>Voltar</button><button type="button" class="cmd danger" id="homeLogout">Sair da conta</button></div>
     </div>
     <div id="gInvite" hidden>
+      <span class="srvicon big" id="invIcon" aria-hidden="true"></span>
       <p class="lbl2">Você foi convidado para</p>
       <p class="invname" id="invName"></p>
       <p class="lbl2" id="invInfo"></p>

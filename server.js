@@ -20,6 +20,7 @@ const MAX_AUDIO = 1.5 * 1024 * 1024; // audio de ate ~1 minuto
 const MAX_MEDIA_KEPT = 40; // fotos e audios mais antigos que isso saem do historico
 const IMAGE_RE = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/;
 const AUDIO_RE = /^data:audio\/(webm|ogg|mp4|mpeg|aac)(;codecs=[A-Za-z0-9.,=-]+)?;base64,[A-Za-z0-9+/=]+$/;
+const MAX_SERVER_ICON = 120 * 1024; // foto do servidor ja vem pequena (96x96) do navegador
 const MAX_AVATAR = 60 * 1024; // foto de perfil ja vem pequena (48x48) do navegador
 const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "\u2764\uFE0F", "\u{1F62E}"];
 const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
@@ -115,10 +116,10 @@ function getCtx(serverId) {
 }
 
 async function buildCtx(serverId) {
-  const [srv] = await db.select("servers", { select: "id,name,owner_id", id: "eq." + serverId });
+  const [srv] = await db.select("servers", { select: "id,name,owner_id,icon", id: "eq." + serverId });
   if (!srv) throw new Error("servidor não existe");
   const ctx = {
-    id: serverId, name: srv.name, ownerId: srv.owner_id, room: "srv:" + serverId,
+    id: serverId, name: srv.name, icon: srv.icon || null, ownerId: srv.owner_id, room: "srv:" + serverId,
     history: [], nextId: 1, storage: createStorage(serverId),
     sockets: new Map(),     // socket.id -> socket (so deste servidor)
     online: new Map(),      // socket.id -> apelido
@@ -301,8 +302,8 @@ api.get("/me", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const profile = await getProfile(user.id);
   if (!profile) return fail(res, 404, "Conta sem perfil. Crie a conta de novo.");
-  const rows = await db.select("server_members", { select: "role,server:servers(id,name,owner_id)", user_id: "eq." + user.id, order: "joined_at.asc" });
-  res.json({ user: { id: user.id, email: user.email }, profile, servers: rows.filter((r) => r.server).map((r) => ({ id: r.server.id, name: r.server.name, role: r.role })) });
+  const rows = await db.select("server_members", { select: "role,server:servers(id,name,owner_id,icon)", user_id: "eq." + user.id, order: "joined_at.asc" });
+  res.json({ user: { id: user.id, email: user.email }, profile, servers: rows.filter((r) => r.server).map((r) => ({ id: r.server.id, name: r.server.name, icon: r.server.icon || null, role: r.role })) });
 }));
 
 // Muda apelido, cor ou foto (vale em todos os servidores)
@@ -365,12 +366,12 @@ api.patch("/me", wrap(async (req, res) => {
 api.post("/servers", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const name = String(req.body.name || "").replace(/\s+/g, " ").trim().slice(0, MAX_SERVER_NAME);
-  if (!name) return fail(res, 400, "De um nome para o servidor.");
+  if (!name) return fail(res, 400, "Dê um nome para o servidor.");
   const owned = await db.select("servers", { select: "id", owner_id: "eq." + user.id });
   if (owned.length >= MAX_SERVERS_OWNED) return fail(res, 400, "Você já é dono de " + MAX_SERVERS_OWNED + " servidores.");
   const [srv] = await db.insert("servers", [{ name, owner_id: user.id }]);
   await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "owner" }], false);
-  res.json({ server: { id: srv.id, name: srv.name, role: "owner" } });
+  res.json({ server: { id: srv.id, name: srv.name, icon: null, role: "owner" } });
 }));
 
 async function requireRole(req, res, user, roles) {
@@ -384,12 +385,26 @@ async function requireRole(req, res, user, roles) {
 api.patch("/servers/:id", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   if (!(await requireRole(req, res, user, ["owner", "admin"]))) return;
-  const name = String(req.body.name || "").replace(/\s+/g, " ").trim().slice(0, MAX_SERVER_NAME);
-  if (!name) return fail(res, 400, "De um nome para o servidor.");
-  await db.update("servers", { id: "eq." + req.params.id }, { name });
+  // muda o nome e/ou a foto do servidor (icon: null tira a foto)
+  const patch = {};
+  if (req.body.name !== undefined) {
+    const name = String(req.body.name || "").replace(/\s+/g, " ").trim().slice(0, MAX_SERVER_NAME);
+    if (!name) return fail(res, 400, "Dê um nome para o servidor.");
+    patch.name = name;
+  }
+  if (req.body.icon !== undefined) {
+    if (req.body.icon === null) patch.icon = null;
+    else {
+      const icon = String(req.body.icon);
+      if (icon.length > MAX_SERVER_ICON || !IMAGE_RE.test(icon)) return fail(res, 400, "Foto inválida.");
+      patch.icon = icon;
+    }
+  }
+  if (!Object.keys(patch).length) return res.json({ ok: true });
+  await db.update("servers", { id: "eq." + req.params.id }, patch);
   if (contexts.has(req.params.id)) {
     const ctx = await contexts.get(req.params.id);
-    ctx.name = name;
+    Object.assign(ctx, patch);
     for (const s of ctx.sockets.values()) s.emit("me", meOf(ctx, s));
   }
   res.json({ ok: true });
@@ -433,7 +448,7 @@ api.post("/servers/:id/invites", wrap(async (req, res) => {
 
 async function findInvite(code) {
   if (!/^[A-Za-z0-9_-]{6,20}$/.test(code)) return null;
-  const rows = await db.select("server_invites", { select: "code,server_id,expires_at,uses,server:servers(id,name)", code: "eq." + code });
+  const rows = await db.select("server_invites", { select: "code,server_id,expires_at,uses,server:servers(id,name,icon)", code: "eq." + code });
   const inv = rows[0];
   if (!inv || !inv.server || (inv.expires_at && Date.parse(inv.expires_at) <= Date.now())) return null;
   return inv;
@@ -490,7 +505,7 @@ io.use(async (socket, next) => {
 });
 
 function meOf(ctx, s) {
-  return { uid: s.data.user.id, nick: s.data.nick, role: s.data.role, server: { id: ctx.id, name: ctx.name } };
+  return { uid: s.data.user.id, nick: s.data.nick, role: s.data.role, server: { id: ctx.id, name: ctx.name, icon: ctx.icon } };
 }
 
 io.on("connection", (socket) => {

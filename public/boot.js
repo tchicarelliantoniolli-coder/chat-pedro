@@ -10,6 +10,12 @@
   const hue = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const initials = (name) => name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
   const currentServer = () => servers.find((x) => x.id === current);
+  // foto do servidor, ou as iniciais numa cor fixa
+  function paintIcon(el, srv) {
+    el.replaceChildren();
+    if (srv.icon) { const img = document.createElement("img"); img.alt = ""; img.src = srv.icon; el.append(img); el.style.background = ""; }
+    else { el.textContent = initials(srv.name); el.style.background = "hsl(" + hue(srv.id) + " 65% 55%)"; }
+  }
 
   async function api(path, { method = "GET", body } = {}) {
     if (sb) { const { data } = await sb.auth.getSession(); session = data.session; }
@@ -27,7 +33,7 @@
     handshake: () => ({ token: session && session.access_token, server: current }),
     onMe(m) {
       const srv = currentServer();
-      if (srv) { srv.name = m.server.name; srv.role = m.role; }
+      if (srv) { srv.name = m.server.name; srv.icon = m.server.icon || null; srv.role = m.role; }
       renderRail();
       renderServerMenu();
     },
@@ -152,7 +158,7 @@
   $("createForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = $("createName").value.trim();
-    if (!name) return gmsg("De um nome para o servidor.");
+    if (!name) return gmsg("Dê um nome para o servidor.");
     try { const r = await api("/api/servers", { method: "POST", body: { name } }); goServer(r.server.id); }
     catch (err) { gmsg(err.message); }
   });
@@ -176,6 +182,7 @@
     try {
       const r = await api("/api/invites/" + code);
       $("invName").textContent = r.server.name;
+      paintIcon($("invIcon"), r.server);
       $("invInfo").textContent = r.members + (r.members === 1 ? " membro" : " membros") + (r.already ? " | você já está nele" : "");
       $("invAccept").textContent = r.already ? "Ir para o servidor" : "Entrar no servidor";
       $("invAccept").hidden = false;
@@ -196,10 +203,9 @@
     $("railList").replaceChildren(...servers.map((s) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "srv" + (s.id === current ? " on" : "");
-      b.textContent = initials(s.name);
+      paintIcon(b, s);
       b.title = s.name;
       b.setAttribute("aria-label", "Servidor " + s.name);
-      b.style.background = "hsl(" + hue(s.id) + " 65% 55%)";
       b.addEventListener("click", () => { if (s.id !== current) goServer(s.id); else document.body.classList.remove("railopen"); });
       return b;
     }));
@@ -216,6 +222,10 @@
     if (!srv) return;
     const mod = srv.role === "owner" || srv.role === "admin";
     $("srvTitle").textContent = srv.name;
+    $("srvRole").textContent = srv.role === "owner" ? "você é o dono" : srv.role === "admin" ? "você é ADM" : "você é membro";
+    paintIcon($("srvIcon"), srv);
+    paintIcon($("headIcon"), srv);
+    $("srvIconDel").hidden = !srv.icon;
     $("srvRenameBox").hidden = !mod;
     $("srvMod").hidden = !mod;
     $("srvLeave").hidden = srv.role === "owner";
@@ -248,15 +258,39 @@
   });
   $("srvRename").addEventListener("submit", async (e) => {
     e.preventDefault();
-    try { await api("/api/servers/" + current, { method: "PATCH", body: { name: $("srvNameInput").value } }); $("srvMsg").textContent = ""; app.setNote("Nome do servidor salvo."); $("srvModal").hidden = true; }
+    try { await api("/api/servers/" + current, { method: "PATCH", body: { name: $("srvNameInput").value } }); $("srvMsg").textContent = "";
+      const b = $("srvRename").querySelector("button"); b.textContent = "Salvo!"; setTimeout(() => { b.textContent = "Salvar nome"; }, 1500); }
     catch (err) { $("srvMsg").textContent = err.message; }
   });
+  // foto do servidor: recorta o meio em quadrado e reduz para 96x96
+  async function serverIconData(file) {
+    const src = await new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = fail; r.readAsDataURL(file); });
+    const img = await new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
+    const side = Math.min(img.width, img.height), c = document.createElement("canvas");
+    c.width = c.height = 96;
+    const g = c.getContext("2d");
+    g.fillStyle = "#ffffff"; g.fillRect(0, 0, 96, 96);
+    g.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 96, 96);
+    return c.toDataURL("image/jpeg", 0.85);
+  }
+  const saveIcon = async (icon) => {
+    try { await api("/api/servers/" + current, { method: "PATCH", body: { icon } }); $("srvMsg").textContent = ""; }
+    catch (err) { $("srvMsg").textContent = err.message; }
+  };
+  $("srvIconBtn").addEventListener("click", () => $("srvIconFile").click());
+  $("srvIconFile").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f || !f.type.startsWith("image/")) return;
+    try { await saveIcon(await serverIconData(f)); } catch { $("srvMsg").textContent = "Não deu para usar essa foto. Tente outra."; }
+  });
+  $("srvIconDel").addEventListener("click", () => saveIcon(null));
   $("srvMod").addEventListener("click", () => { $("srvModal").hidden = true; app.openMod(); });
   // sair e apagar pedem um segundo clique
   function twoStep(btn, label, fn) {
     let armed = false;
     btn.addEventListener("click", async () => {
-      if (!armed) { armed = true; btn.textContent = "Certeza? clique de novo"; setTimeout(() => { armed = false; btn.textContent = label; }, 4000); return; }
+      const t = btn.querySelector("span") || btn;
+      if (!armed) { armed = true; t.textContent = "Certeza? Clique de novo"; btn.classList.add("armed"); setTimeout(() => { armed = false; t.textContent = label; btn.classList.remove("armed"); }, 4000); return; }
       try { await fn(); } catch (err) { $("srvMsg").textContent = err.message; }
     });
   }
