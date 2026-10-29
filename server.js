@@ -25,7 +25,6 @@ const MAX_AVATAR = 60 * 1024; // foto de perfil ja vem pequena (48x48) do navega
 const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "\u2764\uFE0F", "\u{1F62E}"];
 const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
 const STATUSES = ["online", "ausente", "ocupado"];
-const SFX = ["buzina", "ihhh", "risada", "aplausos", "tambor", "erro"];
 const INVITE_HOURS = [1, 24, 168, 0]; // 0 = nunca vence
 
 // Servidores para a call atravessar redes chatas (4G, escola, empresa). O TURN e opcional e vem do Render.
@@ -758,16 +757,6 @@ io.on("connection", (socket) => {
     if (!msg || !ctx.callMembers.has(socket.id) || !ctx.callMembers.has(msg.to)) return;
     if (JSON.stringify(msg).length > 100 * 1024) return;
     io.to(msg.to).emit("call:signal", { from: socket.id, description: msg.description, candidate: msg.candidate });
-  });
-
-  // Soundboard: som curto que toca para todo mundo da call
-  let lastSfx = 0;
-  socket.on("call:sfx", (name) => {
-    const member = ctx.callMembers.get(socket.id);
-    const now = Date.now();
-    if (!member || !SFX.includes(name) || now - lastSfx < 2500) return;
-    lastSfx = now;
-    for (const id of ctx.callMembers.keys()) io.to(id).emit("call:sfx", { name, nick: member.nick });
   });
 
   // Assistir junto: um video do YouTube sincronizado para a call

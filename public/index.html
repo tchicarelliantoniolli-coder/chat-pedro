@@ -74,7 +74,7 @@ button.ib .n { font-size: 17px; }
 button.ib.sm { min-width: 26px; height: 26px; padding: 0 4px; }
 button.ib.sm .ic { width: 15px; height: 15px; }
 button.cmd.withicon { display: inline-flex; align-items: center; gap: 8px; }
-button.ib.leave { color: var(--err); }
+button.ib.leave { color: var(--err); margin-left: 10px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--err) 45%, transparent); }
 button.ib.leave:hover { background: color-mix(in srgb, var(--err) 20%, transparent); }
 #sendBtn { color: var(--bright); }
 
@@ -764,7 +764,7 @@ footer { position: relative; }
 .modal:not([hidden]), #viewer:not([hidden]) { animation: fadeIn 0.15s ease-out; }
 .modal:not([hidden]) .box, #viewer:not([hidden]) img { animation: popIn 0.2s var(--ease); }
 #activity:not([hidden]), #truco:not([hidden]) { animation: fadeIn 0.22s ease-out; }
-#call:not([hidden]), #sfxBar:not([hidden]), #watchForm:not([hidden]), #watch:not([hidden]) { animation: slideDown 0.2s var(--ease); }
+#call:not([hidden]), #watchForm:not([hidden]), #watch:not([hidden]) { animation: slideDown 0.2s var(--ease); }
 .invite { animation: slideUp 0.2s var(--ease); }
 
 /* tela de entrada: logo e o "ou" entre criar e entrar */
@@ -928,14 +928,11 @@ body.gaming .controls .ib { min-width: 30px; padding: 0 4px; }
         <button type="button" class="ib" id="camBtn" title="Ligar a câmera" aria-label="Ligar a câmera"><svg class="ic" aria-hidden="true"><use href="#i-video"/></svg></button>
         <button type="button" class="ib" id="screenBtn" title="Compartilhar a tela" aria-label="Compartilhar a tela"><svg class="ic" aria-hidden="true"><use href="#i-monitor"/></svg></button>
         <button type="button" class="ib" id="pttBtn" title="Segure para falar (ou segure ESPAÇO)" aria-label="Segure para falar (ou segure ESPAÇO)" hidden><svg class="ic" aria-hidden="true"><use href="#i-hand"/></svg></button>
-        <button type="button" class="ib" id="sfxBtn" title="Sons para todo mundo da call" aria-label="Sons para todo mundo da call"><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg></button>
         <button type="button" class="ib" id="watchBtn" title="Assistir YouTube junto" aria-label="Assistir YouTube junto"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg></button>
         <button type="button" class="ib" id="setBtn" title="Configurações de áudio e vídeo" aria-label="Configurações de áudio e vídeo"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
         <button type="button" class="ib" id="minBtn" title="Esconder os vídeos" aria-label="Esconder os vídeos"><svg class="ic" aria-hidden="true"><use href="#i-chevron-up"/></svg></button>
-        <span class="spacer"></span>
         <button type="button" class="ib leave" id="leaveBtn" title="Sair da call" aria-label="Sair da call"><svg class="ic" aria-hidden="true"><use href="#i-phone-off"/></svg></button>
       </div>
-      <div class="controls" id="sfxBar" hidden></div>
       <form class="controls" id="watchForm" hidden>
         <input type="text" id="watchUrl" placeholder="cole o link do YouTube" aria-label="Link do YouTube" autocomplete="off">
         <button type="submit" class="cmd">Assistir junto</button>

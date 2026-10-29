@@ -250,7 +250,7 @@
 
   function cleanup() {
     setPtt(false);
-    $("sfxBar").hidden = true; $("watchForm").hidden = true;
+    $("watchForm").hidden = true;
     setTimeout(syncWatch, 0); // inCall ja vai estar falso: esconde o video
     for (const id of [...peers.keys()]) closePeer(id);
     for (const s of [micRaw, camStream, screenStream]) if (s) s.getTracks().forEach((t) => t.stop());
@@ -716,51 +716,6 @@
   $("pttCheck").addEventListener("change", (e) => {
     prefs.ptt = e.target.checked; store.set("cp-ptt", prefs.ptt ? "on" : "off");
     setPtt(false); applyMic(); refreshButtons();
-  });
-
-  // ---------- soundboard: sons 8-bit feitos na hora, tocam para todo mundo da call ----------
-  const SFX_LABEL = { buzina: "Buzina", ihhh: "Ihhh", risada: "Risada", aplausos: "Aplausos", tambor: "Ba dum tss", erro: "Erro" };
-  $("sfxBar").replaceChildren(...Object.entries(SFX_LABEL).map(([k, label]) => {
-    const b = document.createElement("button"); b.type = "button"; b.className = "cmd"; b.textContent = label;
-    b.addEventListener("click", () => socket.emit("call:sfx", k));
-    return b;
-  }));
-  $("sfxBtn").addEventListener("click", () => { $("sfxBar").hidden = !$("sfxBar").hidden; });
-  function playSfx(name) {
-    if (!ctx || deaf) return;
-    const out = ctx.createGain();
-    out.gain.value = 0.18 * (prefs.master / 100);
-    out.connect(ctx.destination);
-    const t0 = ctx.currentTime;
-    const tone = (type, f0, f1, start, dur, vol = 1) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = type; o.frequency.setValueAtTime(f0, t0 + start);
-      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t0 + start + dur);
-      g.gain.setValueAtTime(vol, t0 + start); g.gain.exponentialRampToValueAtTime(0.001, t0 + start + dur);
-      o.connect(g).connect(out); o.start(t0 + start); o.stop(t0 + start + dur + 0.02);
-    };
-    const noise = (start, dur, vol = 1, hp = 0) => {
-      const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-      const src = ctx.createBufferSource(), g = ctx.createGain();
-      src.buffer = buf;
-      g.gain.setValueAtTime(vol, t0 + start); g.gain.exponentialRampToValueAtTime(0.001, t0 + start + dur);
-      let node = src;
-      if (hp) { const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = hp; node.connect(f); node = f; }
-      node.connect(g).connect(out); src.start(t0 + start);
-    };
-    if (name === "buzina") { tone("sawtooth", 440, 440, 0, 0.35); tone("sawtooth", 554, 554, 0, 0.35); tone("sawtooth", 440, 440, 0.4, 0.5); tone("sawtooth", 554, 554, 0.4, 0.5); }
-    else if (name === "ihhh") tone("square", 950, 260, 0, 0.9, 0.8);
-    else if (name === "risada") for (let i = 0; i < 6; i++) tone("square", 620 - i * 30, 480 - i * 30, i * 0.14, 0.11, 0.8);
-    else if (name === "aplausos") for (let i = 0; i < 14; i++) noise(i * 0.09 + Math.random() * 0.04, 0.08, 0.5, 1200);
-    else if (name === "tambor") { tone("sine", 160, 60, 0, 0.18); tone("sine", 120, 50, 0.22, 0.2); noise(0.45, 0.5, 0.6, 6000); }
-    else if (name === "erro") { tone("square", 330, 330, 0, 0.18, 0.7); tone("square", 220, 220, 0.2, 0.35, 0.7); }
-  }
-  socket.on("call:sfx", ({ name, nick }) => {
-    if (!inCall) return;
-    playSfx(name);
-    setNote("♪ " + nick + " tocou " + (SFX_LABEL[name] || name));
   });
 
   // ---------- assistir junto (YouTube sincronizado) ----------
