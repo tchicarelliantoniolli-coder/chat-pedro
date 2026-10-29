@@ -239,12 +239,16 @@
     } catch (err) { $("srvMsg").textContent = err.message; }
   });
   $("invCopy").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText($("invLink").value); $("invCopy").textContent = "Copiado!"; setTimeout(() => { $("invCopy").textContent = "Copiar"; }, 1500); }
+    try {
+      await navigator.clipboard.writeText($("invLink").value);
+      setIcon($("invCopy"), "check", "Copiado!", "copiado");
+      setTimeout(() => setIcon($("invCopy"), "copy", "Copiar o link"), 1500);
+    }
     catch { $("invLink").select(); $("srvMsg").textContent = "Aperte Ctrl+C para copiar."; }
   });
   $("srvRename").addEventListener("submit", async (e) => {
     e.preventDefault();
-    try { await api("/api/servers/" + current, { method: "PATCH", body: { name: $("srvNameInput").value } }); $("srvMsg").textContent = ""; }
+    try { await api("/api/servers/" + current, { method: "PATCH", body: { name: $("srvNameInput").value } }); $("srvMsg").textContent = ""; app.setNote("Nome do servidor salvo."); $("srvModal").hidden = true; }
     catch (err) { $("srvMsg").textContent = err.message; }
   });
   $("srvMod").addEventListener("click", () => { $("srvModal").hidden = true; app.openMod(); });
@@ -296,7 +300,8 @@
     }
     if (err.message === "sem_banco") { showGate("gAuth"); return gmsg("O site ainda não foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); }
     app.setNote("Não deu para conectar. Tentando de novo...", true);
-    setTimeout(() => socket.connect(), 3000);
+    // erro do proprio servidor: tenta de novo; queda de rede o socket.io ja tenta sozinho
+    if (!socket.active) setTimeout(() => socket.connect(), 3000);
   });
   socket.on("server:removed", (reason) => {
     socket.disconnect();

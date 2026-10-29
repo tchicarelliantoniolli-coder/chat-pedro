@@ -159,7 +159,7 @@ async function loadMembers(ctx) {
 }
 
 const toRoom = (ctx, ev, data) => io.to(ctx.room).emit(ev, data);
-const persist = (ctx) => ctx.storage && ctx.storage.saveSoon({ history: ctx.history, nextId: ctx.nextId });
+const persist = (ctx) => ctx.storage && !ctx.dead && ctx.storage.saveSoon({ history: ctx.history, nextId: ctx.nextId });
 
 function dropMessages(ctx, list) {
   if (!list.length) return;
@@ -180,6 +180,8 @@ function pushMessage(ctx, msg) {
   toRoom(ctx, "message", msg);
   persist(ctx);
 }
+// Historico sem o conteudo das fotos e audios (que sao pesados): o navegador pede cada um quando precisa
+const historyFor = (ctx) => ctx.history.map((m) => (isMedia(m) ? { ...m, src: undefined, lazy: true } : m));
 const sys = (ctx, text) => pushMessage(ctx, { type: "sys", text, ts: Date.now() });
 
 const watchMsg = (ctx) => ctx.watch && { ...ctx.watch, now: Date.now() }; // "now" deixa cada um corrigir o proprio relogio
@@ -195,17 +197,20 @@ function cleanCallState(s) {
   return { mic: !!s.mic, deaf: !!s.deaf, cam: streamId(s.cam), screen: streamId(s.screen) };
 }
 
-// Quem esta online, cores, fotos, status e a lista de membros (online e offline)
-function sendUsers(ctx) {
+// Fotos de perfil de todos os membros: so vai para todo mundo quando muda (sao pesadas)
+function avatarsOf(ctx) {
+  const avatars = {};
+  for (const m of ctx.members) if (m.avatar) avatars[keyOf(m.nick)] = m.avatar;
+  return avatars;
+}
+// Quem esta online, cores, status e a lista de membros (online e offline)
+function sendUsers(ctx, withAvatars) {
   const onlineIds = new Set([...ctx.sockets.values()].map((s) => s.data.user.id));
   toRoom(ctx, "users", [...new Set(ctx.online.values())].sort());
-  const profiles = {}, avatars = {};
-  for (const m of ctx.members) {
-    profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline" };
-    if (m.avatar) avatars[keyOf(m.nick)] = m.avatar;
-  }
+  const profiles = {};
+  for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline" };
   for (const [id, nick] of ctx.online) profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online" };
-  toRoom(ctx, "avatars", avatars);
+  if (withAvatars) toRoom(ctx, "avatars", avatarsOf(ctx));
   toRoom(ctx, "profiles", profiles);
   toRoom(ctx, "members", ctx.members.map((m) => ({ id: m.id, nick: m.nick, role: m.role, online: onlineIds.has(m.id) })));
 }
@@ -340,12 +345,19 @@ api.patch("/me", wrap(async (req, res) => {
         if (ctx.callMembers.has(sid)) ctx.callMembers.get(sid).nick = patch.nick;
         s.emit("me", meOf(ctx, s));
       }
+      // as reacoes antigas passam para o apelido novo
+      for (const m of ctx.history) {
+        let changed = false;
+        for (const who of Object.values(m.reactions || {})) { const i = who.indexOf(old.nick); if (i >= 0) { who[i] = patch.nick; changed = true; } }
+        if (changed) toRoom(ctx, "message:update", { id: m.id, reactions: m.reactions });
+      }
+      persist(ctx);
       ctx.poker.rename(old.nick, patch.nick);
       ctx.truco.rename(old.nick, patch.nick);
       if (wasOnline) sendCall(ctx);
       sys(ctx, old.nick + " agora se chama " + patch.nick);
     }
-    sendUsers(ctx);
+    sendUsers(ctx, !!(patch.nick || patch.avatar));
   }
   res.json({ profile });
 }));
@@ -405,7 +417,7 @@ api.post("/servers/:id/leave", wrap(async (req, res) => {
   if (contexts.has(req.params.id)) {
     const ctx = await contexts.get(req.params.id);
     removeUserFromCtx(ctx, user.id, "Você saiu do servidor.");
-    await loadMembers(ctx); sendUsers(ctx);
+    await loadMembers(ctx); sendUsers(ctx, true);
   }
   res.json({ ok: true });
 }));
@@ -446,7 +458,7 @@ api.post("/invites/:code/accept", wrap(async (req, res) => {
     await db.update("server_invites", { code: "eq." + inv.code }, { uses: inv.uses + 1 });
     if (contexts.has(inv.server_id)) {
       const ctx = await contexts.get(inv.server_id);
-      await loadMembers(ctx); sendUsers(ctx);
+      await loadMembers(ctx); sendUsers(ctx, true);
       const p = await getProfile(user.id);
       if (p) sys(ctx, p.nick + " entrou no servidor pelo convite");
     }
@@ -487,10 +499,11 @@ io.on("connection", (socket) => {
   socket.join(ctx.room);
   ctx.sockets.set(socket.id, socket);
   ctx.online.set(socket.id, socket.data.nick);
-  if (!ctx.members.some((m) => m.id === uid)) loadMembers(ctx).then(() => sendUsers(ctx)).catch(() => {});
+  if (!ctx.members.some((m) => m.id === uid)) loadMembers(ctx).then(() => sendUsers(ctx, true)).catch(() => {});
 
   socket.emit("me", meOf(ctx, socket));
-  socket.emit("history", ctx.history);
+  socket.emit("avatars", avatarsOf(ctx));
+  socket.emit("history", historyFor(ctx));
   socket.emit("call:members", [...ctx.callMembers.values()]);
   socket.emit("ice", ICE_SERVERS);
   socket.emit("watch:state", watchMsg(ctx));
@@ -559,6 +572,13 @@ io.on("connection", (socket) => {
     done(true);
   });
 
+  // fotos e audios do historico chegam sob demanda (quando aparecem na tela)
+  socket.on("media", (id, reply) => {
+    if (typeof reply !== "function") return;
+    const m = ctx.history.find((x) => x.id === Number(id));
+    reply(m && isMedia(m) ? m.src || null : null);
+  });
+
   socket.on("image", (data, replyTo) => {
     if (typeof data !== "string" || data.length > MAX_IMAGE || !IMAGE_RE.test(data)) return;
     const nick = canPost("[foto " + Date.now() + "]");
@@ -621,7 +641,7 @@ io.on("connection", (socket) => {
   socket.on("admin:clear", () => {
     if (!isMod()) return;
     dropMessages(ctx, [...ctx.history]);
-    toRoom(ctx, "history", ctx.history);
+    toRoom(ctx, "history", []);
     sys(ctx, nickNow() + " limpou o chat");
   });
 
@@ -644,7 +664,7 @@ io.on("connection", (socket) => {
     await db.remove("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id });
     removeUserFromCtx(ctx, t.id, "Você foi expulso do servidor " + ctx.name + ". Só volta com um convite novo.");
     sys(ctx, t.nick + " foi expulso do servidor");
-    await loadMembers(ctx); sendUsers(ctx);
+    await loadMembers(ctx); sendUsers(ctx, true);
   }));
 
   socket.on("admin:ban", wrapAsync(async (msg) => {
@@ -657,7 +677,7 @@ io.on("connection", (socket) => {
     await db.remove("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id });
     removeUserFromCtx(ctx, t.id, "Você foi banido do servidor " + ctx.name + (min ? " por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : " para sempre") + ".");
     sys(ctx, t.nick + " foi banido " + (min ? "por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : "para sempre"));
-    await loadMembers(ctx); sendUsers(ctx);
+    await loadMembers(ctx); sendUsers(ctx, true);
     sendBans();
   }));
 

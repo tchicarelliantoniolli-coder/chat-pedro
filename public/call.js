@@ -42,7 +42,6 @@
     $("pttBtn").hidden = !(inCall && prefs.ptt);
     const min = $("call").classList.contains("min");
     setIcon($("minBtn"), min ? "chevron-down" : "chevron-up", min ? "Mostrar os vídeos" : "Esconder os vídeos");
-    $("minBtn").title = $("call").classList.contains("min") ? "Mostrar os vídeos" : "Esconder os vídeos";
     const n = members.length;
     setIcon($("callBtn"), "headphones", inCall ? "Você está na call (" + n + ")" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call", n || "");
     $("callBtn").classList.toggle("on", inCall);
@@ -184,14 +183,21 @@
   const myState = () => ({ mic: micOn, deaf, cam: camStream ? camStream.id : null, screen: screenStream ? screenStream.id : null });
   const sendState = () => { if (inCall) socket.emit("call:state", myState()); };
 
+  let joining = false;
   async function join() {
-    if (inCall || !app.nick) return;
+    if (inCall || joining || !app.nick) return;
+    joining = true;
+    try { await doJoin(); } finally { joining = false; }
+  }
+  async function doJoin() {
     if (!window.RTCPeerConnection || !navigator.mediaDevices) { setNote("ERRO: seu navegador não suporta chamadas. Tente o Chrome.", true); return; }
     buildAudioGraph();
     try { await startMic(); }
     catch { micOn = false; setNote("Sem acesso ao microfone. Você entrou mudo; libere o microfone no navegador para falar.", true); }
     applyMic();
-    socket.emit("call:join", myState(), (res) => {
+    await new Promise((done) => socket.timeout(10000).emit("call:join", myState(), (err, res) => {
+      done();
+      if (err) res = null; // o servidor nao respondeu
       if (!res || !res.ok) { setNote("ERRO: não deu para entrar na chamada.", true); cleanup(); return; }
       inCall = true;
       applyMic();
@@ -202,7 +208,7 @@
       refreshButtons();
       renderTiles();
       fillDevices();
-    });
+    }));
   }
 
   function cleanup() {
@@ -243,6 +249,8 @@
           video: { deviceId: prefs.camId ? { ideal: prefs.camId } : undefined, width: { ideal: 640 }, height: { ideal: 360 } },
         });
       } catch { setNote("ERRO: sem acesso a câmera. Libere a câmera no navegador.", true); return; }
+      if (!inCall) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; return; } // saiu da call enquanto esperava
+      camStream.getVideoTracks()[0].onended = () => { if (camStream) toggleCam(); }; // camera desconectada
       addTrackToAll(camStream.getVideoTracks()[0], camStream);
       fillDevices();
     }
@@ -253,6 +261,7 @@
     if (screenStream) return stopScreen();
     try { screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false }); }
     catch { return; } // a pessoa cancelou
+    if (!inCall) { screenStream.getTracks().forEach((t) => t.stop()); screenStream = null; return; }
     const track = screenStream.getVideoTracks()[0];
     track.onended = stopScreen; // "Parar compartilhamento" do proprio navegador
     addTrackToAll(track, screenStream);

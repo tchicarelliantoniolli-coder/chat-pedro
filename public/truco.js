@@ -353,7 +353,7 @@
     if (e.type === "raise") {
       beep(SFX.raise);
       if (open()) shout(e.text, "", (e.nick || "") + " pediu " + e.to);
-      else if (st.me >= 0 && !mine) setNote("Truco " + e.text + " Abra o Truco pra responder!", true);
+      else if (st.me >= 0 && !mine) setNote("Truco: " + e.text + " Abra o truco (ícone de paus) para responder!", true);
       return;
     }
     if (e.type === "accept") { beep(SFX.accept); if (open()) shout(e.text, "ok", e.nick ? e.nick + " aceitou" : ""); return; }
