@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chat Pedro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+:root {
+  --bg: #000000;
+  --fg: #33ff66;
+  --dim: #1f9940;
+  --bright: #b6ffc8;
+  --err: #ff5555;
+  --pixel: "Press Start 2P", "Courier New", monospace;
+  --mono: "VT323", "Courier New", monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--mono); font-size: 22px; line-height: 1.2;
+  display: flex; flex-direction: column;
+}
+.wrap {
+  width: 100%; box-sizing: border-box;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header .wrap { padding-block: 12px 4px; }
+h1 { font-family: var(--pixel); font-size: 14px; font-weight: 400; margin: 0; color: var(--bright); }
+.sub { color: var(--dim); margin-top: 6px; overflow-wrap: anywhere; }
+main { flex: 1; overflow-y: auto; min-height: 0; }
+#log { padding-block: 8px; }
+.line { white-space: pre-wrap; overflow-wrap: anywhere; }
+.time { color: var(--dim); }
+.who { color: var(--bright); }
+.sys { color: var(--dim); }
+footer .wrap { padding-block: 6px 12px; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+form { display: flex; align-items: flex-start; }
+.ps1 { color: var(--bright); white-space: pre; }
+textarea {
+  flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: transparent;
+  color: var(--fg); font: inherit; caret-color: var(--fg); padding: 0; margin: 0; max-height: 6em;
+}
+textarea::placeholder { color: var(--dim); }
+#note { color: var(--dim); min-height: 1.2em; margin: 4px 0 0; }
+#note.err { color: var(--err); }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>CHAT PEDRO</h1>
+  <div class="sub" id="status">C:\&gt; conectando...</div>
+</div></header>
+
+<main id="scroller"><div class="wrap"><div id="log"></div></div></main>
+
+<footer><div class="wrap">
+  <form id="form">
+    <span class="ps1" id="ps1">apelido: </span>
+    <textarea id="input" rows="1" placeholder="digite seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
+  </form>
+  <p id="note">Escolha um apelido e aperte ENTER</p>
+</div></footer>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const log = $("log"), scroller = $("scroller"), input = $("input"), note = $("note"), ps1 = $("ps1");
+  const socket = io();
+  let nick = null, users = [];
+
+  const HELP = "ENTER envia | SHIFT+ENTER nova linha | /nick NOVO muda o apelido | /quem lista quem esta online | /limpar limpa a tela";
+  const setNote = (text, err) => { note.textContent = text; note.classList.toggle("err", !!err); };
+  const pad = (n) => String(n).padStart(2, "0");
+  const fmtTime = (ts) => { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+  const span = (cls, text) => { const s = document.createElement("span"); s.className = cls; s.textContent = text; return s; };
+  const saved = (() => { try { return localStorage.getItem("chatpedro-nick"); } catch { return null; } })();
+
+  function addLine(m) {
+    const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+    const empty = $("empty");
+    if (empty) empty.remove();
+    const l = document.createElement("div");
+    l.className = "line";
+    l.append(span("time", "[" + fmtTime(m.ts) + "] "));
+    if (m.type === "sys") l.append(span("sys", "*** " + m.text));
+    else l.append(span("who", m.nick + "> "), document.createTextNode(m.text));
+    log.append(l);
+    if (atBottom) scroller.scrollTop = scroller.scrollHeight;
+  }
+  const localSys = (text) => addLine({ type: "sys", text, ts: Date.now() });
+
+  function updateStatus() {
+    $("status").textContent = socket.connected
+      ? "C:\\> online | " + users.length + " na sala" + (nick ? " | voce: " + nick : "")
+      : "C:\\> desconectado... tentando reconectar";
+  }
+
+  function join(name) {
+    socket.emit("join", name, (res) => {
+      if (!res.ok) { setNote("ERRO: " + res.error, true); return; }
+      nick = res.nick;
+      try { localStorage.setItem("chatpedro-nick", nick); } catch {}
+      ps1.textContent = nick + "> ";
+      input.placeholder = "digite aqui_";
+      setNote(HELP);
+      updateStatus();
+    });
+  }
+
+  function submit() {
+    const text = input.value.trim();
+    if (!text) return;
+    if (!socket.connected) { setNote("ERRO: sem conexao. Espere reconectar.", true); return; }
+    input.value = ""; autosize();
+    if (!nick) return join(text);
+    if (text.startsWith("/nick ")) return join(text.slice(6));
+    if (text === "/quem") return localSys("online: " + users.join(", "));
+    if (text === "/limpar") { log.replaceChildren(); return; }
+    socket.emit("message", text);
+  }
+
+  socket.on("connect", () => { updateStatus(); if (nick) join(nick); else if (saved) join(saved); });
+  socket.on("disconnect", updateStatus);
+  socket.on("history", (msgs) => {
+    log.replaceChildren();
+    msgs.forEach(addLine);
+    if (!msgs.length) {
+      const e = span("line sys", "Nenhuma mensagem ainda. Seja o primeiro!");
+      e.id = "empty"; e.style.display = "block";
+      log.append(e);
+    }
+    scroller.scrollTop = scroller.scrollHeight;
+  });
+  socket.on("message", addLine);
+  socket.on("users", (list) => { users = list; updateStatus(); });
+
+  function autosize() { input.style.height = "auto"; input.style.height = input.scrollHeight + "px"; }
+  input.addEventListener("input", autosize);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
+  });
+  $("form").addEventListener("submit", (e) => { e.preventDefault(); submit(); });
+  scroller.addEventListener("click", () => { if (!window.getSelection().toString()) input.focus(); });
+})();
+</script>
+</body>
+</html>
