@@ -71,6 +71,9 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   bolinha vermelha `.mbadge` de mudo), barra de botões em grupos (`.ctray`), menu "..." (`#moreBtn`) e
   Atividades (`app.actsMenu`: YouTube junto, Poker, Truco); painel "Voz conectada" com 3 botões
   (`#vpCam`, `#vpScreen`, `#vpAct`) e supressão de ruído (`#vpNoise`). `app.audio` serve os menus das setinhas.
+  Volume de cada pessoa como no Discord: botão direito (ou segurar o dedo) na pessoa na lista do canal de voz ou no
+  quadro da call abre `userMenu` ("Volume do usuário" 0–200%, "Silenciar" só para você, "Redefinir volume"); fica em
+  `cp-vol-<nick>` e `cp-lmute-<nick>`. Acima de 100% (e no iPhone) o som passa por um GainNode (`boost`). Teste `12-volume-na-call`.
 - `public/settings.js`: Configurações de usuário em tela cheia (mesmo layout `gs-*` das do servidor): Minha conta,
   Perfis (com prévia), Conteúdo e social, Dados e privacidade, Dispositivos, Conexões, Aparência, Acessibilidade,
   Voz e vídeo (`#settings`), Bate-papo, Notificações, Atalhos, Idioma, Modo streamer, Avançado (modo

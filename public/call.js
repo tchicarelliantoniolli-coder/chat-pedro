@@ -37,7 +37,12 @@
   const canPickOutput = "setSinkId" in HTMLMediaElement.prototype;
   let micBlocked = false; // o navegador negou o microfone da ultima vez
   let preview = false;    // microfone ligado so para testar (fora da call)
-  const volumeOf = (nick) => Number(store.get("cp-vol-" + nick.toLowerCase()) || 100);
+  // volume de cada pessoa (0 a 200%, como no Discord) e "silenciar so para mim"; fica guardado no navegador
+  const volumeOf = (nick) => { const v = Number(store.get("cp-vol-" + nick.toLowerCase())); return Number.isFinite(v) && store.get("cp-vol-" + nick.toLowerCase()) ? Math.max(0, Math.min(200, v)) : 100; };
+  const localMuted = (nick) => store.get("cp-lmute-" + nick.toLowerCase()) === "1";
+  // no iPhone o volume de um <audio> nao muda pelo site: la (e acima de 100%) o som passa por um ajuste do navegador
+  const volumeWorks = (() => { try { const a = document.createElement("audio"); a.volume = 0.5; return a.volume === 0.5; } catch { return false; } })();
+  let pctx = null; // som de quem esta na call quando precisa de ajuste (acima de 100% ou iPhone)
 
   // ---------- botoes ----------
   // o botao mostra o estado: icone riscado/vermelho = desligado, fundo aceso = ligado
@@ -203,6 +208,7 @@
   }
 
   function attachAudio(id, p, stream) {
+    if (p.boost && p.boost.stream !== stream) dropBoost(p);
     if (!p.audio) {
       p.audio = new Audio();
       p.audio.autoplay = true;
@@ -224,14 +230,48 @@
   function applyVolume(id) {
     const p = peers.get(id), m = members.find((x) => x.id === id);
     if (!p || !p.audio || !m) return;
-    p.audio.volume = Math.min(1, (volumeOf(m.nick) / 100) * (prefs.master / 100));
-    p.audio.muted = deaf;
+    const v = (volumeOf(m.nick) / 100) * (prefs.master / 100);
+    const silent = deaf || localMuted(m.nick);
+    if ((v > 1 || !volumeWorks) && boost(p)) {
+      p.audio.muted = true; // o <audio> continua tocando (sem ele o Chrome nao entrega o som), mas mudo
+      p.boost.gain.gain.value = v;
+      p.boost.out.muted = silent;
+    } else {
+      if (p.boost) p.boost.out.muted = true;
+      p.audio.volume = Math.min(1, v);
+      p.audio.muted = silent;
+    }
   }
+  function boost(p) {
+    if (p.boost) return true;
+    const stream = p.audio.srcObject;
+    if (!stream) return false;
+    try {
+      pctx = pctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (pctx.state === "suspended") pctx.resume().catch(() => {});
+      const src = pctx.createMediaStreamSource(stream), gain = pctx.createGain(), dest = pctx.createMediaStreamDestination();
+      src.connect(gain).connect(dest);
+      const out = new Audio(); out.autoplay = true; out.srcObject = dest.stream; document.body.append(out);
+      if (canPickOutput && prefs.outId) out.setSinkId(prefs.outId).catch(() => {});
+      out.play().catch(() => {});
+      p.boost = { stream, src, gain, out };
+      return true;
+    } catch { return false; }
+  }
+  function dropBoost(p) {
+    if (!p.boost) return;
+    try { p.boost.src.disconnect(); } catch {}
+    p.boost.out.srcObject = null; p.boost.out.remove();
+    p.boost = null;
+  }
+  // iPhone: o ajuste de som so liga depois de um toque na pagina
+  addEventListener("pointerdown", () => { if (pctx && pctx.state === "suspended") pctx.resume().catch(() => {}); }, { capture: true, passive: true });
 
   function closePeer(id) {
     const p = peers.get(id);
     if (!p) return;
     p.pc.close();
+    dropBoost(p);
     if (p.audio) { p.audio.srcObject = null; p.audio.remove(); }
     peers.delete(id);
   }
@@ -431,7 +471,7 @@
   // ---------- saida de audio ----------
   $("outSelect").addEventListener("change", (e) => {
     prefs.outId = e.target.value; store.set("cp-out", prefs.outId);
-    for (const p of peers.values()) if (p.audio) p.audio.setSinkId(prefs.outId).catch(() => {});
+    for (const p of peers.values()) for (const a of [p.audio, p.boost && p.boost.out]) if (a) a.setSinkId(prefs.outId).catch(() => {});
     if (ctx && ctx.setSinkId) ctx.setSinkId(prefs.outId).catch(() => {});
   });
   // som de teste: um bipe curto na saida escolhida
@@ -550,11 +590,12 @@
       el = document.createElement("div");
       el.className = "tile";
       el.addEventListener("click", (e) => {
-        if (e.target.closest(".vol, .full") || isFull(el)) return;
+        if (e.target.closest(".full") || isFull(el)) return;
         focused.has(key) ? focused.delete(key) : focused.add(key);
         el.classList.toggle("focus", focused.has(key));
       });
-      el.addEventListener("dblclick", (e) => { if (!e.target.closest(".vol, .full")) toggleFull(el); });
+      el.addEventListener("dblclick", (e) => { if (!e.target.closest(".full")) toggleFull(el); });
+      onMenu(el, (x, y) => { const m = members.find((z) => z.id === el.dataset.member); if (m) userMenu(m, x, y); });
       const fb = document.createElement("button");
       fb.type = "button"; fb.className = "ib sm full"; setIcon(fb, "maximize", "Tela cheia");
       fb.addEventListener("click", (e) => { e.stopPropagation(); toggleFull(el); });
@@ -589,28 +630,76 @@
       const b = document.createElement("span"); b.className = "mbadge"; b.title = f.title; b.append(icon(opts.deaf ? "uhead-off" : "umic-off")); el.append(b);
     }
     el.title = opts.screen ? "" : opts.title;
-    // volume de cada pessoa (so nos outros, no quadro principal)
-    let vol = el.querySelector(".vol");
-    if (opts.volume) {
-      if (!vol) {
-        vol = document.createElement("label"); vol.className = "vol";
-        const t = document.createElement("span");
-        const r = document.createElement("input"); r.type = "range"; r.min = 0; r.max = 100; r.step = 5;
-        r.setAttribute("aria-label", "Volume de " + opts.nick);
-        r.addEventListener("input", () => {
-          const nk = el.dataset.nick;
-          store.set("cp-vol-" + nk, r.value); t.textContent = "VOL " + r.value + "%";
-          applyVolume(el.dataset.member);
-        });
-        vol.append(t, r); el.append(vol);
-      }
-      el.dataset.nick = opts.nick.toLowerCase();
-      const v = volumeOf(opts.nick);
-      vol.querySelector("input").value = v;
-      vol.querySelector("span").textContent = "VOL " + v + "%";
-    } else vol?.remove();
+    // silenciado so para voce: aparece no nome
+    if (!opts.screen && opts.volume && localMuted(opts.nick)) {
+      const f = document.createElement("span"); f.className = "flag lmute"; f.title = "Silenciado por você"; f.append(icon("volume-off")); label.append(f);
+    }
     return el;
   }
+
+  // ---------- menu da pessoa na call (como no Discord): volume do usuario e silenciar ----------
+  // abre com o botao direito; no celular, segurando o dedo
+  function onMenu(el, open) {
+    el.addEventListener("contextmenu", (e) => { e.preventDefault(); e.stopPropagation(); open(e.clientX, e.clientY); });
+    let t = null, sx = 0, sy = 0;
+    el.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch") return;
+      sx = e.clientX; sy = e.clientY;
+      t = setTimeout(() => { t = null; el.dataset.held = "1"; open(sx, sy); }, 500);
+    });
+    const cancel = () => { clearTimeout(t); t = null; };
+    el.addEventListener("pointermove", (e) => { if (t && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+    el.addEventListener("pointerup", cancel); el.addEventListener("pointercancel", cancel);
+    // o toque longo nao vira clique
+    el.addEventListener("click", (e) => { if (el.dataset.held) { delete el.dataset.held; e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  function setUserVolume(m, v) {
+    const k = "cp-vol-" + m.nick.toLowerCase();
+    if (v === 100) store.set(k, ""); else store.set(k, String(v));
+    for (const x of members) if (x.nick === m.nick) applyVolume(x.id);
+  }
+  function userMenu(m, x, y) {
+    if (m.id === socket.id) return;
+    const nk = m.nick.toLowerCase();
+    // barra de volume: 0 a 200%, 100% no meio
+    const box = document.createElement("div"); box.className = "uvol";
+    const lab = document.createElement("div"); lab.className = "uvl"; lab.textContent = "Volume do usuário";
+    const wrap = document.createElement("div"); wrap.className = "uvr";
+    const r = document.createElement("input"); r.type = "range"; r.min = 0; r.max = 200; r.step = 1; r.value = volumeOf(m.nick);
+    r.setAttribute("aria-label", "Volume de " + m.nick);
+    const tip = document.createElement("span"); tip.className = "uvt";
+    const paint = () => {
+      const v = Number(r.value);
+      r.style.setProperty("--p", (v / 2) + "%");
+      tip.textContent = v + "%"; tip.style.left = "calc(" + (v / 2) + "% + " + (8 - v * 0.08) + "px)";
+      reset.hidden = v === 100;
+    };
+    r.addEventListener("input", () => { setUserVolume(m, Number(r.value)); paint(); });
+    r.addEventListener("dblclick", () => { r.value = 100; setUserVolume(m, 100); paint(); });
+    wrap.append(r, tip);
+    box.append(lab, wrap);
+    box.addEventListener("click", (e) => e.stopPropagation());
+    // silenciar so para voce (a pessoa nao fica sabendo)
+    const mute = document.createElement("button"); mute.type = "button"; mute.className = "mitem mcheck";
+    const ml = document.createElement("span"); ml.className = "ml"; ml.textContent = "Silenciar";
+    const ck = document.createElement("span"); ck.className = "ckbox"; ck.append(icon("check"));
+    mute.append(ml, ck);
+    const paintMute = () => { const on = localMuted(m.nick); mute.classList.toggle("on", on); mute.setAttribute("aria-pressed", String(on)); };
+    mute.addEventListener("click", (e) => {
+      e.stopPropagation();
+      store.set("cp-lmute-" + nk, localMuted(m.nick) ? "" : "1");
+      for (const z of members) if (z.nick === m.nick) applyVolume(z.id);
+      paintMute(); renderTiles(); renderSidebar();
+    });
+    const reset = document.createElement("button"); reset.type = "button"; reset.className = "mitem";
+    const rl = document.createElement("span"); rl.className = "ml"; rl.textContent = "Redefinir volume";
+    reset.append(rl, icon("history"));
+    reset.addEventListener("click", (e) => { e.stopPropagation(); r.value = 100; setUserVolume(m, 100); paint(); });
+    const head = document.createElement("div"); head.className = "uvhead"; head.append(avatar(m.nick), document.createTextNode(app.dispName ? app.dispName(m.nick) : m.nick));
+    app.showMenu([head, ["-"], box, mute, reset], x, y);
+    paint(); paintMute();
+  }
+  app.userMenu = userMenu;
 
   // Tela cheia: usa a do navegador; onde ela nao existe (iPhone), o quadro cobre a pagina
   const fullEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
@@ -688,7 +777,9 @@
       if (m.screen) { const live = document.createElement("b"); live.className = "live"; live.textContent = "AO VIVO"; t.append(live); }
       if (stage && m.hand) { t.append(icon("hand")); tags.push("levantou a mão"); }
       t.title = tags.join(" · ");
+      if (m.id !== socket.id && localMuted(m.nick)) { const lm = icon("volume-off"); lm.classList.add("lmute"); t.prepend(lm); tags.unshift("silenciado por você"); t.title = tags.join(" · "); }
       li.append(avatar(m.nick), name, t);
+      if (m.id !== socket.id) onMenu(li, (x, y) => userMenu(m, x, y));
       // a moderacao convida para o palco ou manda para a plateia
       if (stage && app.can && app.can("members")) {
         li.classList.add("click");

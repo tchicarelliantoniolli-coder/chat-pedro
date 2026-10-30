@@ -286,7 +286,7 @@ body.call-resizing, body.call-resizing * { cursor: ns-resize !important; user-se
 #tiles:has(.tile.focus) .tile:not(.focus) .av.big { width: 32px; height: 32px; font-size: 12px; }
 #tiles:has(.tile.focus) .tile:not(.focus) .label { font-size: 15px; bottom: 3px; left: 3px; }
 #tiles:has(.tile.focus) .tile:not(.focus) .label .flag { display: none; }
-#tiles:has(.tile.focus) .tile:not(.focus) .full, #tiles:has(.tile.focus) .tile:not(.focus) .vol { display: none; }
+#tiles:has(.tile.focus) .tile:not(.focus) .full { display: none; }
 /* Controles do quadro, cada um no seu canto: nome embaixo a esquerda, tela cheia embaixo a direita,
    volume em cima a direita (so ao passar o mouse ou tocar no quadro) */
 .tile .full {
@@ -303,7 +303,6 @@ body.call-resizing, body.call-resizing * { cursor: ns-resize !important; user-se
 .tile:fullscreen video, .tile.theater video { object-fit: contain; }
 .tile:fullscreen .full, .tile.theater .full { opacity: 1; bottom: 12px; right: 12px; font-size: 18px; }
 .tile:fullscreen .label, .tile.theater .label { bottom: 12px; left: 12px; max-width: calc(100% - 240px); }
-.tile:fullscreen .vol, .tile.theater .vol { display: flex; top: 12px; right: 12px; }
 .tile video { width: 100%; height: 100%; object-fit: cover; background: #000; }
 .tile.screen video { object-fit: contain; }
 .tile video.mirror { transform: scaleX(-1); }
@@ -317,12 +316,6 @@ body.call-resizing, body.call-resizing * { cursor: ns-resize !important; user-se
 @media (hover: none) { .tile .label { max-width: calc(100% - 128px); } }
 .tile .label .n { background: rgba(0, 0, 0, 0.75); color: var(--bright); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .tile .label .flag { background: var(--err); color: #000; padding: 0 4px; flex: none; }
-.tile .vol {
-  position: absolute; top: 6px; right: 6px; display: none; align-items: center; gap: 6px; max-width: calc(100% - 12px);
-  background: rgba(0, 0, 0, 0.75); padding: 2px 6px; font-size: 14px; color: var(--bright); cursor: default;
-}
-.tile .vol input { width: 80px; min-width: 0; accent-color: var(--fg); }
-.tile:hover .vol, .tile:focus-within .vol, .tile.focus .vol { display: flex; }
 .controls {
   display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding-block: 8px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px;
@@ -721,7 +714,6 @@ body.gaming .tr-felt { width: min(100cqw, 100cqh); }
   header .title { flex-basis: auto; }
   .sub { font-size: 0; } /* no celular fica so o quadradinho de online */
   #tiles { padding: 8px; }
-  .tile .vol input { width: 70px; }
   .pad { padding-right: max(16px, env(safe-area-inset-right, 0px)); }
   aside {
     position: fixed; top: 0; right: 0; bottom: 0; z-index: 10; width: min(260px, 80vw);
@@ -1337,6 +1329,22 @@ aside { width: 264px; background: #1a1a1e; }
 .vpeople:empty { display: none; }
 body.dm #textCat, body.dm #textList, body.dm #eventsBtn, body.dm #voiceCat .catadd { display: none; }
 
+/* menu da pessoa na call: volume do usuario (0 a 200%) e silenciar, como no Discord */
+#ctxMenu .uvhead { display: flex; align-items: center; gap: 8px; padding: 4px 8px 6px; color: var(--bright); font-weight: 600; font-size: 14px; }
+#ctxMenu .uvhead .av { width: 24px; height: 24px; font-size: 10px; margin: 0; }
+#ctxMenu .uvol { padding: 6px 8px 10px; }
+#ctxMenu .uvl { font-size: 12px; font-weight: 600; color: var(--dim); margin-bottom: 10px; }
+#ctxMenu .uvr { position: relative; padding-top: 22px; }
+#ctxMenu .uvr input { width: 100%; margin: 0; height: 8px; border-radius: 4px; appearance: none; -webkit-appearance: none; cursor: pointer;
+  background: linear-gradient(to right, var(--accent, #5865f2) var(--p, 50%), #4e5058 var(--p, 50%)); }
+#ctxMenu .uvr input::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 24px; border-radius: 3px; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35); }
+#ctxMenu .uvr input::-moz-range-thumb { width: 10px; height: 24px; border-radius: 3px; background: #fff; border: 1px solid #ccc; }
+#ctxMenu .uvt { position: absolute; top: -6px; translate: -50% 0; background: #111214; color: var(--bright); font-size: 12px; font-weight: 600; padding: 2px 6px; border-radius: 4px; pointer-events: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+#ctxMenu .mcheck .ckbox { width: 18px; height: 18px; border-radius: 4px; border: 1px solid var(--dim); display: grid; place-items: center; flex: none; }
+#ctxMenu .mcheck .ckbox .ic { width: 14px; height: 14px; opacity: 0; color: #fff; }
+#ctxMenu .mcheck.on .ckbox { background: var(--accent, #5865f2); border-color: var(--accent, #5865f2); }
+#ctxMenu .mcheck.on .ckbox .ic { opacity: 1; }
+.vpeople li .lmute, .tile .flag.lmute { color: var(--err); }
 #ctxMenu { position: fixed; z-index: 60; min-width: 188px; max-width: 260px; padding: 6px 8px; background: #111214; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35); display: flex; flex-direction: column; animation: popIn 0.12s var(--ease); }
 .mitem { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 8px; border-radius: 4px; font-size: 14px; font-weight: 500; color: #b5bac1; cursor: pointer; }
 .mitem .ic { width: 18px; height: 18px; flex: none; }
@@ -1890,7 +1898,6 @@ body.no-anim .pres::before { animation: none !important; }
 #call .tile .label .flag { display: grid; place-items: center; width: 24px; height: 22px; border-radius: 4px; background: rgba(0, 0, 0, 0.6); color: #f23f43; padding: 0; }
 #call .tile .label .flag .ic { width: 16px; height: 16px; }
 #call .tile .full { border-radius: 4px; background: rgba(0, 0, 0, 0.6); }
-#call .tile .vol { border-radius: 4px; background: rgba(0, 0, 0, 0.6); }
 #call .mbadge { display: none; }
 /* ninguem com video: so as fotos redondas no meio (como na chamada do Discord) */
 #call #tiles.avmode { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 16px; padding: 40px 16px 24px; min-height: 96px; }
@@ -1899,7 +1906,6 @@ body.no-anim .pres::before { animation: none !important; }
 #call #tiles.avmode .tile .av.big { transition: box-shadow 0.15s ease; }
 #call #tiles.avmode .tile.speaking .av.big { box-shadow: 0 0 0 3px #000, 0 0 0 5px #23a55a; }
 #call #tiles.avmode .tile .label, #call #tiles.avmode .tile .full { display: none; }
-#call #tiles.avmode .tile .vol { top: calc(100% + 6px); left: 50%; right: auto; translate: -50% 0; white-space: nowrap; z-index: 3; }
 #call #tiles.avmode .tile .mbadge { display: grid; place-items: center; position: absolute; right: -4px; bottom: -4px; width: 26px; height: 26px; border-radius: 50%; background: #da373c; color: #fff; box-shadow: 0 0 0 4px #000; }
 #call #tiles.avmode .tile .mbadge .ic { width: 16px; height: 16px; }
 /* barra de botoes: grupos com borda, botao vermelho de desligar */
@@ -3676,7 +3682,9 @@ window.setIcon = (btn, name, label, extra) => {
   // menu flutuante (botao direito e "mais")
   function showMenu(items, x, y) {
     const menu = $("ctxMenu");
-    menu.replaceChildren(...items.filter(Boolean).map(([label, ic, fn, danger]) => {
+    menu.replaceChildren(...items.filter(Boolean).map((it) => {
+      if (it instanceof Node) return it; // conteudo pronto (ex.: barra de volume do usuario)
+      const [label, ic, fn, danger] = it;
       if (label === "-") return span("msep", "");
       const b = document.createElement("button"); b.type = "button"; b.className = "mitem" + (danger ? " danger" : "");
       b.append(span("ml", label), icon(ic));
