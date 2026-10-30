@@ -17,6 +17,8 @@
   let inCall = false;
   const peers = new Map(); // socket.id -> { pc, polite, makingOffer, ignoreOffer, streams, audio, senders }
   const focused = new Set();
+  const seenScreens = new Set(); // telas compartilhadas que ja apareceram (so a nova ganha destaque sozinha)
+  let userPicked = false;        // a pessoa escolheu o destaque na mao
 
   // Estado local
   let ctx = null;               // AudioContext
@@ -159,11 +161,13 @@
   }
 
   // ---------- conexoes com os outros ----------
+  // video da tela antes do som: quem recebe ja sabe que aquele som e da tela (e nao a voz)
+  const screenTracks = () => (screenStream ? [...screenStream.getVideoTracks(), ...screenStream.getAudioTracks()] : []);
   function localTracks() {
     const out = [];
     if (micTrack()) out.push([micTrack(), micStream()]);
     if (camStream) out.push([camStream.getVideoTracks()[0], camStream]);
-    if (screenStream) out.push([screenStream.getVideoTracks()[0], screenStream]);
+    if (screenStream) for (const t of screenTracks()) out.push([t, screenStream]); // video e som da tela
     return out;
   }
 
@@ -199,7 +203,11 @@
     pc.ontrack = ({ track, streams }) => {
       const stream = streams[0] || new MediaStream([track]);
       p.streams[stream.id] = stream;
-      if (track.kind === "audio") attachAudio(id, p, stream);
+      if (track.kind === "audio") {
+        const m = allMembers.find((x) => x.id === id);
+        if (stream.getVideoTracks().length || (m && m.screen === stream.id)) attachScreenAudio(id, p, stream);
+        else attachAudio(id, p, stream);
+      }
       stream.onremovetrack = () => renderTiles();
       track.onunmute = () => renderTiles();
       renderTiles();
@@ -227,11 +235,21 @@
     }
   }
 
+  // som da tela compartilhada: toca separado da voz (o volume da pessoa vale para os dois)
+  function attachScreenAudio(id, p, stream) {
+    if (!p.screenAudio) { p.screenAudio = new Audio(); p.screenAudio.autoplay = true; document.body.append(p.screenAudio); }
+    p.screenAudio.srcObject = stream;
+    if (canPickOutput && prefs.outId) p.screenAudio.setSinkId(prefs.outId).catch(() => {});
+    applyVolume(id);
+    p.screenAudio.play().catch(() => {});
+  }
   function applyVolume(id) {
     const p = peers.get(id), m = members.find((x) => x.id === id);
-    if (!p || !p.audio || !m) return;
+    if (!p || !m) return;
     const v = (volumeOf(m.nick) / 100) * (prefs.master / 100);
     const silent = deaf || localMuted(m.nick);
+    if (p.screenAudio) { p.screenAudio.volume = Math.min(1, v); p.screenAudio.muted = silent; }
+    if (!p.audio) return;
     if ((v > 1 || !volumeWorks) && boost(p)) {
       p.audio.muted = true; // o <audio> continua tocando (sem ele o Chrome nao entrega o som), mas mudo
       p.boost.gain.gain.value = v;
@@ -273,6 +291,7 @@
     p.pc.close();
     dropBoost(p);
     if (p.audio) { p.audio.srcObject = null; p.audio.remove(); }
+    if (p.screenAudio) { p.screenAudio.srcObject = null; p.screenAudio.remove(); }
     peers.delete(id);
   }
 
@@ -394,17 +413,24 @@
   async function toggleScreen() {
     if (screenStream) return stopScreen();
     if (stageBlocked()) return;
-    try { screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false }); }
-    catch { return; } // a pessoa cancelou
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 30, max: 30 }, width: { max: 1920 }, height: { max: 1080 } },
+        // com som (como no Discord); o som da propria call nao vai junto (senao os outros ouvem eco)
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, restrictOwnAudio: true },
+        systemAudio: "include", selfBrowserSurface: "exclude", surfaceSwitching: "include",
+      });
+    } catch { screenStream = null; return; } // a pessoa cancelou
     if (!inCall) { screenStream.getTracks().forEach((t) => t.stop()); screenStream = null; return; }
     const track = screenStream.getVideoTracks()[0];
+    if ("contentHint" in track) track.contentHint = "detail"; // texto da tela nitido
     track.onended = stopScreen; // "Parar compartilhamento" do proprio navegador
-    addTrackToAll(track, screenStream);
+    for (const t of screenTracks()) addTrackToAll(t, screenStream);
     sendState(); refreshButtons(); renderTiles();
   }
   function stopScreen() {
     if (!screenStream) return;
-    removeTrackFromAll(screenStream.getVideoTracks()[0]);
+    for (const t of screenStream.getTracks()) removeTrackFromAll(t);
     screenStream.getTracks().forEach((t) => t.stop());
     screenStream = null;
     sendState(); refreshButtons(); renderTiles();
@@ -595,8 +621,11 @@
       el.className = "tile";
       el.addEventListener("click", (e) => {
         if (e.target.closest(".full") || isFull(el)) return;
-        focused.has(key) ? focused.delete(key) : focused.add(key);
-        el.classList.toggle("focus", focused.has(key));
+        // um quadro em destaque por vez (como no Discord); clicar nele de novo volta para a grade
+        const was = focused.has(key);
+        focused.clear(); userPicked = true;
+        if (!was) focused.add(key);
+        for (const [k, t] of tiles) t.classList.toggle("focus", focused.has(k));
       });
       el.addEventListener("dblclick", (e) => { if (!e.target.closest(".full")) toggleFull(el); });
       onMenu(el, (x, y) => { const m = members.find((z) => z.id === el.dataset.member); if (m) userMenu(m, x, y); });
@@ -753,6 +782,16 @@
       for (const u of app.members || []) if (!here.has(u.id)) want.push(ghostTile(u));
     }
     for (const [key, el] of tiles) if (!want.includes(el)) { el.remove(); tiles.delete(key); focused.delete(key); }
+    // alguem comecou a compartilhar a tela: ela vira o quadro grande (se voce nao escolheu outro)
+    for (const el of want) {
+      const key = [...tiles].find(([, t]) => t === el)[0];
+      if (!el.classList.contains("screen") || seenScreens.has(key)) continue;
+      seenScreens.add(key);
+      if (!key.startsWith(socket.id + ":") && (!focused.size || !userPicked)) { focused.clear(); focused.add(key); }
+    }
+    for (const k of [...seenScreens]) if (!tiles.has(k)) seenScreens.delete(k);
+    if (!focused.size) userPicked = false;
+    for (const [k, t] of tiles) t.classList.toggle("focus", focused.has(k));
     // so mexe na ordem quando ela muda de verdade: tirar um quadro da pagina fecha a tela cheia dele
     const box = $("tiles"), cur = [...box.children];
     if (cur.length !== want.length || cur.some((el, i) => el !== want[i])) box.replaceChildren(...want);
@@ -812,7 +851,15 @@
       const t = document.createElement("span"); t.className = "tags";
       if (m.deaf) t.append(icon("headphones-off")); else if (!m.mic) t.append(icon("mic-off"));
       if (m.cam) t.append(icon("video"));
-      if (m.screen) { const live = document.createElement("b"); live.className = "live"; live.textContent = "AO VIVO"; t.append(live); }
+      if (m.screen) {
+        const live = document.createElement("b"); live.className = "live"; live.textContent = "AO VIVO";
+        // na call: clicar no AO VIVO mostra a tela da pessoa grande
+        if (inCall && m.ch === myCh) {
+          live.classList.add("click"); live.title = "Assistir à tela de " + m.nick;
+          live.addEventListener("click", (e) => { e.stopPropagation(); focused.clear(); focused.add(m.id + ":screen"); userPicked = true; $("call").classList.remove("min"); renderTiles(); refreshButtons(); });
+        }
+        t.append(live);
+      }
       if (stage && m.hand) { t.append(icon("hand")); tags.push("levantou a mão"); }
       t.title = tags.join(" · ");
       if (m.id !== socket.id && localMuted(m.nick)) { const lm = icon("volume-off"); lm.classList.add("lmute"); t.prepend(lm); tags.unshift("silenciado por você"); t.title = tags.join(" · "); }

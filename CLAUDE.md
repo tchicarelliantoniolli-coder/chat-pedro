@@ -82,6 +82,11 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   Volume de cada pessoa como no Discord: botão direito (ou segurar o dedo) na pessoa na lista do canal de voz ou no
   quadro da call abre `userMenu` ("Volume do usuário" 0–200%, "Silenciar" só para você, "Redefinir volume"); fica em
   `cp-vol-<nick>` e `cp-lmute-<nick>`. Acima de 100% (e no iPhone) o som passa por um GainNode (`boost`). Teste `12-volume-na-call`.
+  Compartilhar tela como no Discord: vai com som (`getDisplayMedia` com áudio, sem o som da própria call); quem recebe
+  toca o som da tela num `<audio>` separado da voz (`p.screenAudio`; o som é da tela quando o stream tem vídeo ou é o
+  `m.screen` da pessoa, por isso o vídeo da tela é enviado antes do som). Tela nova de outra pessoa vira o quadro em
+  destaque sozinha (`.tile.focus`, um por vez; clicar escolhe/volta para a grade; "AO VIVO" na lista também foca); com
+  destaque a call cresce e os outros viram miniaturas de 64px embaixo. Teste `16-compartilhar-tela` (3 pessoas).
 - `public/ring.js`: ligar na DM e na DM em grupo como no Discord. Quem começa a chamada faz tocar para os outros
   (servidor: `startDmCall`/`ringUser`/`stopRing`, eventos `call:ring`, `call:ringstop`, `call:ringing`, `call:decline`;
   toca por até 1 minuto, em qualquer aba do site). Janelinha "Chamada recebida..." (`.ringpop`, no meio da tela,
