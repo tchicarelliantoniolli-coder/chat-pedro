@@ -72,6 +72,28 @@ const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
   await M.tap('#blLite'); await M.waitForTimeout(2500);
   ok(await M.evaluate(() => window.ChatPedro.blefe.ready), 'modo leve remonta o 3D');
   await M.screenshot({ path: SP + '/bl-celular-leve.png' });
+  // tela cheia: o jogo ocupa a tela toda e o mesmo botao sai
+  const full = (p, id) => p.evaluate((id) => { const el = document.getElementById(id); return document.fullscreenElement === el || el.classList.contains('gamefull'); }, id);
+  await P.click('#blFull'); await P.waitForTimeout(800);
+  ok(await full(P, 'blefe'), 'Mesa do Blefe em tela cheia');
+  const box = await P.evaluate(() => { const r = document.getElementById('blefe').getBoundingClientRect(); return [r.width, r.height]; });
+  ok(box[0] >= 1300 && box[1] >= 700, 'ocupa a tela toda: ' + box);
+  await P.screenshot({ path: SP + '/bl-tela-cheia.png' });
+  await P.click('#blFull'); await P.waitForTimeout(500);
+  ok(!(await full(P, 'blefe')), 'sai da tela cheia pelo mesmo botao');
+  await P.click('#trOpen'); await P.waitForTimeout(300); await P.click('#trFull'); await P.waitForTimeout(800);
+  ok(await full(P, 'truco'), 'truco em tela cheia');
+  await P.screenshot({ path: SP + '/truco-tela-cheia.png' });
+  await P.click('#trFull'); await P.waitForTimeout(400);
+  await P.click('#actOpen'); await P.waitForTimeout(300); await P.click('#actFull'); await P.waitForTimeout(800);
+  ok(await full(P, 'activity'), 'poker em tela cheia');
+  await P.screenshot({ path: SP + '/poker-tela-cheia.png' });
+  await P.evaluate(() => document.getElementById('blOpen').click()); await P.waitForTimeout(1000);
+  ok(!(await full(P, 'activity')), 'abrir outro jogo sai da tela cheia');
+  await M.tap('#blFull'); await M.waitForTimeout(800);
+  ok(await full(M, 'blefe'), 'tela cheia no celular');
+  await M.screenshot({ path: SP + '/bl-tela-cheia-celular.png' });
+  await M.tap('#blFull'); await M.waitForTimeout(300);
   // fechar e abrir o truco nao deixa dois jogos abertos
   await P.click('#trOpen'); await P.waitForTimeout(300);
   ok(await P.isHidden('#blefe'), 'abrir o truco fecha a Mesa do Blefe');

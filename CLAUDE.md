@@ -59,6 +59,8 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   (`chatpedro-blefe-look`), reações, boca mexe com a voz da call (`app.speakingNicks`, vem do `call.js`).
   three.js fica no `node_modules` e é servido em `/vendor/three` só quando abre a mesa; "modo leve" sem sombras.
   Testes `11-mesa-do-blefe` e `fuzz-blefe.js`.
+- Tela cheia nos jogos: botão `.gfull` (`#actFull`, `#trFull`, `#blFull`) no topo de cada jogo; usa a tela cheia do
+  navegador na seção do jogo e, onde não dá (iPhone), a classe `.gamefull` (ocupa a janela). Sai com Esc ou ao fechar o jogo.
 - `public/index.html`: todo o CSS e o JS principal do chat (mensagens, canais, tópicos, fórum, markdown,
   emojis, membros, cartão de perfil, moderação, painel do usuário, tela de carregamento "Você sabia").
   As páginas das Configurações de usuário também estão no HTML (`#userSettings`, uma `.us-page` por seção).

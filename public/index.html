@@ -369,7 +369,7 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 /* Atividade: mesa de poker no estilo PokerStars, com o verde do terminal */
 #activity { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); background: var(--stage); max-height: 78%; min-height: 0; overflow-y: auto; }
 .act-head { display: flex; align-items: center; gap: 12px; padding: 8px 16px 0; }
-.act-head .info { color: var(--dim); }
+.act-head .info { color: var(--dim); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .act-head h2 { font-family: var(--pixel); font-size: 11px; font-weight: 400; color: var(--bright); margin: 0; flex: 1; }
 .table-wrap { container-type: inline-size; padding: 10px 16px 4px; }
 .felt {
@@ -438,6 +438,17 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
 .tablebar .cmd.on { color: var(--bright); }
 .dealerlog { margin: 0 16px 10px; padding: 4px 8px; border: 1px solid var(--dim); max-height: 6.2em; overflow-y: auto; color: var(--dim); font-size: 14px; }
 #actList { list-style: none; margin: 0; padding: 0 14px 6px; }
+/* Jogo em tela cheia: o jogo ocupa a tela toda (no iPhone, que nao deixa, ocupa a janela inteira) */
+#activity:fullscreen, #truco:fullscreen, #blefe:fullscreen, .gamefull {
+  max-height: none !important; height: 100% !important; width: 100%; overflow: hidden !important; border: 0 !important; background: var(--stage);
+}
+.gamefull { position: fixed !important; inset: 0; z-index: 9000; }
+:is(#activity, #truco, #blefe):is(:fullscreen, .gamefull) > * { flex: none; }
+:is(#activity, #truco):is(:fullscreen, .gamefull) > .table-wrap, #blefe:is(:fullscreen, .gamefull) > .bl-stage { flex: 1 1 0; min-height: 0; }
+:is(#activity, #truco):is(:fullscreen, .gamefull) .table-wrap { container-type: size; display: flex; align-items: center; justify-content: center; padding: 6px 16px; }
+:is(#activity, #truco):is(:fullscreen, .gamefull) .felt { width: min(100cqw, calc(100cqh * 2.1)); max-height: none; container-type: inline-size; }
+:is(#activity, #truco):is(:fullscreen, .gamefull) .tr-felt { width: min(100cqw, 100cqh); }
+.gfull.on { color: var(--bright); }
 /* Mesa do Blefe: o 3D ocupa o meio; textos e botoes ficam por cima */
 #blefe { flex: 0 1 auto; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); background: var(--stage); max-height: 86%; min-height: 0; overflow-y: auto; }
 #blefe .act-head h2 { white-space: nowrap; }
@@ -2118,6 +2129,7 @@ body:not(.dm) .dmonly { display: none; }
       <div class="act-head">
         <h2>POKER</h2>
         <span class="info" id="actInfo"></span>
+        <button type="button" class="ib gfull" id="actFull" title="Tela cheia" aria-label="Tela cheia"><svg class="ic" aria-hidden="true"><use href="#i-maximize"/></svg></button>
         <button type="button" class="ib" id="actClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="table-wrap"><div class="felt" id="felt"></div></div>
@@ -2130,6 +2142,7 @@ body:not(.dm) .dmonly { display: none; }
         <h2>TRUCO PAULISTA</h2>
         <span class="info" id="trInfo"></span>
         <button type="button" class="ib" id="trSound" title="Desligar os sons" aria-label="Desligar os sons"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg></button>
+        <button type="button" class="ib gfull" id="trFull" title="Tela cheia" aria-label="Tela cheia"><svg class="ic" aria-hidden="true"><use href="#i-maximize"/></svg></button>
         <button type="button" class="ib" id="trClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="tr-score" id="trScore"></div>
@@ -2147,6 +2160,7 @@ body:not(.dm) .dmonly { display: none; }
         <span class="info" id="blInfo"></span>
         <button type="button" class="ib" id="blLite" aria-label="Modo leve"><svg class="ic" aria-hidden="true"><use href="#i-wave"/></svg></button>
         <button type="button" class="ib" id="blSound" title="Desligar os sons" aria-label="Desligar os sons"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg></button>
+        <button type="button" class="ib gfull" id="blFull" title="Tela cheia" aria-label="Tela cheia"><svg class="ic" aria-hidden="true"><use href="#i-maximize"/></svg></button>
         <button type="button" class="ib" id="blClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
       <div class="bl-stage" id="blStage">
@@ -4243,6 +4257,41 @@ window.setIcon = (btn, name, label, extra) => {
   gameWatch.observe($("activity"), { attributes: true, attributeFilter: ["hidden"] });
   gameWatch.observe($("truco"), { attributes: true, attributeFilter: ["hidden"] });
   gameWatch.observe($("blefe"), { attributes: true, attributeFilter: ["hidden"] });
+
+  // Tela cheia nos jogos (poker, truco e Mesa do Blefe). Onde o navegador nao deixa (iPhone),
+  // o jogo ocupa a janela inteira. Esc ou o mesmo botao sai.
+  const GAMES = [["activity", "actFull"], ["truco", "trFull"], ["blefe", "blFull"]];
+  const fullGame = () => document.fullscreenElement || document.webkitFullscreenElement || document.querySelector(".gamefull");
+  function fullIcons() {
+    const cur = fullGame();
+    for (const [sec, b] of GAMES) { const on = cur === $(sec); setIcon($(b), on ? "minimize" : "maximize", on ? "Sair da tela cheia" : "Tela cheia"); $(b).classList.toggle("on", on); }
+    window.dispatchEvent(new Event("resize")); // os jogos se redesenham no tamanho novo
+  }
+  async function exitFull() {
+    const fake = document.querySelector(".gamefull");
+    if (fake) fake.classList.remove("gamefull");
+    else if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+    else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
+    fullIcons();
+  }
+  for (const [sec, b] of GAMES) {
+    $(b).addEventListener("click", async () => {
+      const el = $(sec);
+      if (fullGame() === el) return exitFull();
+      await exitFull();
+      try {
+        if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: "hide" });
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else throw new Error("sem tela cheia");
+      } catch { el.classList.add("gamefull"); }
+      fullIcons();
+    });
+    // fechou o jogo (ou abriu outro): sai da tela cheia
+    new MutationObserver(() => { if ($(sec).hidden && fullGame() === $(sec)) exitFull(); }).observe($(sec), { attributes: true, attributeFilter: ["hidden"] });
+  }
+  document.addEventListener("fullscreenchange", fullIcons);
+  document.addEventListener("webkitfullscreenchange", fullIcons);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.querySelector(".gamefull")) exitFull(); });
 
   // Lista de membros como no Discord: grupos por cargo (Dono, ADM, Online) e Offline,
   // com o status personalizado ou a atividade embaixo do nome
