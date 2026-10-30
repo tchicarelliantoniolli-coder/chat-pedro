@@ -31,8 +31,8 @@ const FILE_RE = /^data:[\w.+-]+\/[\w.+-]+(;[\w=.+-]+)*;base64,[A-Za-z0-9+/=]+$/;
 const EMOJI_RE = /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f|\u20e3)+$/u;
 const MAX_CHANNELS = 30;
 const SLOW_STEPS = [0, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
-const MAX_SERVER_ICON = 120 * 1024; // foto do servidor ja vem pequena (96x96) do navegador
-const MAX_AVATAR = 60 * 1024; // foto de perfil ja vem pequena (48x48) do navegador
+const MAX_SERVER_ICON = 160 * 1024; // foto do servidor ja vem reduzida (256x256) do navegador
+const MAX_AVATAR = 160 * 1024; // foto de perfil ja vem reduzida (256x256, WebP) do navegador
 const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "\u2764\uFE0F", "\u{1F62E}"];
 const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
 const STATUSES = ["online", "ausente", "ocupado", "invisivel"];

@@ -51,6 +51,8 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   separado (canais, histórico, call, poker, truco, cargos, emojis...). DM e DM em grupo são servidores com
   `dm = true`. O evento `profile` leva o status e `hideAct` (esconder "jogando poker", "na call").
 - `db.js` (acesso ao Supabase), `storage.js` (salva o chat e os dados do servidor no `chat_kv`).
+- Foto de perfil e foto do servidor: 256x256 em WebP (`squareImage` no `index.html`, reduz pela metade aos poucos para
+  ficar nítida; ~15–40 KB). Fotos antigas de 48x48 só melhoram quando a pessoa manda de novo. Teste em `08-configuracoes`.
 - Espaço do banco (500 MB grátis): fotos saem do navegador em WebP (JPEG se não der), no máximo 1 MB; áudio em mono a
   24 kbps; cada foto/áudio/arquivo fica numa linha `srv:<id>:media:<n>` (nunca dentro do histórico). Faxina no
   `server.js` (`trimStorage`, 1 min depois de ligar e a cada 30 min): chama a função do banco `chat_kv_trim_media`

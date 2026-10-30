@@ -364,17 +364,8 @@
       const b = $("srvRename").querySelector("button"); b.textContent = "Salvo!"; setTimeout(() => { b.textContent = "Salvar nome"; }, 1500); }
     catch (err) { $("srvMsg").textContent = err.message; }
   });
-  // foto do servidor: recorta o meio em quadrado e reduz para 96x96
-  async function serverIconData(file) {
-    const src = await new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = fail; r.readAsDataURL(file); });
-    const img = await new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
-    const side = Math.min(img.width, img.height), c = document.createElement("canvas");
-    c.width = c.height = 96;
-    const g = c.getContext("2d");
-    g.fillStyle = "#ffffff"; g.fillRect(0, 0, 96, 96);
-    g.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 96, 96);
-    return c.toDataURL("image/jpeg", 0.85);
-  }
+  // foto do servidor: recorta o meio em quadrado e reduz para 256x256 (nitida)
+  const serverIconData = (file) => app.squareImage(file, 256, 150 * 1024);
   const saveIcon = async (icon) => {
     try { await api("/api/servers/" + current, { method: "PATCH", body: { icon } }); $("srvMsg").textContent = ""; }
     catch (err) { $("srvMsg").textContent = err.message; }

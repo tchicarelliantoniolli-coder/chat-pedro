@@ -91,14 +91,14 @@ main { flex: 1; overflow-y: auto; min-height: 0; }
 .who { color: var(--bright); }
 .sys { color: var(--dim); }
 
-/* Avatares em pixel art: a foto e guardada em 48x48 e ampliada sem suavizar */
+/* Avatares: a foto e guardada em 256x256 (nitida ate nos cartoes grandes e em telas de alta resolucao) */
 .av {
   display: inline-flex; align-items: center; justify-content: center; flex: none;
   width: 22px; height: 22px; vertical-align: -4px; margin-right: 6px;
   border: 1px solid var(--dim); box-sizing: border-box; overflow: hidden;
   font-family: var(--pixel); font-size: 9px; color: var(--bg);
 }
-.av img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.av img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .av.big { width: 36px; height: 36px; font-size: 13px; vertical-align: middle; margin-right: 0; }
 
 footer { padding-block: 10px; padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
@@ -4895,7 +4895,7 @@ window.setIcon = (btn, name, label, extra) => {
   // Fotos: reduz para no maximo 1280px e converte para WebP (bem mais leve que JPEG, quase a mesma
   // qualidade) antes de enviar; o navegador que nao sabe fazer WebP (Safari antigo) manda JPEG.
   // Cada foto fica com no maximo 1 MB. GIFs pequenos vao como estao para manter a animacao.
-  const MAX_SIDE = 1280, MAX_BYTES = 1024 * 1024, AVATAR_SIDE = 48;
+  const MAX_SIDE = 1280, MAX_BYTES = 1024 * 1024, AVATAR_SIDE = 256, AVATAR_BYTES = 150 * 1024;
   const readAsDataURL = (file) => new Promise((ok, fail) => {
     const r = new FileReader();
     r.onload = () => ok(r.result); r.onerror = fail; r.readAsDataURL(file);
@@ -4926,17 +4926,38 @@ window.setIcon = (btn, name, label, extra) => {
     throw new Error("grande demais");
   }
 
-  // Foto de perfil: recorta o centro em quadrado e reduz para 48x48 (vira pixel art na tela)
-  async function prepareAvatar(file) {
+  // Recorta o centro em quadrado e reduz para size x size com boa qualidade: diminui pela metade aos poucos
+  // (reduzir de uma vez uma foto grande de celular deixa ela serrilhada) e manda em WebP (JPEG se nao der).
+  // Usado na foto de perfil e na foto do servidor (boot.js).
+  async function squareImage(file, size, maxBytes) {
     const img = await loadImage(await readAsDataURL(file));
-    const side = Math.min(img.width, img.height);
+    let side = Math.min(img.width, img.height);
+    let src = img, sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+    while (side / 2 >= size) {
+      const half = document.createElement("canvas");
+      half.width = half.height = Math.round(side / 2);
+      const h = half.getContext("2d"); h.imageSmoothingQuality = "high";
+      h.drawImage(src, sx, sy, side, side, 0, 0, half.width, half.height);
+      src = half; sx = sy = 0; side = half.width;
+    }
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = AVATAR_SIDE;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, AVATAR_SIDE, AVATAR_SIDE);
-    ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, AVATAR_SIDE, AVATAR_SIDE);
-    return canvas.toDataURL("image/jpeg", 0.9);
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext("2d"); ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(src, sx, sy, side, side, 0, 0, size, size);
+    const webp = canvas.toDataURL("image/webp", 0.9).startsWith("data:image/webp");
+    if (!webp) { // JPEG nao tem transparencia: fundo branco
+      const flat = document.createElement("canvas"); flat.width = flat.height = size;
+      const f = flat.getContext("2d"); f.fillStyle = "#ffffff"; f.fillRect(0, 0, size, size); f.drawImage(canvas, 0, 0);
+      return flat.toDataURL("image/jpeg", 0.88);
+    }
+    for (const q of [0.9, 0.82, 0.74, 0.65, 0.5]) {
+      const out = canvas.toDataURL("image/webp", q);
+      if (out.length < maxBytes) return out;
+    }
+    throw new Error("grande demais");
   }
+  // Foto de perfil: 256x256, como no Discord
+  const prepareAvatar = (file) => squareImage(file, AVATAR_SIDE, AVATAR_BYTES);
 
   function canSend(file) {
     if (!file || !file.type.startsWith("image/")) { setNote("ERRO: isso não é uma imagem.", true); return false; }
@@ -5155,7 +5176,7 @@ window.setIcon = (btn, name, label, extra) => {
   $("dmFriends").addEventListener("click", () => $("railHome").click());
 
   window.ChatPedro = {
-    socket, avatar, setNote, store, renderPeople, openMod, showMenu, icon, dispName, copyText, renderProfile, setStatus, STATUS, rerenderAll, sendProfile,
+    socket, avatar, setNote, store, squareImage, renderPeople, openMod, showMenu, icon, dispName, copyText, renderProfile, setStatus, STATUS, rerenderAll, sendProfile,
     get myStatus() { return myStatus; },
     get profiles() { return profiles; },
     get blocked() { return blocked(); },

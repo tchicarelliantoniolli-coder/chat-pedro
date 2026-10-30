@@ -33,6 +33,12 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { console.log('
     ok(await P.locator('#upPop').isHidden(), 'ESC fecha o menu');
   });
 
+  await step('foto de perfil', async () => {
+    await P.setInputFiles('#avatarFile', require('path').join(__dirname, 'fixtures', 'foto.jpg')); await P.waitForTimeout(1500);
+    const sz = await P.evaluate(async () => { const i = document.querySelector('#meAv img, .av img'); if (!i) return 0; await i.decode().catch(() => {}); return i.naturalWidth; });
+    ok(sz === 256, 'foto de perfil guardada em 256x256 (nítida, como no Discord): ' + sz);
+  });
+
   await step('cartao da conta', async () => {
     await P.click('#profileBtn'); await P.waitForTimeout(300);
     ok(await P.locator('#upPop .pname', { hasText: 'Pedro' }).count() === 1, 'clicar no nome abre o cartão da conta');
