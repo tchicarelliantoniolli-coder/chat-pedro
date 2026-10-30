@@ -17,6 +17,9 @@ async function getMany(keys) {
   return out;
 }
 
+// tudo do servidor que nao e mensagem (cada um fica numa chave srv:<id>:<nome>)
+const META_NAMES = ["channels", "automod", "audit", "events", "roles", "memberRoles", "nicks", "emojis", "stickers", "webhooks", "welcome", "banner", "vanity"];
+
 function createStorage(serverId) {
   if (!ready()) return null;
   const p = "srv:" + serverId + ":";
@@ -51,7 +54,7 @@ function createStorage(serverId) {
 
     // dados do servidor que nao sao mensagens: canais, AutoMod, registro de moderacao e eventos
     async loadMeta() {
-      const names = ["channels", "automod", "audit", "events"];
+      const names = META_NAMES;
       const got = await getMany(names.map((n) => p + n));
       const out = {};
       for (const n of names) { try { out[n] = got[p + n] ? JSON.parse(got[p + n]) : null; } catch { out[n] = null; } }

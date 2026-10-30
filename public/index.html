@@ -1367,11 +1367,288 @@ footer { position: relative; }
 .pbtns .cmd { flex: 1; }
 .pres.invisivel::after { background: var(--panel); box-shadow: inset 0 0 0 3px #80848e; }
 .sys.loading { display: block; padding: 16px; text-align: center; animation: shimmer 1s ease-in-out infinite alternate; }
+/* ---------- recursos do Discord (parte 2): cargos, topicos, forum, figurinhas, amigos, descobrir ---------- */
+.cemoji { width: 22px; height: 22px; object-fit: contain; vertical-align: -6px; margin: 0 1px; }
+.rx .cemoji { width: 16px; height: 16px; vertical-align: -3px; }
+.picker .cemoji, .ep-grid .cemoji { width: 30px; height: 30px; vertical-align: middle; }
+.ep-foot .cemoji { width: 20px; height: 20px; vertical-align: -5px; }
+.bottag { flex: none; align-self: center; font-size: 10px; font-weight: 600; line-height: 15px; padding: 0 4px; border-radius: 4px; background: var(--accent); color: #fff; }
+.line.joinl .body { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.line.joinl .who { color: var(--bright); font-weight: 500; }
+.wave { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 8px; background: var(--surface); color: var(--fg); font-size: 14px; font-weight: 500; flex-basis: auto; }
+.wave:hover { background: var(--int-hover); color: var(--bright); }
+.wave:disabled { opacity: 0.5; cursor: default; }
+.stk { display: block; width: 160px; height: 160px; margin: 4px 0; }
+.stk img { width: 100%; height: 100%; object-fit: contain; }
+.stk.wait { background: color-mix(in srgb, var(--fg) 6%, transparent); border-radius: 8px; animation: shimmer 1.2s ease-in-out infinite alternate; }
+.embed { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; max-width: 432px; margin: 6px 0 2px; padding: 8px 16px 16px 12px; border-radius: 4px; background: var(--surface); border-left: 4px solid #1e1f22; box-sizing: border-box; }
+.embed .emt { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding-top: 8px; }
+.embed .ems { font-size: 12px; color: var(--dim); }
+.embed .emh { color: var(--link); font-weight: 600; font-size: 16px; text-decoration: none; overflow-wrap: anywhere; }
+.embed .emh:hover { text-decoration: underline; }
+.embed .emd { font-size: 14px; color: var(--fg); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.embed img { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; margin-top: 8px; cursor: pointer; }
+.embed.big { grid-template-columns: minmax(0, 1fr); }
+.embed.big img { width: 100%; height: auto; max-height: 300px; margin-top: 8px; }
+.trans { display: block; margin-top: 4px; padding-left: 8px; border-left: 4px solid var(--spine); color: var(--fg); font-size: 15px; white-space: pre-wrap; }
+.trans .trl { display: block; font-size: 12px; color: var(--dim); font-weight: 600; }
+.thcard { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; max-width: 480px; margin: 6px 0 2px; padding: 8px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.thcard:hover { border-color: var(--dim); }
+.thcard .thn { color: var(--bright); font-weight: 600; font-size: 14px; }
+.thcard .thc { color: var(--link); font-size: 14px; font-weight: 600; }
+.thcard .thl { flex-basis: 100%; color: var(--dim); font-size: 13px; }
+.crumb { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: var(--dim); font-weight: 600; font-size: 16px; margin-right: 2px; }
+.crumb .ic { width: 18px; height: 18px; }
+.crumb:hover { color: var(--bright); }
+.chan.thread { padding-left: 34px; font-size: 15px; height: 32px; }
+.chan.thread .spine { position: absolute; left: 14px; top: -6px; width: 12px; height: 22px; border-left: 2px solid var(--spine); border-bottom: 2px solid var(--spine); border-bottom-left-radius: 8px; }
+.chan.thread.unread::before { display: none; }
+#forumView { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+body.forum #scroller, body.forum footer { display: none !important; }
+.fhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px; border-radius: 8px; background: var(--box); border: 1px solid var(--line); }
+.fhead input { flex: 1; min-width: 180px; font: inherit; font-size: 15px; color: var(--fg); background: transparent; border: 0; outline: 0; padding: 6px 8px; }
+.fhead select { font: inherit; font-size: 14px; color: var(--fg); background: var(--surface); border: 0; border-radius: 6px; padding: 6px 8px; }
+#forumList { display: flex; flex-direction: column; gap: 8px; }
+.fpost { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 8px; background: var(--box); border: 1px solid var(--line); transition: background-color 0.12s, border-color 0.12s; }
+.fpost:hover { background: var(--surface); border-color: var(--dim); }
+.fpost .fpt { color: var(--bright); font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.fpost.unread .fpt::after { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bright); margin-left: 8px; vertical-align: middle; }
+.fpost .fpby { color: var(--dim); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fpost .fpby .who { font-weight: 500; }
+.fpost .fpfoot { display: flex; align-items: center; gap: 6px; color: var(--dim); font-size: 13px; }
+.fpost .fpfoot .ic { width: 16px; height: 16px; }
+.fempty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 48px 16px; }
+.fempty .big { width: 64px; height: 64px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; }
+.fempty .big .ic { width: 32px; height: 32px; }
+.fempty .t { color: var(--bright); font-size: 20px; font-weight: 700; }
+.noperm { display: none; margin: 8px 0 0; padding: 14px 16px; border-radius: 8px; background: var(--box); color: var(--dim); font-size: 15px; }
+body.noposts .noperm { display: block; }
+body.noposts #form, body.noposts #replying { display: none !important; }
+.replying { display: flex; align-items: center; gap: 8px; }
+.replying #replyText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pingtog { all: unset; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--dim); padding: 2px 4px; border-radius: 4px; }
+.pingtog.on { color: var(--link); }
+.pingtog:hover { background: var(--hover); }
+#stickerPicker { position: fixed; z-index: 55; width: min(400px, calc(100vw - 16px)); max-height: min(420px, calc(100vh - 100px)); background: var(--surface); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); display: flex; flex-direction: column; overflow: hidden; animation: popIn 0.14s var(--ease); }
+#stickerPicker .ep-top b { color: var(--bright); font-size: 14px; }
+.stkgrid { flex: 1; overflow-y: auto; padding: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.stkgrid button { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border-radius: 8px; font-size: 12px; color: var(--dim); text-align: center; }
+.stkgrid button:hover { background: var(--hover); color: var(--bright); }
+.stkgrid img { width: 88px; height: 88px; object-fit: contain; }
+.welbox { align-items: center; text-align: center; max-width: 440px; }
+.welbox #welDesc { color: var(--fg); margin: 0; white-space: pre-wrap; }
+.welbox ol { text-align: left; align-self: stretch; margin: 0; padding: 12px 12px 12px 36px; background: var(--bg); border-radius: 8px; display: flex; flex-direction: column; gap: 8px; color: var(--fg); }
+.welbox .cmd.big { align-self: stretch; }
+#srvBtn.hasbanner { height: 138px; align-items: flex-start; background-size: cover; background-position: center; }
+#srvBtn.hasbanner b, #srvBtn.hasbanner .ic { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); color: #fff; }
+/* cartao de perfil */
+.puser { display: block; margin: 0 16px; font-size: 14px; color: var(--fg); }
+.proles, .pconn { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 16px; }
+.rpill { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; background: var(--box); color: var(--fg); font-size: 12px; font-weight: 500; }
+.rpill.rm, .rpill.add { cursor: pointer; }
+.rpill.rm:hover { background: rgba(218, 62, 68, 0.2); }
+.rpill.add { color: var(--dim); }
+.rpill.add:hover { color: var(--bright); background: var(--int-hover); }
+.rpill .ic { width: 14px; height: 14px; }
+.rdot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.connrow { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; background: var(--box); border: 1px solid var(--line); color: var(--fg); text-decoration: none; font-size: 14px; }
+.pconn .connrow { flex: 1 1 100%; }
+a.connrow:hover { border-color: var(--dim); }
+.connrow .cn { color: var(--dim); font-size: 12px; font-weight: 600; min-width: 74px; }
+.connrow .cv { color: var(--bright); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.connlist { display: flex; flex-direction: column; gap: 4px; }
+/* decoracoes de avatar */
+.pres[class*="deco-"]::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; pointer-events: none; z-index: 1; }
+.pres.deco-fogo::before { box-shadow: 0 0 0 2px #ff7a18, 0 0 10px 2px rgba(255, 90, 0, 0.75); animation: decoPulse 1.4s ease-in-out infinite alternate; }
+.pres.deco-neon::before { box-shadow: 0 0 0 2px #00e5ff, 0 0 12px 2px rgba(0, 229, 255, 0.7); }
+.pres.deco-arco-iris::before { background: conic-gradient(#ff4d4d, #ffb84d, #f9ff4d, #4dff88, #4dc3ff, #a64dff, #ff4d4d); -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%); mask: radial-gradient(circle, transparent 62%, #000 64%); animation: decoSpin 4s linear infinite; }
+.pres.deco-ouro::before { box-shadow: 0 0 0 3px #f0b232, 0 0 0 4px #8a5a00; }
+.pres.deco-gelo::before { box-shadow: 0 0 0 2px #bfe9ff, 0 0 10px 3px rgba(150, 220, 255, 0.6); }
+.pres.deco-coracoes::before { box-shadow: 0 0 0 2px #eb459e; }
+.pres.deco-coracoes::after { content: "❤"; background: none !important; border: 0 !important; color: #eb459e; font-size: 12px; width: auto !important; height: auto !important; right: -6px !important; top: -8px; bottom: auto !important; }
+@keyframes decoPulse { to { box-shadow: 0 0 0 2px #ffb000, 0 0 14px 4px rgba(255, 140, 0, 0.8); } }
+@keyframes decoSpin { to { transform: rotate(360deg); } }
+.decos { display: flex; flex-wrap: wrap; gap: 8px; }
+.deco { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 72px; padding: 8px 4px; border-radius: 8px; font-size: 12px; color: var(--dim); border: 2px solid transparent; }
+.deco:hover { background: var(--hover); }
+.deco.on { border-color: var(--accent); color: var(--bright); }
+/* barra da esquerda: inicio, descobrir e nao lidos */
+.srv.homebtn { background: var(--bg); color: var(--fg); }
+.srv.homebtn .ic { width: 26px; height: 26px; }
+.srv.homebtn:hover, body.home .srv.homebtn { background: var(--accent); color: #fff; border-radius: 16px; }
+body.home .srv.homebtn::before { height: 36px; }
+body.home #railList .srv.on::before, body.disc #railList .srv.on::before { height: 0; }
+.srv.add.disc .ic { width: 22px; height: 22px; }
+body.disc .srv.add.disc { background: var(--ok); color: #fff; border-radius: 16px; }
+.srv.unread::before { height: 8px; }
+#rail > .railsep { margin: 0 auto; }
+/* inicio: amigos e conversas */
+body.home #side, body.home .chat, body.home #sidebar, body.disc #side, body.disc .chat, body.disc #sidebar { display: none !important; }
+#homeView { flex: 1; min-width: 0; display: flex; }
+.hside { width: 268px; flex: none; background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.hfind { all: unset; box-sizing: border-box; cursor: pointer; margin: 10px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--box); color: var(--dim); font-size: 14px; display: flex; align-items: center; }
+.hlist { flex: 1; overflow-y: auto; padding: 0 8px 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+.hlist .chan { margin-left: 0; width: 100%; }
+.chan.dmrow { gap: 12px; padding: 4px 8px; }
+.dmav { width: 32px !important; height: 32px !important; border-radius: 50% !important; font-size: 12px; flex: none; }
+.dmsub { color: var(--dim); font-size: 12px; }
+.hempty { color: var(--dim); font-size: 14px; padding: 8px; margin: 0; }
+.hmain { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); border-top: 1px solid var(--line); border-left: 1px solid var(--line); border-top-left-radius: 8px; }
+.hhead { gap: 12px; }
+.hhead > .ic { width: 22px; height: 22px; color: var(--dim); }
+.hdiv { width: 1px; height: 24px; background: var(--line); }
+.htabs { display: flex; gap: 12px; flex-wrap: wrap; }
+.htabs button { all: unset; cursor: pointer; padding: 2px 10px; border-radius: 6px; color: var(--dim); font-weight: 500; font-size: 15px; }
+.htabs button:hover { background: var(--int-hover); color: var(--bright); }
+.htabs button.on { background: var(--int-selected); color: var(--bright); }
+.htabs button.addf { background: #248046; color: #fff; }
+.htabs button.addf.on { background: transparent; color: #2dc770; }
+.hbody { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px 16px 30px; }
+.fsearch { width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; color: var(--fg); background: var(--box); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; outline: 0; margin-bottom: 16px; }
+.fcount { font-size: 12px; font-weight: 600; color: var(--dim); letter-spacing: 0.02em; margin: 8px 0; }
+.frow { display: flex; align-items: center; gap: 12px; padding: 10px; margin: 0 -10px; border-top: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.frow:hover { background: var(--int-hover); border-top-color: transparent; }
+.frow:hover + .frow { border-top-color: transparent; }
+.frow .ftxt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.frow .ftxt b { color: var(--bright); font-weight: 600; }
+.frow .ftxt small { color: var(--dim); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.facts { display: flex; gap: 10px; }
+.fbtn { all: unset; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; background: var(--panel); color: var(--dim); display: flex; align-items: center; justify-content: center; }
+.fbtn .ic { width: 20px; height: 20px; }
+.fbtn:hover { color: var(--bright); }
+.fbtn.ok:hover { color: #23a55a; }
+.fbtn.no:hover { color: var(--err); }
+.fadd h2 { font-size: 16px; color: var(--bright); margin: 4px 0 8px; }
+.fadd p { color: var(--dim); margin: 0 0 16px; font-size: 14px; }
+.faddrow { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); }
+.faddrow.ok { border-color: #23a55a; }
+.faddrow.bad { border-color: var(--err); }
+.faddrow input { flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--fg); background: transparent; border: 0; outline: 0; }
+.faddrow .cmd.big:disabled { opacity: 0.5; cursor: not-allowed; }
+.faddmsg { margin-top: 8px !important; font-size: 14px; }
+.faddrow.ok + .faddmsg { color: #2dc770; }
+.faddrow.bad + .faddmsg { color: var(--err); }
+.pickitem .av.big { width: 32px; height: 32px; font-size: 12px; }
+.pickitem.sel { background: var(--int-selected); box-shadow: inset 0 0 0 2px var(--accent); }
+/* descobrir */
+#discView { flex: 1; min-width: 0; overflow-y: auto; background: var(--bg); border-top: 1px solid var(--line); border-left: 1px solid var(--line); border-top-left-radius: 8px; padding: 0 0 32px; }
+.dhero { position: relative; margin: 16px; padding: 48px 24px; border-radius: 8px; text-align: center; background: linear-gradient(135deg, #404eed, #5865f2 50%, #7289da); color: #fff; }
+.dhero h2 { margin: 0 0 8px; font-size: 26px; font-weight: 800; }
+.dhero p { margin: 0 0 20px; opacity: 0.9; }
+.dhero input { width: min(560px, 100%); box-sizing: border-box; font: inherit; font-size: 16px; padding: 12px 16px; border-radius: 8px; border: 0; background: #fff; color: #060607; outline: 0; }
+.dhero .ib { position: absolute; top: 8px; right: 8px; color: #fff; }
+.dtitle { margin: 24px 16px 12px; color: var(--bright); font-size: 20px; }
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 16px; padding: 0 16px; }
+.dcard { position: relative; display: flex; flex-direction: column; border-radius: 8px; background: var(--panel); overflow: hidden; transition: transform 0.15s var(--ease), box-shadow 0.15s; }
+.dcard:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); }
+.dban { height: 112px; }
+.dcard .dic { position: absolute; top: 84px; left: 16px; width: 48px !important; height: 48px !important; border-radius: 14px !important; border: 4px solid var(--panel); box-sizing: content-box; }
+.dtxt { padding: 36px 16px 8px; }
+.dtxt b { color: var(--bright); font-size: 16px; }
+.dtxt p { color: var(--dim); font-size: 14px; margin: 6px 0 0; min-height: 40px; }
+.dfoot { display: flex; gap: 14px; padding: 0 16px 12px; font-size: 12px; color: var(--dim); }
+.dfoot span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: #80848e; }
+.dfoot .don::before { background: #23a55a; }
+.dcard .cmd.big { margin: 0 16px 16px; }
+/* configuracoes do servidor (tela cheia) */
+.gsettings { padding: 0 !important; background: var(--bg) !important; }
+.gs-wrap { display: flex; width: 100%; height: 100%; }
+.gs-nav { flex: 1 0 218px; display: flex; justify-content: flex-end; background: var(--panel); overflow-y: auto; }
+.gs-navin { width: 218px; padding: 60px 6px 60px 20px; display: flex; flex-direction: column; gap: 2px; }
+#gsTabs { display: flex; flex-direction: column; gap: 2px; }
+.gs-srv { font-size: 12px; font-weight: 700; color: var(--dim); text-transform: uppercase; padding: 6px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-h { font-size: 12px; font-weight: 700; color: var(--dim); padding: 16px 10px 6px; }
+.gs-tab { all: unset; cursor: pointer; padding: 6px 10px; border-radius: 6px; color: var(--channel); font-size: 16px; font-weight: 500; }
+.gs-tab:hover { background: var(--int-hover); color: var(--bright); }
+.gs-tab.on { background: var(--int-selected); color: var(--bright); }
+.gs-main { flex: 1 1 800px; position: relative; overflow-y: auto; }
+.gs-in { max-width: 740px; padding: 60px 40px 80px; display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
+.gs-in > * { align-self: stretch; }
+.gs-in > .cmd { align-self: flex-start; }
+.gs-x { all: unset; cursor: pointer; position: fixed; top: 60px; right: max(24px, calc(50vw - 560px)); display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--dim); font-size: 13px; font-weight: 600; }
+.gs-x .ic { width: 36px; height: 36px; padding: 6px; box-sizing: border-box; border: 2px solid currentColor; border-radius: 50%; }
+.gs-x:hover { color: var(--bright); }
+.gs-title { margin: 0; color: var(--bright); font-size: 20px; font-weight: 700; }
+.gs-sub, .gs-hint { margin: 0; color: var(--dim); font-size: 14px; }
+.gs-label { display: block; font-size: 12px; font-weight: 700; color: var(--dim); margin-bottom: 8px; letter-spacing: 0.02em; }
+.gs-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 8px; background: var(--box); border: 1px solid var(--line); }
+.gs-card .gs-label { margin-bottom: 0; }
+.gs-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gs-row input[type=text], .gs-field input, .gs-card textarea, .gs-row select { font: inherit; font-size: 15px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; outline: 0; }
+.gs-row input[type=text] { flex: 1; min-width: 160px; }
+.gs-card textarea { resize: vertical; width: 100%; box-sizing: border-box; }
+.gs-field { display: flex; flex-direction: column; gap: 8px; }
+.gs-save { justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 16px; }
+.gs-banner { height: 180px; border-radius: 8px; background: var(--panel) center / cover no-repeat; display: flex; align-items: center; justify-content: center; color: var(--dim); }
+.gs-list { display: flex; flex-direction: column; }
+.gs-rrow { display: flex; align-items: center; gap: 10px; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.gs-rrow:hover { background: var(--hover); }
+.gs-rname { flex: 1; min-width: 0; color: var(--bright); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.gs-rinfo { color: var(--dim); font-size: 14px; }
+.ib.flip .ic { transform: rotate(180deg); }
+.gs-swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gs-swatches .sw { all: unset; cursor: pointer; width: 28px; height: 28px; border-radius: 6px; }
+.gs-swatches .sw.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--bright); }
+.gs-swatches input[type=color] { width: 40px; height: 32px; border: 0; padding: 0; background: none; cursor: pointer; }
+.gs-toggle, .gs-perm { display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; color: var(--bright); }
+.gs-perm { padding: 12px 0; border-top: 1px solid var(--line); }
+.gs-ptxt { display: flex; flex-direction: column; gap: 2px; }
+.gs-ptxt small { color: var(--dim); font-size: 13px; }
+.gs-toggle input, .gs-perm input { appearance: none; -webkit-appearance: none; flex: none; width: 40px; height: 24px; border-radius: 12px; background: #80848e; position: relative; cursor: pointer; transition: background-color 0.15s; margin: 0; }
+.gs-toggle input::after, .gs-perm input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.15s var(--ease); }
+.gs-toggle input:checked, .gs-perm input:checked { background: #23a55a; }
+.gs-toggle input:checked::after, .gs-perm input:checked::after { transform: translateX(16px); }
+.gs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.gs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.gs-grid.big { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.gs-emoji { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; background: var(--box); border: 1px solid var(--line); min-width: 0; }
+.gs-emoji img { width: 32px; height: 32px; object-fit: contain; flex: none; }
+.gs-emoji.big { flex-direction: column; }
+.gs-emoji.big img { width: 120px; height: 120px; }
+.gs-emoji span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.gs-vanity { gap: 0; }
+.gs-pre { padding: 8px 10px; border-radius: 6px 0 0 6px; background: var(--panel); border: 1px solid var(--line); border-right: 0; color: var(--dim); font-size: 15px; }
+.gs-vanity input[type=text] { border-radius: 0 6px 6px 0 !important; }
+/* criar servidor: modelos */
+.tpls { display: flex; flex-wrap: wrap; gap: 6px; }
+.tpl { all: unset; cursor: pointer; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); color: var(--fg); font-size: 14px; font-weight: 500; }
+.tpl:hover { border-color: var(--dim); }
+.tpl.on { border-color: var(--accent); background: rgba(88, 101, 242, 0.15); color: var(--bright); }
+/* call: palco e sensibilidade */
+.vpeople li.vgrp { font-size: 11px; font-weight: 700; color: var(--dim); text-transform: uppercase; padding: 6px 8px 2px; background: none !important; cursor: default; }
+.vpeople li.aud { opacity: 0.75; }
+.vpeople li.click { cursor: pointer; }
+#handBtn.on { background: var(--gold); color: #000; }
+.meter { position: relative; }
+#sensMark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--gold); }
+.chan.voice.stage .ic { color: var(--ok); }
+/* 2 etapas */
+#mfaQr { display: block; background: #fff; border-radius: 8px; padding: 8px; margin: 8px 0; }
+#mfaSetup { display: flex; flex-direction: column; gap: 8px; }
+/* modo streamer */
+body.streamer #profEmail, body.streamer #invLink, body.streamer .gs-vanity input, body.streamer #mfaSecret { filter: blur(6px); }
+body.streamer #profEmail:hover, body.streamer #invLink:focus { filter: none; }
+@media (max-width: 760px) {
+  .hside { display: none; }
+  .hbody { padding: 12px; }
+  .gs-wrap { flex-direction: column; }
+  .gs-nav { flex: none; justify-content: flex-start; }
+  .gs-navin { width: 100%; padding: 12px; }
+  #gsTabs { flex-direction: row; flex-wrap: wrap; }
+  .gs-h { display: none; }
+  .gs-in { padding: 16px 16px 60px; }
+  .gs-x { top: 12px; right: 12px; }
+  .gs-x span { display: none; }
+  .chathead .htabs { gap: 4px; }
+  .hhead .hdiv { display: none; }
+  #forumView { padding: 12px; }
+  .embed { max-width: 100%; }
+}
 </style>
 </head>
 <body>
 <!-- icones do site (desenhados aqui, sem depender de outro site) -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 7h12l3.5 10.5-3.5 1.5-3-4h-6l-3 4L2.5 17.5z"/><path d="M8 10v4M6 12h4"/><path fill="currentColor" stroke="none" d="M15 10h2v2h-2zM17 12h2v2h-2z"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><path d="M10 3L8 21M16 3l-2 18M4 8.5h17M3 15.5h17"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4.5-4.5L4 21l-1-1 4.5-4.5L3 11l2-2 5 1 4-4z"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol><symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M12 7v10M7 12h10" stroke="var(--box)" stroke-width="2.4"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></g></symbol><symbol id="i-forward" viewBox="0 0 24 24"><path d="M15 15l5-5-5-5"/><path d="M20 10H9a5 5 0 0 0-5 5v5"/></symbol><symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5"/></symbol><symbol id="i-poll" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol><symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></symbol><symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-9.3-5M6 8c0 7-3 9-3 9h14M13.7 21a2 2 0 0 1-3.4 0M2 2l20 20"/></symbol><symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></symbol><symbol id="i-copy-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/></symbol><symbol id="i-forum" viewBox="0 0 24 24"><path d="M4 5h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM19 9h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-4-3h-4"/></symbol><symbol id="i-thread" viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8.5h8M8 11.5h5"/></symbol><symbol id="i-stage" viewBox="0 0 24 24"><circle cx="12" cy="11" r="2.5"/><path d="M7.5 15.5a6.5 6.5 0 1 1 9 0M4.8 18.2a10 10 0 1 1 14.4 0M10 21h4"/></symbol><symbol id="i-sticker" viewBox="0 0 24 24"><path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8l7-7V6a3 3 0 0 0-3-3h-4zM14 21v-4a3 3 0 0 1 3-3h4M8.5 10h.01M14.5 10h.01M8.5 14.5c1 1 2.2 1.5 3.5 1.5"/></symbol><symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol><symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 5h9M8.5 3v2M6 5c.8 3.5 3 6 6 7.5M11 5c-.8 3.5-3 6-6.5 7.5M13 21l4-9 4 9M14.5 18h5"/></symbol><symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></symbol><symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11M11 10.5v-6a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7L3 14.5a1.5 1.5 0 0 1 2.4-1.8L8 15"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.2"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 7h12l3.5 10.5-3.5 1.5-3-4h-6l-3 4L2.5 17.5z"/><path d="M8 10v4M6 12h4"/><path fill="currentColor" stroke="none" d="M15 10h2v2h-2zM17 12h2v2h-2z"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><path d="M10 3L8 21M16 3l-2 18M4 8.5h17M3 15.5h17"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4.5-4.5L4 21l-1-1 4.5-4.5L3 11l2-2 5 1 4-4z"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol><symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M12 7v10M7 12h10" stroke="var(--box)" stroke-width="2.4"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></g></symbol><symbol id="i-forward" viewBox="0 0 24 24"><path d="M15 15l5-5-5-5"/><path d="M20 10H9a5 5 0 0 0-5 5v5"/></symbol><symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5"/></symbol><symbol id="i-poll" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol><symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></symbol><symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-9.3-5M6 8c0 7-3 9-3 9h14M13.7 21a2 2 0 0 1-3.4 0M2 2l20 20"/></symbol><symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></symbol><symbol id="i-copy-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
 <header>
   <button type="button" class="ib" id="railBtn" title="Seus servidores" aria-label="Seus servidores" aria-controls="rail"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
   <div class="title">
@@ -1384,9 +1661,36 @@ footer { position: relative; }
 
 <div class="app">
   <nav id="rail" aria-label="Seus servidores">
+    <button type="button" class="srv homebtn" id="railHome" title="Mensagens diretas e amigos" aria-label="Mensagens diretas e amigos"><svg class="ic" aria-hidden="true"><use href="#i-message"/></svg></button>
+    <span class="railsep"></span>
     <div id="railList"></div>
     <button type="button" class="srv add" id="railAdd" title="Criar servidor ou entrar com convite">+</button>
+    <button type="button" class="srv add disc" id="railDisc" title="Explorar servidores públicos" aria-label="Explorar servidores públicos"><svg class="ic" aria-hidden="true"><use href="#i-compass"/></svg></button>
   </nav>
+  <section id="homeView" hidden>
+    <nav class="hside" aria-label="Mensagens diretas">
+      <button type="button" class="hfind" id="hFind">Encontre ou comece uma conversa</button>
+      <div class="hlist">
+        <button type="button" class="chan hnav on" id="hFriends"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg><span class="vn">Amigos</span><span class="cbadge" id="hReqCount" hidden></span></button>
+        <div class="cat"><span>Mensagens diretas</span><button type="button" class="catadd" id="hNewGroup" title="Criar DM em grupo" aria-label="Criar DM em grupo"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button></div>
+        <div id="hDms"></div>
+      </div>
+    </nav>
+    <div class="hmain">
+      <div class="chathead hhead">
+        <svg class="ic" aria-hidden="true"><use href="#i-users"/></svg><b>Amigos</b><span class="hdiv"></span>
+        <div class="htabs" id="hTabs"><button type="button" data-t="online" class="on">Online</button><button type="button" data-t="all">Todos</button><button type="button" data-t="pending">Pendente</button><button type="button" data-t="add" class="addf">Adicionar amigo</button></div>
+        <span class="spacer"></span>
+        <button type="button" class="ib" id="hClose" title="Voltar para o servidor" aria-label="Voltar para o servidor"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="hbody" id="hBody"></div>
+    </div>
+  </section>
+  <section id="discView" hidden>
+    <div class="dhero"><h2>Encontre sua comunidade no Chat Pedro</h2><p>De jogos a estudos, tem lugar para você.</p><input type="search" id="discSearch" placeholder="Explorar comunidades"><button type="button" class="ib" id="discClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <h3 class="dtitle">Comunidades em destaque</h3>
+    <div class="dgrid" id="discList"></div>
+  </section>
   <nav id="side" aria-label="Canais do servidor">
     <button type="button" class="srvhead" id="srvBtn" title="Opções do servidor: convidar, personalizar, moderar"><span class="srvicon" id="headIcon" aria-hidden="true"></span><b id="serverName"></b><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
     <div class="chans">
@@ -1413,7 +1717,7 @@ footer { position: relative; }
   </nav>
   <div class="chat">
     <div class="chathead">
-      <span id="chanIcon"><svg class="ic" aria-hidden="true"><use href="#i-hash"/></svg></span><b id="chanName">chat</b><span class="topic" id="chanTopic"></span>
+      <button type="button" class="crumb" id="chanCrumb" hidden></button><span id="chanIcon"><svg class="ic" aria-hidden="true"><use href="#i-hash"/></svg></span><b id="chanName">chat</b><span class="topic" id="chanTopic"></span>
       <span class="spacer"></span>
       <button type="button" class="ib" id="inboxBtn" title="Caixa de entrada: menções e mensagens salvas" aria-label="Caixa de entrada"><svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg></button>
       <button type="button" class="ib" id="pinsBtn" title="Mensagens fixadas" aria-label="Mensagens fixadas"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></button>
@@ -1455,6 +1759,7 @@ footer { position: relative; }
       </div>
       <div id="tiles"></div>
       <div class="controls">
+        <button type="button" class="ib" id="handBtn" title="Levantar a mão" aria-label="Levantar a mão" hidden><svg class="ic" aria-hidden="true"><use href="#i-hand"/></svg></button>
         <button type="button" class="ib" id="micBtn" title="Desligar o microfone" aria-label="Desligar o microfone"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
         <button type="button" class="ib" id="deafBtn" title="Parar de ouvir a call" aria-label="Parar de ouvir a call"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg></button>
         <button type="button" class="ib" id="camBtn" title="Ligar a câmera" aria-label="Ligar a câmera"><svg class="ic" aria-hidden="true"><use href="#i-video"/></svg></button>
@@ -1471,18 +1776,24 @@ footer { position: relative; }
       </form>
     </section>
     <main id="scroller"><div class="pad"><div id="log"></div></div></main>
+    <section id="forumView" hidden>
+      <div class="fhead"><input type="search" id="forumSearch" placeholder="Procurar ou criar um post..." aria-label="Procurar posts"><select id="forumSort" aria-label="Ordenar"><option value="last">Atividade recente</option><option value="new">Data de criação</option></select><button type="button" class="cmd big withicon" id="forumNew"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg> Novo post</button></div>
+      <div id="forumList"></div>
+    </section>
     <footer class="pad">
       <button type="button" id="jumpNew" hidden><span class="n"></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
       <button type="button" id="chatPeek" aria-controls="scroller"><span class="lbl"><svg class="ic" aria-hidden="true"><use href="#i-message"/></svg></span><span id="peekText">sem mensagens</span></button>
       <div id="typing" aria-live="polite"></div>
       <div id="mentionBox"></div>
       <div id="slashBox" hidden></div>
-      <div class="replying" id="replying" hidden><span id="replyText"></span><button type="button" class="ib sm" id="replyCancel" title="Cancelar resposta" aria-label="Cancelar resposta"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <div class="noperm" id="noPerm">Você não tem permissão para enviar mensagens neste canal.</div>
+      <div class="replying" id="replying" hidden><span id="replyText"></span><button type="button" class="pingtog on" id="replyPing" title="Mencionar quem escreveu a mensagem">@ ATIVADO</button><button type="button" class="ib sm" id="replyCancel" title="Cancelar resposta" aria-label="Cancelar resposta"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
       <div class="replying rec" id="recBar" hidden><span id="recText">gravando...</span><button type="button" class="cmd" id="recSend">Enviar</button><button type="button" class="cmd danger" id="recCancel">Cancelar</button></div>
       <form id="form">
         <span class="ps1" id="ps1">apelido: </span>
         <button type="button" class="ib" id="photoBtn" title="Enviar foto" aria-label="Enviar foto" hidden><svg class="ic" aria-hidden="true"><use href="#i-plus-circle"/></svg></button>
         <textarea id="input" rows="1" placeholder="seu apelido_" aria-label="Mensagem" maxlength="2000" autofocus></textarea>
+        <button type="button" class="ib" id="stickerBtn" title="Figurinhas do servidor" aria-label="Figurinhas"><svg class="ic" aria-hidden="true"><use href="#i-sticker"/></svg></button>
         <button type="button" class="ib" id="emojiBtn" title="Emojis (Ctrl+E)" aria-label="Emojis"><svg class="ic" aria-hidden="true"><use href="#i-smile"/></svg></button>
         <button type="button" class="ib" id="audioBtn" title="Gravar áudio (até 1 minuto)" aria-label="Gravar áudio (até 1 minuto)" hidden><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
         <button type="submit" class="ib" id="sendBtn" title="Enviar" aria-label="Enviar"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg></button>
@@ -1533,14 +1844,41 @@ footer { position: relative; }
 <div class="modal" id="chanModal" hidden>
   <div class="box" role="dialog" aria-labelledby="chanTitle">
     <div class="row"><h3 id="chanTitle">CANAL</h3><button type="button" class="ib" id="chanClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-    <div class="opts" id="chanTypeRow"><button type="button" class="cmd" data-type="text" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-hash"/></svg> Texto</button><button type="button" class="cmd" data-type="voice" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Voz</button></div>
+    <div class="opts" id="chanTypeRow"><button type="button" class="cmd" data-type="text" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-hash"/></svg> Texto</button><button type="button" class="cmd" data-type="voice" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Voz</button><button type="button" class="cmd" data-type="forum" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-forum"/></svg> Fórum</button></div>
     <label>Nome do canal <input type="text" id="chanNameInput" maxlength="32" placeholder="novo-canal"></label>
     <label id="chanTopicRow">Tópico <input type="text" id="chanTopicInput" maxlength="300" placeholder="sobre o que é este canal"></label>
+    <label class="check" id="chanAnnounceRow"><input type="checkbox" id="chanAnnounce"> <span><b>Canal de anúncios</b><br>Só quem modera manda mensagem aqui. Bom para avisos e regras.</span></label>
+    <label class="check" id="chanStageRow"><input type="checkbox" id="chanStage"> <span><b>Canal de palco</b><br>Só os oradores falam; a plateia ouve e levanta a mão para pedir a vez.</span></label>
     <label id="chanSlowRow">Modo lento
       <select id="chanSlowInput"><option value="0">desligado</option><option value="5">5 s</option><option value="10">10 s</option><option value="15">15 s</option><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option><option value="300">5 min</option><option value="600">10 min</option><option value="1800">30 min</option><option value="3600">1 hora</option></select>
     </label>
     <div class="row"><button type="button" class="cmd danger" id="chanDelete">Apagar canal</button><button type="button" class="cmd big" id="chanSave">Salvar</button></div>
   </div>
+</div>
+
+<div class="modal" id="threadModal" hidden>
+  <div class="box" role="dialog" aria-labelledby="thTitle">
+    <div class="row"><h3 id="thTitle">Criar tópico</h3><button type="button" class="ib" id="thClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="confirm-prev" id="thPrev" hidden></div>
+    <label>Nome <input type="text" id="thName" maxlength="100" placeholder="Nome do tópico"></label>
+    <label id="thTextRow">Mensagem <textarea id="thText" rows="5" maxlength="2000" placeholder="Escreva o post"></textarea></label>
+    <div class="row"><span></span><button type="button" class="cmd big" id="thSave">Criar</button></div>
+  </div>
+</div>
+
+<div class="modal" id="welcomeModal" hidden>
+  <div class="box welbox" role="dialog" aria-labelledby="welTitle">
+    <span class="srvicon big" id="welIcon" aria-hidden="true"></span>
+    <h3 id="welTitle">Boas-vindas!</h3>
+    <p id="welDesc"></p>
+    <ol id="welRules"></ol>
+    <button type="button" class="cmd big" id="welOk">Li e concordo com as regras</button>
+  </div>
+</div>
+
+<div id="stickerPicker" hidden>
+  <div class="ep-top"><b>Figurinhas de <span id="stkSrv"></span></b></div>
+  <div class="stkgrid" id="stickerList"></div>
 </div>
 
 <div class="modal" id="srvModal" hidden>
@@ -1593,6 +1931,16 @@ footer { position: relative; }
     <div class="sect"><b>Áudio e vídeo</b><div class="opts"><button type="button" class="cmd withicon" id="avBtn"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg> Microfone, saída de som e câmera</button></div></div>
     <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">Trocar foto de perfil</button></div></div>
     <div class="sect"><b>Cor do nome</b><div class="swatches" id="colorPick"></div></div>
+    <div class="sect"><b>Cor do banner do perfil</b><div class="opts"><input type="color" id="bannerColor" value="#5865f2" aria-label="Cor do banner"><button type="button" class="cmd" id="bannerSave">Salvar banner</button><button type="button" class="cmd" id="bannerReset">Usar a cor do nome</button></div></div>
+    <div class="sect"><b>Decoração do avatar</b><div class="decos" id="decoPick"></div></div>
+    <div class="sect"><b>Conexões</b><span class="lbl2">Mostre suas contas de jogos e redes no seu perfil.</span><div id="connList" class="connlist"></div>
+      <div class="opts"><select id="connType" aria-label="Tipo de conta"></select><input type="text" id="connName" maxlength="60" placeholder="seu usuário" aria-label="Usuário"><button type="button" class="cmd" id="connAdd">Adicionar</button></div></div>
+    <div class="sect"><b>Verificação em 2 etapas</b><span class="lbl2" id="mfaState">Proteja a conta com um código do celular além da senha.</span>
+      <div class="opts"><button type="button" class="cmd withicon" id="mfaOn"><svg class="ic" aria-hidden="true"><use href="#i-shield-check"/></svg> Ativar</button><button type="button" class="cmd danger" id="mfaOff" hidden>Desativar</button></div>
+      <div id="mfaSetup" hidden><img id="mfaQr" alt="QR code para o app autenticador" width="180" height="180"><span class="lbl2">Ou digite a chave: <code id="mfaSecret"></code></span>
+        <form class="opts" id="mfaVerify"><input type="text" id="mfaVerifyCode" inputmode="numeric" maxlength="6" placeholder="código de 6 números" aria-label="Código"><button type="submit" class="cmd big">Confirmar</button></form></div>
+    </div>
+    <div class="sect"><b>Modo streamer</b><label class="check"><input type="checkbox" id="streamerMode"> <span>Esconde seu e-mail, links de convite e o texto das notificações (bom para transmitir a tela).</span></label></div>
     <div class="sect"><b>Status</b><div class="opts" id="statusPick"></div><span style="color: var(--dim)">Ocupado: sem sons nem notificações, só as menções com @.</span></div>
     <div class="sect"><b>Notificações</b><div class="opts"><button type="button" class="cmd" id="notifBtn">Ativar notificações</button></div><span style="color: var(--dim)" id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</span></div>
     <p class="err" id="profMsg"></p>
@@ -1608,7 +1956,11 @@ footer { position: relative; }
       <label><span>Volume do microfone: <b id="micGainVal">100%</b></span>
         <input type="range" id="micGain" min="0" max="200" step="5" value="100">
       </label>
-      <div class="meter"><i id="micMeter"></i></div>
+      <div class="meter"><i id="micMeter"></i><b id="sensMark" hidden></b></div>
+      <label><span>Sensibilidade de entrada: <b id="sensVal">automática</b></span>
+        <input type="range" id="sensRange" min="0" max="25" step="1" value="0">
+        <small class="lbl2">Em "automática" o som sempre passa. Arraste para a direita e o microfone só abre quando você fala mais alto que a marca (corta barulho de fundo).</small>
+      </label>
       <span class="hint" id="micHint">Fale e veja a barra se mexer.</span>
       <label class="check"><input type="checkbox" id="simpleMic"> Microfone sem filtros (desliga cancelamento de eco e redução de ruído; ajuda em alguns fones)</label>
       <div class="opts"><button type="button" class="cmd withicon" id="micDiag"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> Fazer diagnóstico</button></div>
@@ -1644,9 +1996,14 @@ footer { position: relative; }
         <button type="button" class="cmd small" id="forgotBtn">esqueci a senha</button>
       </form>
     </div>
+    <div id="gMfa" hidden>
+      <p class="lbl2">Sua conta tem verificação em 2 etapas. Abra o app autenticador (Google Authenticator, Authy...) e digite o código de 6 números.</p>
+      <form id="mfaForm" class="gform"><label>Código <input type="text" id="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000"></label><button type="submit" class="cmd big">Confirmar</button></form>
+      <div class="opts"><button type="button" class="cmd danger" id="mfaLogout">Sair da conta</button></div>
+    </div>
     <div id="gHome" hidden>
       <p class="lbl2">Você ainda não está em nenhum servidor. Crie o seu ou cole um convite que recebeu.</p>
-      <form id="createForm" class="gform"><label>Nome do servidor novo <input type="text" id="createName" maxlength="40" placeholder="ex.: Galera do Pedro"></label><button type="submit" class="cmd big">Criar servidor</button></form>
+      <form id="createForm" class="gform"><label>Nome do servidor novo <input type="text" id="createName" maxlength="40" placeholder="ex.: Galera do Pedro"></label><div class="tpls" id="tplPick"><button type="button" class="tpl on" data-t="">Do zero</button><button type="button" class="tpl" data-t="amigos">Amigos</button><button type="button" class="tpl" data-t="jogos">Jogos</button><button type="button" class="tpl" data-t="estudos">Estudos</button><button type="button" class="tpl" data-t="comunidade">Comunidade</button></div><button type="submit" class="cmd big">Criar servidor</button></form>
       <div class="or"><span>ou</span></div>
       <form id="joinForm" class="gform"><label>Link ou código do convite <input type="text" id="joinCode" placeholder="https://.../convite/AbC123"></label><button type="submit" class="cmd big">Entrar com convite</button></form>
       <div class="opts"><button type="button" class="cmd" id="homeBack" hidden>Voltar</button><button type="button" class="cmd danger" id="homeLogout">Sair da conta</button></div>
@@ -1855,7 +2212,27 @@ window.setIcon = (btn, name, label, extra) => {
 
   // ---------- mensagens ----------
   let myUid = null, myRole = "member", isAdmin = false, members = [];
-  const canDelete = (m) => isAdmin || (m.uid ? m.uid === myUid : !!nick && keyOf(m.nick) === keyOf(nick));
+  // permissoes (dono e ADM tem todas; cargos personalizados dao algumas) e dados do servidor
+  let myPerms = new Set();
+  let guild = { roles: [], memberRoles: {}, nicks: {}, emojis: [], stickers: [], welcome: { desc: "", rules: [] }, vanity: null, isPublic: false, description: "" };
+  const can = (p) => myPerms.has(p);
+  const idOfNick = (n) => (profiles[keyOf(n)] || {}).id;
+  // apelido no servidor (se tiver) no lugar do nome da conta
+  const dispName = (n) => { const id = idOfNick(n); return (id && guild.nicks[id]) || n; };
+  const rolesOf = (id) => (guild.memberRoles[id] || []).map((r) => guild.roles.find((x) => x.id === r)).filter(Boolean).sort((a, b) => guild.roles.indexOf(a) - guild.roles.indexOf(b));
+  // cor do nome: a do cargo mais alto com cor; senao a que a pessoa escolheu
+  const colorOf = (n) => { const id = idOfNick(n); const r = id && rolesOf(id).find((x) => x.color); return r ? r.color : (profiles[keyOf(n)] || {}).color || ""; };
+  const customEmoji = (id) => guild.emojis.find((e) => e.id === id);
+  // emoji (normal ou do servidor) como elemento
+  function emojiEl(e) {
+    const ce = /^<:([A-Za-z0-9_]{2,32}):([a-f0-9]{10})>$/.exec(e);
+    if (!ce) return document.createTextNode(e);
+    const em = customEmoji(ce[2]);
+    if (!em) return document.createTextNode(":" + ce[1] + ":");
+    const img = document.createElement("img"); img.className = "cemoji"; img.src = em.src; img.alt = ":" + em.name + ":"; img.title = ":" + em.name + ":";
+    return img;
+  }
+  const canDelete = (m) => can("messages") || (m.uid ? m.uid === myUid : !!nick && keyOf(m.nick) === keyOf(nick));
   const refreshDel = () => { for (const { el, m } of lineById.values()) { const d = el.querySelector(".acts .del"); if (d) d.hidden = !canDelete(m); } };
   const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "❤️", "\u{1F62E}"];
   const lineById = new Map(); // id -> { el, m }
@@ -1864,10 +2241,10 @@ window.setIcon = (btn, name, label, extra) => {
   const keyOf = (n) => (n || "").toLowerCase();
 
   function whoSpan(n) {
-    const w = span("who", n);
+    const w = span("who", dispName(n));
     w.dataset.nick = keyOf(n);
-    const p = profiles[keyOf(n)];
-    if (p && p.color) w.style.color = p.color;
+    const c = colorOf(n);
+    if (c) w.style.color = c;
     return w;
   }
 
@@ -1885,6 +2262,7 @@ window.setIcon = (btn, name, label, extra) => {
   // Markdown do Discord: **negrito**, *italico*, __sublinhado__, ~~riscado~~, `codigo`, ```bloco```,
   // ||spoiler||, > citacao e links clicaveis. Tudo vira elementos (nunca HTML cru).
   const MD = [
+    { re: /<:([A-Za-z0-9_]{2,32}):([a-f0-9]{10})>/, tag: "cemoji" },
     { re: /\\([\\*_~`|>#\[\]-])/, tag: "esc" },
     { re: /`([^`\n]+)`/, tag: "code" },
     { re: /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/, tag: "mlink" },
@@ -1904,6 +2282,7 @@ window.setIcon = (btn, name, label, extra) => {
       mdLeaf(text.slice(0, best.m.index), el);
       let node;
       if (best.p.tag === "esc") { el.append(best.m[1]); text = text.slice(best.m.index + best.m[0].length); continue; }
+      if (best.p.tag === "cemoji") { el.append(emojiEl(best.m[0])); text = text.slice(best.m.index + best.m[0].length); continue; }
       if (best.p.tag === "mlink") {
         node = document.createElement("a"); node.href = best.m[2]; node.target = "_blank"; node.rel = "noopener noreferrer nofollow"; node.title = best.m[2];
         mdInline(best.m[1], node); el.append(node); text = text.slice(best.m.index + best.m[0].length); continue;
@@ -1922,11 +2301,11 @@ window.setIcon = (btn, name, label, extra) => {
       const m = URL_RE.exec(text);
       // #canal vira um atalho clicavel para o canal
       const cm = /(^|[\s(])#([\p{L}\p{N}_-]{1,32})/u.exec(text);
-      const ch = cm && channels.find((c) => c.type === "text" && c.name === cm[2]);
+      const ch = cm && channels.find((c) => (c.type === "text" || c.type === "forum") && c.name === cm[2]);
       if (ch && (!m || cm.index < m.index)) {
         mdLeaf(text.slice(0, cm.index + cm[1].length), el);
         const chip = span("chanchip", "#" + ch.name); chip.title = "Ir para #" + ch.name;
-        chip.addEventListener("click", (e) => { e.stopPropagation(); openChannel(ch.id); });
+        chip.addEventListener("click", (e) => { e.stopPropagation(); goChannel(ch.id); });
         el.append(chip);
         text = text.slice(cm.index + cm[0].length);
         continue;
@@ -1984,6 +2363,8 @@ window.setIcon = (btn, name, label, extra) => {
     if (t.includes("@" + keyOf(nick))) return true;
     return /@(everyone|here|todos)\b/.test(t) && !!author && typeof roleOfNick === "function" && roleOfNick(author) !== "member";
   };
+  // a mensagem me chama? (@meu nome, @everyone de quem pode, ou resposta a uma mensagem minha com mencao)
+  const pingsMe = (m) => !!m && m.type === "msg" && !!nick && m.nick !== nick && (mentionsMe(m.text, m.nick) || (m.everyone && /@(everyone|here)\b/.test(m.text || "")) || (!!m.reply && !!m.reply.ping && m.reply.uid === myUid));
 
   function renderReacts(box, m, live) {
     const before = new Map([...box.children].map((b) => [b.dataset.e, b.textContent]));
@@ -1992,10 +2373,10 @@ window.setIcon = (btn, name, label, extra) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "rx" + (who.includes(nick) ? " mine" : "");
-      b.textContent = emoji + " " + who.length;
+      b.append(emojiEl(emoji), " " + who.length);
       b.dataset.e = emoji;
       if (live && before.get(emoji) !== b.textContent) b.classList.add("bump"); // so a que mudou da o pulinho
-      b.title = who.join(", ");
+      b.title = who.map(dispName).join(", ");
       b.addEventListener("click", () => socket.emit("react", { id: m.id, emoji }));
       box.append(b);
     }
@@ -2023,7 +2404,7 @@ window.setIcon = (btn, name, label, extra) => {
       if (open) return;
       const pk = span("picker", "");
       for (const emoji of recentEmojis().slice(0, 6)) {
-        const b = document.createElement("button"); b.type = "button"; b.textContent = emoji; b.title = "Reagir com " + emoji;
+        const b = document.createElement("button"); b.type = "button"; b.append(emojiEl(emoji)); b.title = "Reagir";
         b.addEventListener("click", (e) => { e.stopPropagation(); react(m, emoji); pk.remove(); });
         pk.append(b);
       }
@@ -2066,6 +2447,18 @@ window.setIcon = (btn, name, label, extra) => {
     if (m.type === "sys") {
       l.className = "line sysl";
       gut.append(icon("arrow"));
+      // alguem entrou: frase de boas-vindas e o botao de dar oi (como no Discord)
+      if (m.join) {
+        l.classList.add("joinl");
+        const w = span("sys", ""); w.append(whoSpan(m.join), " " + JOIN_LINES[m.id % JOIN_LINES.length]);
+        body.append(w, span("time", stampOf(m.ts)));
+        if (m.join !== nick && nick) {
+          const hi = document.createElement("button"); hi.type = "button"; hi.className = "wave"; hi.append("👋 Dar oi para " + dispName(m.join));
+          hi.addEventListener("click", () => { hi.disabled = true; socket.emit("message", { text: "👋 Oi, @" + m.join + "!", ch: curCh }); });
+          body.append(hi);
+        }
+        return l;
+      }
       body.append(span("sys", m.text), span("time", fmtTime(m.ts)));
       return l;
     }
@@ -2089,11 +2482,22 @@ window.setIcon = (btn, name, label, extra) => {
       q.addEventListener("click", () => jumpTo(m.reply.id));
       body.append(q);
     }
-    if (!cont) { const head = span("head", ""); const tm = span("time", stampOf(m.ts)); tm.title = new Date(m.ts).toLocaleString("pt-BR", { dateStyle: "full", timeStyle: "short" }); head.append(whoSpan(m.nick), tm); body.append(head); }
+    if (!cont) {
+      const head = span("head", ""); const tm = span("time", stampOf(m.ts)); tm.title = new Date(m.ts).toLocaleString("pt-BR", { dateStyle: "full", timeStyle: "short" });
+      head.append(whoSpan(m.nick));
+      if (m.bot) head.append(span("bottag", "APP"));
+      head.append(tm); body.append(head);
+    }
     if (m.pinned) { l.classList.add("pinned"); const pin = span("pinmark", ""); pin.append(icon("pin")); pin.title = "Mensagem fixada"; body.prepend(pin); }
     if (m.fwd) { const f = span("fwd", ""); f.append(icon("forward"), span("", "Encaminhada" + (m.fwd.nick ? " de " + m.fwd.nick : ""))); body.append(f); }
     if (m.type === "poll") {
       body.append(renderPoll(m));
+    } else if (m.type === "sticker") {
+      const box = span("stk wait", ""); box.title = m.sticker.name;
+      const img = document.createElement("img"); img.alt = "Figurinha " + m.sticker.name;
+      img.addEventListener("load", () => box.classList.remove("wait"));
+      box.append(img); body.append(box);
+      stickerSrc(m.sticker.id).then((src) => { if (src) img.src = src; else box.replaceWith(span("sys", "figurinha que foi apagada do servidor")); });
     } else if (m.type === "file") {
       const card = span("filecard", "");
       const ic = span("fi", ""); ic.append(icon("file"));
@@ -2128,8 +2532,10 @@ window.setIcon = (btn, name, label, extra) => {
       renderText(m.text, t);
       if (m.edited) { const e = span("edited", "(editado)"); e.title = "Editado em " + new Date(m.edited).toLocaleString("pt-BR"); t.append(" ", e); }
       body.append(t);
-      if (mentionsMe(m.text, m.nick) && m.nick !== nick) l.classList.add("mentioned");
+      if (pingsMe(m)) l.classList.add("mentioned");
       const yt = (m.text || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/))([A-Za-z0-9_-]{11})/);
+      if (!yt && !m.pending) { const u = linkFor(m.text); if (u) embedInto(body, u); }
+      if (m.trans) { const tr = span("trans", ""); tr.append(span("trl", "Tradução"), span("", m.trans)); body.append(tr); }
       if (yt) {
         const card = document.createElement("a"); card.className = "ytcard"; card.href = "https://www.youtube.com/watch?v=" + yt[1]; card.target = "_blank"; card.rel = "noopener noreferrer";
         const im = document.createElement("img"); im.loading = "lazy"; im.alt = "Vídeo do YouTube"; im.src = "https://i.ytimg.com/vi/" + yt[1] + "/hqdefault.jpg";
@@ -2137,6 +2543,7 @@ window.setIcon = (btn, name, label, extra) => {
         body.append(card);
       }
     }
+    if (m.thread) body.append(threadCard(m.thread));
     if (m.pending) return l;
     l.addEventListener("contextmenu", (e) => { if (e.target.closest("a, audio, input, textarea")) return; e.preventDefault(); msgMenu(m, e.clientX, e.clientY); });
     const rx = span("reacts", "");
@@ -2240,21 +2647,39 @@ window.setIcon = (btn, name, label, extra) => {
   const mutedChans = new Set(JSON.parse(store.get("chatpedro-mutedch") || "[]"));
   const saveMuted = () => store.set("chatpedro-mutedch", JSON.stringify([...mutedChans]));
   const curChannel = () => channels.find((c) => c.id === curCh);
+  const chanIconOf = (c) => c.type === "forum" ? "forum" : c.type === "thread" ? "thread" : c.type === "voice" ? (c.stage ? "stage" : "volume") : c.announce ? "megaphone" : "hash";
+  const parentOf = (c) => c && c.type === "thread" ? channels.find((x) => x.id === c.parent) : null;
+  // so a moderacao manda mensagem em canal de anuncios
+  const canPostIn = (c) => !!c && !(c.announce && !can("messages"));
   function updateHead() {
     const c = curChannel();
     if (!c) return;
     const peer = isDm && window.ChatPedroAuth ? window.ChatPedroAuth.peerName() : null;
-    $("chanIcon").replaceChildren(icon(isDm ? "at" : "hash"));
+    $("chanIcon").replaceChildren(icon(isDm ? "at" : chanIconOf(c)));
+    const par = parentOf(c);
     $("chanName").textContent = isDm ? peer || "conversa" : c.name;
-    $("chanTopic").textContent = isDm ? "" : c.topic || "";
+    $("chanCrumb").hidden = !par;
+    if (par) { $("chanCrumb").replaceChildren(icon(chanIconOf(par)), span("", par.name), icon("chevron-right")); $("chanCrumb").onclick = () => goChannel(par.id); }
+    $("chanTopic").textContent = isDm ? "" : c.type === "thread" ? (c.count || 0) + (c.count === 1 ? " mensagem" : " mensagens") + " · tópico de " + dispName(c.by || "") : c.topic || "";
     $("chanTopic").title = c.topic || "";
-    input.placeholder = isDm ? "Conversar com @" + (peer || "") : "Conversar em #" + c.name;
+    document.body.classList.toggle("forum", c.type === "forum");
+    document.body.classList.toggle("noposts", !canPostIn(c));
+    input.placeholder = isDm ? "Conversar com @" + (peer || "") : c.type === "thread" ? "Conversar em " + c.name : "Conversar em #" + c.name;
     if (!isDm && serverId && location.pathname.startsWith("/s/")) history.replaceState(null, "", "/s/" + serverId + (c.id !== (channels.find((x) => x.type === "text") || {}).id ? "?c=" + c.id : ""));
   }
+  // abre qualquer canal: forum mostra os posts; voz entra na call
+  function goChannel(id, jumpId) {
+    const c = channels.find((x) => x.id === id);
+    if (!c) return;
+    if (c.type === "forum") return openForum(c.id);
+    if (c.type === "voice") { const v = document.querySelector('.chan.voice[data-voice="' + CSS.escape(c.id) + '"]'); if (v) v.click(); return; }
+    openChannel(id, jumpId);
+  }
   function openChannel(id, jumpId) {
-    const c = channels.find((x) => x.id === id && x.type === "text");
+    const c = channels.find((x) => x.id === id && (x.type === "text" || x.type === "thread"));
     if (!c) return;
     if (curCh && curCh !== id) chInfo(curCh).entries = entries;
+    curForum = null; $("forumView").hidden = true;
     curCh = id;
     if (serverId) store.set("chatpedro-ch-" + serverId, id);
     const info = chInfo(id);
@@ -2283,26 +2708,30 @@ window.setIcon = (btn, name, label, extra) => {
   function chanRow(c) {
     const info = chInfo(c.id);
     const b = document.createElement("button"); b.type = "button";
-    b.className = "chan text" + (c.id === curCh ? " on" : "") + (info.unread && !mutedChans.has(c.id) ? " unread" : "") + (mutedChans.has(c.id) ? " muted" : "");
+    const on = c.id === curCh || (c.type === "forum" && curForum === c.id);
+    b.className = "chan text" + (c.type === "thread" ? " thread" : "") + (on ? " on" : "") + (info.unread && !mutedChans.has(c.id) ? " unread" : "") + (mutedChans.has(c.id) ? " muted" : "");
     b.dataset.ch = c.id;
-    b.append(icon("hash"), span("vn", c.name));
+    if (c.type === "thread") b.append(span("spine", ""), span("vn", c.name));
+    else b.append(icon(chanIconOf(c)), span("vn", c.name));
     if (info.mentions) b.append(span("cbadge", String(info.mentions)));
-    if (isAdmin && !isDm) {
+    if (c.type !== "thread" && can("channels") && !isDm) {
       const g = document.createElement("span"); g.className = "cgear"; g.title = "Editar canal"; g.append(icon("settings"));
       g.addEventListener("click", (e) => { e.stopPropagation(); openChanModal(c); });
       b.append(g);
     }
-    b.addEventListener("click", () => openChannel(c.id));
+    b.addEventListener("click", () => goChannel(c.id));
     b.addEventListener("contextmenu", (e) => { e.preventDefault(); chanMenu(c, e); });
     return b;
   }
+  // topicos com movimento nos ultimos 3 dias aparecem embaixo do canal (como no Discord)
+  const activeThreads = (pid) => channels.filter((t) => t.type === "thread" && t.parent === pid && (t.id === curCh || Date.now() - (t.last || t.ts || 0) < 3 * 86400000)).sort((a, b) => (b.last || 0) - (a.last || 0)).slice(0, 5);
   function renderChannels() {
-    $("textList").replaceChildren(...channels.filter((c) => c.type === "text").map(chanRow));
+    $("textList").replaceChildren(...channels.filter((c) => c.type === "text" || c.type === "forum").flatMap((c) => [chanRow(c), ...(c.type === "text" ? activeThreads(c.id).map(chanRow) : [])]));
     $("voiceList").replaceChildren(...channels.filter((c) => c.type === "voice").map((c) => {
       const wrap = document.createElement("div");
-      const b = document.createElement("button"); b.type = "button"; b.className = "chan voice"; b.dataset.voice = c.id;
-      b.append(icon("volume"), span("vn", c.name), span("vj", "entrar"));
-      if (isAdmin && !isDm) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "chan voice" + (c.stage ? " stage" : ""); b.dataset.voice = c.id;
+      b.append(icon(c.stage ? "stage" : "volume"), span("vn", c.name), span("vj", "entrar"));
+      if (can("channels") && !isDm) {
         const g = document.createElement("span"); g.className = "cgear"; g.title = "Editar canal"; g.append(icon("settings"));
         g.addEventListener("click", (e) => { e.stopPropagation(); openChanModal(c); });
         b.append(g);
@@ -2311,7 +2740,7 @@ window.setIcon = (btn, name, label, extra) => {
       wrap.append(b, ul);
       return wrap;
     }));
-    document.querySelectorAll(".catadd").forEach((x) => { x.hidden = !isAdmin || isDm; });
+    document.querySelectorAll(".catadd").forEach((x) => { x.hidden = !can("channels") || isDm; });
     if (window.ChatPedro && window.ChatPedro.renderVoice) window.ChatPedro.renderVoice();
     // titulo da aba com o total de nao lidas de outros canais
     const others = [...chData.entries()].filter(([id]) => id !== curCh && !mutedChans.has(id)).reduce((n, [, i]) => n + i.unread, 0);
@@ -2324,7 +2753,10 @@ window.setIcon = (btn, name, label, extra) => {
       [mutedChans.has(c.id) ? "Ativar som do canal" : "Silenciar canal", "bell-off", () => { mutedChans.has(c.id) ? mutedChans.delete(c.id) : mutedChans.add(c.id); saveMuted(); renderChannels(); }],
       ["Copiar link do canal", "copy-link", () => copyText(location.origin + "/s/" + serverId + "?c=" + c.id, "Link do canal copiado.")],
     ];
-    if (isAdmin && !isDm) items.push(["Editar canal", "settings", () => openChanModal(c)]);
+    if (c.type === "thread" && (can("channels") || c.uid === myUid)) {
+      items.push(["Renomear tópico", "edit", () => openThreadModal({ rename: c })]);
+      items.push(["Apagar tópico", "trash", () => socket.emit("channel:delete", c.id), true]);
+    } else if (can("channels") && !isDm) items.push(["Editar canal", "settings", () => openChanModal(c)]);
     showMenu(items, e.clientX, e.clientY);
   }
   // janela de criar ou editar canal
@@ -2337,7 +2769,8 @@ window.setIcon = (btn, name, label, extra) => {
     $("chanNameInput").value = c ? c.name : "";
     $("chanTopicInput").value = c && c.topic ? c.topic : "";
     $("chanSlowInput").value = String(c && c.slow ? c.slow : 0);
-    $("chanTopicRow").hidden = $("chanSlowRow").hidden = chanType !== "text";
+    $("chanAnnounce").checked = !!(c && c.announce); $("chanStage").checked = !!(c && c.stage);
+    chanTypeUi();
     $("chanDelete").hidden = !c;
     $("chanModal").hidden = false;
     $("chanNameInput").focus();
@@ -2346,16 +2779,22 @@ window.setIcon = (btn, name, label, extra) => {
     const b = e.target.closest("button"); if (!b) return;
     chanType = b.dataset.type;
     $("chanTypeRow").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    $("chanTopicRow").hidden = $("chanSlowRow").hidden = chanType !== "text";
+    chanTypeUi();
   });
+  function chanTypeUi() {
+    $("chanTopicRow").hidden = chanType === "voice";
+    $("chanSlowRow").hidden = $("chanAnnounceRow").hidden = chanType !== "text";
+    $("chanStageRow").hidden = chanType !== "voice";
+  }
   document.querySelectorAll(".catadd").forEach((b) => b.addEventListener("click", () => openChanModal(null, b.dataset.add)));
   $("chanClose").addEventListener("click", () => { $("chanModal").hidden = true; });
   $("chanModal").addEventListener("click", (e) => { if (e.target === $("chanModal")) $("chanModal").hidden = true; });
   $("chanSave").addEventListener("click", () => {
     const name = $("chanNameInput").value.trim();
     if (!name) return $("chanNameInput").focus();
-    if (chanEditing) socket.emit("channel:update", { id: chanEditing.id, name, topic: $("chanTopicInput").value, slow: Number($("chanSlowInput").value) });
-    else socket.emit("channel:create", { name, type: chanType, topic: $("chanTopicInput").value, slow: Number($("chanSlowInput").value) });
+    const extra = { topic: $("chanTopicInput").value, slow: Number($("chanSlowInput").value), announce: $("chanAnnounce").checked, stage: $("chanStage").checked };
+    if (chanEditing) socket.emit("channel:update", { id: chanEditing.id, name, ...extra });
+    else socket.emit("channel:create", { name, type: chanType, ...extra });
     $("chanModal").hidden = true;
   });
   let chanDelArmed = false;
@@ -2366,6 +2805,186 @@ window.setIcon = (btn, name, label, extra) => {
     $("chanModal").hidden = true;
   });
   $("chanNameInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("chanSave").click(); });
+
+
+  // ---------- frases de boas-vindas (como no Discord) ----------
+  const JOIN_LINES = ["acabou de chegar. Diga oi!", "chegou na festa.", "pulou no servidor.", "apareceu do nada.", "chegou. Todo mundo, finjam que estão ocupados!", "acabou de entrar. Cadê o bolo?", "está aqui.", "deslizou para dentro do servidor."];
+
+  // ---------- figurinhas ----------
+  const stickerCache = new Map(); // id -> Promise<src>
+  const stickerSrc = (id) => {
+    if (!stickerCache.has(id)) stickerCache.set(id, new Promise((ok) => socket.emit("sticker:get", id, (src) => { if (!src) stickerCache.delete(id); ok(src); })));
+    return stickerCache.get(id);
+  };
+  function openStickers() {
+    const p = $("stickerPicker");
+    if (!p.hidden) { p.hidden = true; return; }
+    $("stkSrv").textContent = $("serverName").textContent;
+    const list = $("stickerList");
+    list.replaceChildren(...guild.stickers.map((st) => {
+      const b = document.createElement("button"); b.type = "button"; b.title = st.name;
+      const img = document.createElement("img"); img.alt = st.name; stickerSrc(st.id).then((src) => { if (src) img.src = src; });
+      b.append(img, span("", st.name));
+      b.addEventListener("click", (e) => { e.stopPropagation(); p.hidden = true; socket.emit("sticker", { id: st.id, ch: curCh, replyTo: replyTo ? replyTo.id : undefined }); clearReply(); });
+      return b;
+    }));
+    if (!guild.stickers.length) list.append(span("pempty", can("server") ? "Nenhuma figurinha ainda. Adicione em Configurações do servidor > Figurinhas." : "Este servidor ainda não tem figurinhas."));
+    p.hidden = false;
+    const r = $("stickerBtn").getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
+    p.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.right - w)) + "px";
+    p.style.top = Math.max(8, r.top - h - 8) + "px";
+  }
+  $("stickerBtn").addEventListener("click", (e) => { e.stopPropagation(); openStickers(); });
+  document.addEventListener("click", (e) => { if (!$("stickerPicker").hidden && !$("stickerPicker").contains(e.target)) $("stickerPicker").hidden = true; });
+
+  // ---------- previa de links (cartao com titulo, descricao e imagem) ----------
+  const embedCache = new Map(); // url -> Promise<dados>
+  const linkFor = (text) => {
+    const all = String(text || "").replace(/```[\s\S]*?```|`[^`]*`/g, "").match(/https?:\/\/[^\s<>]+[^\s<>.,:;"')\]!?]/g) || [];
+    // links entre < > nao ganham previa (como no Discord)
+    return all.find((u) => !String(text).includes("<" + u + ">") && !/(?:youtu\.be|youtube\.com)\//.test(u)) || null;
+  };
+  function embedInto(body, url) {
+    if (!embedCache.has(url)) embedCache.set(url, window.ChatPedroAuth ? window.ChatPedroAuth.api("/api/embed?url=" + encodeURIComponent(url)).catch(() => null) : Promise.resolve(null));
+    const slot = span("embslot", ""); body.append(slot);
+    embedCache.get(url).then((d) => {
+      if (!d || !slot.isConnected) return;
+      const stick = nearBottom();
+      const card = span("embed" + (d.big && d.image ? " big" : ""), "");
+      if (d.color) card.style.borderLeftColor = d.color;
+      const txt = span("emt", "");
+      txt.append(span("ems", d.site));
+      if (d.title) { const a = document.createElement("a"); a.className = "emh"; a.href = d.url; a.target = "_blank"; a.rel = "noopener noreferrer nofollow"; a.textContent = d.title; txt.append(a); }
+      if (d.desc) txt.append(span("emd", d.desc));
+      card.append(txt);
+      if (d.image) { const im = document.createElement("img"); im.loading = "lazy"; im.alt = ""; im.referrerPolicy = "no-referrer"; im.src = d.image; im.addEventListener("error", () => im.remove()); im.addEventListener("click", () => openViewer(d.image)); card.append(im); }
+      slot.replaceWith(card);
+      if (stick) scroller.scrollTop = scroller.scrollHeight;
+    });
+  }
+
+  // ---------- traduzir mensagem ----------
+  async function translateMsg(m) {
+    const text = m.text || "";
+    try {
+      // tradutor que vem no proprio navegador (Chrome), sem mandar o texto para ninguem
+      if ("Translator" in self && "LanguageDetector" in self) {
+        setNote("Traduzindo...");
+        const det = await self.LanguageDetector.create();
+        const [best] = await det.detect(text);
+        const from = best && best.detectedLanguage && best.detectedLanguage !== "und" ? best.detectedLanguage : "en";
+        if (from.startsWith("pt")) return setNote("Essa mensagem já está em português.");
+        const tr = await self.Translator.create({ sourceLanguage: from, targetLanguage: "pt" });
+        m.trans = await tr.translate(text);
+        setNote(""); rerenderAll(); return;
+      }
+    } catch {}
+    window.open("https://translate.google.com/?sl=auto&tl=pt&op=translate&text=" + encodeURIComponent(text), "_blank", "noopener");
+  }
+
+  // ---------- topicos ----------
+  function threadCard(t) {
+    const c = document.createElement("button"); c.type = "button"; c.className = "thcard";
+    c.append(span("thn", t.name), span("thc", (t.count || 0) + (t.count === 1 ? " mensagem" : " mensagens") + " ›"));
+    if (t.last) c.append(span("thl", "última " + stampOf(t.last).toLowerCase()));
+    c.addEventListener("click", (e) => { e.stopPropagation(); openChannel(t.id); });
+    return c;
+  }
+  let thMode = null; // { msg } | { forum } | { rename }
+  function openThreadModal(mode) {
+    thMode = mode;
+    const forum = !!mode.forum, rename = !!mode.rename;
+    $("thTitle").textContent = rename ? "Renomear tópico" : forum ? "Novo post em " + mode.forum.name : "Criar tópico";
+    $("thSave").textContent = rename ? "Salvar" : forum ? "Publicar" : "Criar tópico";
+    $("thTextRow").hidden = !forum;
+    $("thName").value = rename ? mode.rename.name : forum ? ($("forumSearch").value || "") : "";
+    $("thName").placeholder = forum ? "Título do post" : "Nome do tópico";
+    $("thText").value = "";
+    const prev = $("thPrev"); prev.hidden = !mode.msg; prev.replaceChildren();
+    if (mode.msg) { const head = span("phead", ""); head.append(avatar(mode.msg.nick), whoSpan(mode.msg.nick)); prev.append(head, span("ptxt", plainOf(mode.msg))); }
+    $("threadModal").hidden = false;
+    $("thName").focus();
+  }
+  $("thClose").addEventListener("click", () => { $("threadModal").hidden = true; });
+  $("threadModal").addEventListener("click", (e) => { if (e.target === $("threadModal")) $("threadModal").hidden = true; });
+  $("thName").addEventListener("keydown", (e) => { if (e.key === "Enter" && $("thTextRow").hidden) $("thSave").click(); });
+  $("thSave").addEventListener("click", () => {
+    const name = $("thName").value.trim(), text = $("thText").value.trim();
+    if (!thMode) return;
+    if (thMode.rename) { if (name) socket.emit("channel:update", { id: thMode.rename.id, name }); $("threadModal").hidden = true; return; }
+    if (thMode.forum && (!name || !text)) return setNote("O post precisa de título e mensagem.", true);
+    const payload = thMode.forum ? { parent: thMode.forum.id, name, text } : { parent: curCh, msg: thMode.msg.id, name };
+    socket.emit("thread:create", payload, (id) => { if (id) { $("forumSearch").value = ""; openChannel(id); } });
+    $("threadModal").hidden = true;
+  });
+
+  // ---------- forum: posts em cartoes ----------
+  let curForum = null;
+  function openForum(id) {
+    const c = channels.find((x) => x.id === id && x.type === "forum");
+    if (!c) return;
+    if (curCh) chInfo(curCh).entries = entries;
+    curForum = id; curCh = null;
+    if (serverId) history.replaceState(null, "", "/s/" + serverId + "?c=" + id);
+    closePanel(); clearReply();
+    $("chanIcon").replaceChildren(icon("forum")); $("chanName").textContent = c.name; $("chanCrumb").hidden = true;
+    $("chanTopic").textContent = c.topic || ""; $("chanTopic").title = c.topic || "";
+    document.body.classList.add("forum"); document.body.classList.remove("noposts"); $("forumView").hidden = false;
+    document.body.classList.remove("railopen");
+    renderForum(); renderChannels();
+  }
+  function renderForum() {
+    const c = channels.find((x) => x.id === curForum);
+    if (!c) return;
+    const q = fold($("forumSearch").value);
+    const sort = $("forumSort").value;
+    const posts = channels.filter((t) => t.type === "thread" && t.parent === c.id && (!q || fold(t.name + " " + (t.preview || "")).includes(q)))
+      .sort((a, b) => sort === "new" ? b.ts - a.ts : (b.last || 0) - (a.last || 0));
+    $("forumList").replaceChildren(...posts.map((t) => {
+      const card = document.createElement("button"); card.type = "button"; card.className = "fpost" + (chInfo(t.id).unread ? " unread" : "");
+      const top = span("fptop", ""); top.append(span("fpt", t.name));
+      const by = span("fpby", ""); by.append(whoSpan(t.by || "?"), ": " + (t.preview || ""));
+      const foot = span("fpfoot", ""); foot.append(icon("message"), " " + (t.count || 0), span("fpdot", "•"), stampOf(t.last || t.ts));
+      card.append(top, by, foot);
+      card.addEventListener("click", () => openChannel(t.id));
+      card.addEventListener("contextmenu", (e) => { e.preventDefault(); chanMenu(t, e); });
+      return card;
+    }));
+    if (!posts.length) {
+      const e = span("fempty", "");
+      const ic = span("big", ""); ic.append(icon("forum"));
+      e.append(ic, span("t", q ? "Nenhum post encontrado" : "Ainda não tem nenhum post"), span("sys", q ? "Crie um post com esse título." : "Seja a primeira pessoa a começar uma conversa aqui."));
+      $("forumList").append(e);
+    }
+  }
+  $("forumSearch").addEventListener("input", renderForum);
+  $("forumSearch").addEventListener("keydown", (e) => { if (e.key === "Enter") $("forumNew").click(); });
+  $("forumSort").addEventListener("change", renderForum);
+  $("forumNew").addEventListener("click", () => { const c = channels.find((x) => x.id === curForum); if (c) openThreadModal({ forum: c }); });
+
+  // ---------- tela de boas-vindas do servidor (aparece uma vez para cada pessoa) ----------
+  function maybeWelcome() {
+    const w = guild.welcome || {};
+    if (isDm || (!w.desc && !(w.rules || []).length)) return;
+    const k = "chatpedro-welcome-" + serverId + "-" + myUid;
+    if (store.get(k)) return;
+    $("welTitle").textContent = "Boas-vindas a " + $("serverName").textContent + "!";
+    const icn = $("headIcon").cloneNode(true); icn.id = "welIcon"; icn.className = "srvicon big"; $("welIcon").replaceWith(icn);
+    $("welDesc").textContent = w.desc || "";
+    $("welDesc").hidden = !w.desc;
+    $("welRules").replaceChildren(...(w.rules || []).map((r) => { const li = document.createElement("li"); mdInline(r, li); return li; }));
+    $("welRules").hidden = !(w.rules || []).length;
+    $("welcomeModal").hidden = false;
+    $("welOk").onclick = () => { store.set(k, "1"); $("welcomeModal").hidden = true; };
+  }
+
+  // ---------- responder com ou sem mencao ----------
+  let replyPing = true;
+  $("replyPing").addEventListener("click", () => {
+    replyPing = !replyPing;
+    $("replyPing").textContent = replyPing ? "@ ATIVADO" : "@ DESATIVADO";
+    $("replyPing").classList.toggle("on", replyPing);
+  });
 
   // ---------- pequenas ferramentas ----------
   const fmtSize = (n) => !n ? "" : n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB";
@@ -2404,7 +3023,7 @@ window.setIcon = (btn, name, label, extra) => {
 
   // ---------- menu da mensagem ----------
   const msgLink = (m) => location.origin + "/s/" + serverId + "?c=" + (m.ch || curCh) + "&m=" + m.id;
-  const plainOf = (m) => m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.type === "file" ? (m.name || "arquivo") : m.type === "poll" ? m.poll.q : m.text || "";
+  const plainOf = (m) => m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.type === "file" ? (m.name || "arquivo") : m.type === "poll" ? m.poll.q : m.type === "sticker" ? "figurinha " + m.sticker.name : m.text || "";
   function msgMenu(m, x, y) {
     if (!m.id) return;
     const mine = m.uid && m.uid === myUid;
@@ -2413,6 +3032,9 @@ window.setIcon = (btn, name, label, extra) => {
       mine && m.type === "msg" ? ["Editar mensagem", "edit", () => startEdit(m)] : null,
       ["Responder", "reply", () => setReply(m)],
       ["Encaminhar", "forward", () => forwardMsg(m)],
+      !m.thread && !isDm && curChannel() && curChannel().type === "text" ? ["Criar tópico", "thread", () => openThreadModal({ msg: m })] : null,
+      m.thread ? ["Abrir tópico", "thread", () => openChannel(m.thread.id)] : null,
+      m.type === "msg" ? ["Traduzir", "translate", () => translateMsg(m)] : null,
       ["-"],
       [m.pinned ? "Desafixar mensagem" : "Fixar mensagem", "pin", () => socket.emit("pin", m.id)],
       [isSaved(m) ? "Remover dos salvos" : "Salvar mensagem", "bookmark", () => toggleSave(m)],
@@ -2481,7 +3103,7 @@ window.setIcon = (btn, name, label, extra) => {
     }
     let items = [];
     if (inboxTab === "mentions") {
-      for (const [ch, info] of chData) for (const m of info.entries) if (m.type === "msg" && m.nick !== nick && mentionsMe(m.text, m.nick)) items.push({ ...m, ch });
+      for (const [ch, info] of chData) for (const m of info.entries) if (pingsMe(m)) items.push({ ...m, ch });
       items.sort((a, b) => b.ts - a.ts);
       items = items.slice(0, 50).map((m) => { const b = panelItem(m); b.onclick = null; b.addEventListener("click", (e) => { e.stopImmediatePropagation(); closePanel(); goMsg(m.ch, m.id); }, true); return b; });
       if (!items.length) items = [span("pempty", "Nenhuma menção nos canais que você abriu.")];
@@ -2509,14 +3131,17 @@ window.setIcon = (btn, name, label, extra) => {
   function renderEmojiList(q) {
     const list = $("emojiList"); list.replaceChildren();
     const fq = (q || "").trim().toLowerCase();
-    const sections = fq ? [["Resultados", "", EMOJIS.flatMap((c) => c[2]).filter(([e, n]) => n.includes(fq))]] : [["Usados recentemente", "", recentEmojis().map((e) => [e, (EMOJIS.flatMap((c) => c[2]).find((x) => x[0] === e) || [e, ""])[1]])], ...EMOJIS];
+    const mine = guild.emojis.map((x) => ["<:" + x.name + ":" + x.id + ">", x.name.toLowerCase()]);
+    const nameOf = (e) => (mine.find((x) => x[0] === e) || EMOJIS.flatMap((c) => c[2]).find((x) => x[0] === e) || [e, ""])[1];
+    const recent = recentEmojis().filter((e) => !e.startsWith("<:") || mine.some((x) => x[0] === e)).map((e) => [e, nameOf(e)]);
+    const sections = fq ? [["Resultados", "", [...mine, ...EMOJIS.flatMap((c) => c[2])].filter(([e, n]) => n.includes(fq))]] : [["Usados recentemente", "", recent], ...(mine.length ? [[$("serverName").textContent, "", mine]] : []), ...EMOJIS];
     for (const [title, , items] of sections) {
       if (!items.length) continue;
       const h = span("ep-h", title); h.dataset.cat = title; list.append(h);
       const grid = span("ep-grid", "");
       for (const [e, names] of items) {
-        const b = document.createElement("button"); b.type = "button"; b.textContent = e; b.title = ":" + names.split(" ")[0] + ":";
-        b.addEventListener("mouseenter", () => { $("emojiFoot").textContent = e + "  :" + names.split(" ")[0] + ":"; });
+        const b = document.createElement("button"); b.type = "button"; b.append(emojiEl(e)); b.title = ":" + names.split(" ")[0] + ":";
+        b.addEventListener("mouseenter", () => { $("emojiFoot").replaceChildren(emojiEl(e), "  :" + names.split(" ")[0] + ":"); });
         b.addEventListener("click", (ev) => { ev.stopPropagation(); useEmoji(e); const cb = emojiCb; if (!ev.shiftKey) closeEmoji(); if (cb) cb(e); });
         grid.append(b);
       }
@@ -2547,7 +3172,11 @@ window.setIcon = (btn, name, label, extra) => {
   $("emojiBtn").addEventListener("click", (e) => { e.stopPropagation(); if (!$("emojiPicker").hidden) return closeEmoji(); openEmoji($("emojiBtn"), insertAtCursor); });
   // :atalho: vira emoji ao mandar (ex.: :joy: -> 😂)
   const SHORT = new Map(EMOJIS.flatMap((c) => c[2]).map(([e, n]) => [n.split(" ")[0], e]));
-  const shortcodes = (t) => t.replace(/:([a-z0-9_+-]{2,32}):/gi, (all, k) => SHORT.get(k.toLowerCase()) || all);
+  const shortcodes = (t) => t.replace(/(<)?:([a-z0-9_+-]{2,32}):/gi, (all, lt, k) => {
+    if (lt) return all; // ja e um emoji do servidor <:nome:id>
+    const ce = guild.emojis.find((x) => x.name.toLowerCase() === k.toLowerCase());
+    return ce ? "<:" + ce.name + ":" + ce.id + ">" : SHORT.get(k.toLowerCase()) || all;
+  });
 
   // ---------- enquetes ----------
   function renderPoll(m) {
@@ -2677,7 +3306,7 @@ window.setIcon = (btn, name, label, extra) => {
       const go = document.createElement("button"); go.type = "button"; go.className = "cmd" + (e.going.includes(nick) ? " on" : ""); go.textContent = e.going.includes(nick) ? "✓ Interessado" : "Tenho interesse";
       go.addEventListener("click", () => socket.emit("event:going", e.id));
       row.append(go);
-      if (isAdmin || e.by === nick) { const del = document.createElement("button"); del.type = "button"; del.className = "cmd danger"; del.textContent = "Cancelar"; del.addEventListener("click", () => socket.emit("event:delete", e.id)); row.append(del); }
+      if (can("server") || e.by === nick) { const del = document.createElement("button"); del.type = "button"; del.className = "cmd danger"; del.textContent = "Cancelar"; del.addEventListener("click", () => socket.emit("event:delete", e.id)); row.append(del); }
       card.append(row);
       return card;
     }) : [span("pempty", "Nenhum evento marcado. Crie um abaixo!")]));
@@ -2827,7 +3456,10 @@ window.setIcon = (btn, name, label, extra) => {
   function setReply(m) {
     replyTo = m;
     const what = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text;
-    $("replyText").textContent = "respondendo " + m.nick + ": " + what;
+    $("replyText").textContent = "Respondendo a " + dispName(m.nick);
+    $("replyText").title = what || "";
+    replyPing = m.uid !== myUid; $("replyPing").textContent = replyPing ? "@ ATIVADO" : "@ DESATIVADO"; $("replyPing").classList.toggle("on", replyPing);
+    $("replyPing").hidden = !m.uid || m.uid === myUid;
     $("replying").hidden = !m;
     input.focus();
   }
@@ -2856,12 +3488,12 @@ window.setIcon = (btn, name, label, extra) => {
   function alertFor(m) {
     if (!nick || !m.nick || m.nick === nick || m.type === "sys") return;
     if (document.hidden) { hiddenUnread++; setTitle(); }
-    const mentioned = m.type === "msg" && mentionsMe(m.text, m.nick);
+    const mentioned = pingsMe(m);
     if (myStatus === "ocupado" && !mentioned) return;
     if (mentioned) ding([880, 1320, 1760]);
     if (notifOn && document.hidden && "Notification" in window && Notification.permission === "granted") {
       const body = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text;
-      try { new Notification(mentioned ? m.nick + " mencionou você" : m.nick, { body: body.slice(0, 140), tag: "chatpedro", icon: avatars[keyOf(m.nick)] || undefined }); } catch {}
+      try { new Notification(mentioned ? m.nick + " mencionou você" : m.nick, { body: document.body.classList.contains("streamer") ? "Nova mensagem" : String(body || "").slice(0, 140), tag: "chatpedro", icon: avatars[keyOf(m.nick)] || undefined }); } catch {}
     }
   }
 
@@ -2957,11 +3589,12 @@ window.setIcon = (btn, name, label, extra) => {
     const li = document.createElement("li");
     if (!online) li.className = "off";
     const p = profiles[keyOf(u)] || {};
-    const pres = span("pres" + (online && (p.status === "ausente" || p.status === "ocupado") ? " " + p.status : "") + (online ? "" : " none"), "");
+    const pres = span("pres" + (online && (p.status === "ausente" || p.status === "ocupado") ? " " + p.status : "") + (online ? "" : " none") + (p.deco ? " deco-" + p.deco : ""), "");
     pres.append(avatar(u, true));
     const box = span("mtxt", "");
-    const name = span("name", u);
-    if (p.color) name.style.color = p.color;
+    const name = span("name", dispName(u));
+    const col = colorOf(u);
+    if (col) name.style.color = col;
     const role = roleOfNick(u);
     if (role === "owner") { const c = span("crown", ""); c.textContent = "\u265B"; c.title = "Dono do servidor"; name.append(c); }
     box.append(name);
@@ -2976,15 +3609,20 @@ window.setIcon = (btn, name, label, extra) => {
     const ul = $("people");
     ul.replaceChildren();
     const byName = (a, b) => a.localeCompare(b);
+    // cargos "separados" (hoist) ganham um grupo proprio, na ordem dos cargos
+    const hoistOf = (u) => { const id = idOfNick(u); return id ? rolesOf(id).find((r) => r.hoist) : null; };
+    const plain = users.filter((u) => roleOfNick(u) === "member");
     const groups = [
       ["Dono", users.filter((u) => roleOfNick(u) === "owner")],
       ["ADM", users.filter((u) => roleOfNick(u) === "admin")],
-      ["Online", users.filter((u) => roleOfNick(u) === "member")],
+      ...guild.roles.filter((r) => r.hoist).map((r) => [r.name, plain.filter((u) => hoistOf(u) === r)]),
+      ["Online", plain.filter((u) => !hoistOf(u))],
     ];
+    const byShown = (a, b) => dispName(a).localeCompare(dispName(b));
     for (const [title, list] of groups) {
       if (!list.length) continue;
       ul.append(span("grp", title + " — " + list.length));
-      for (const u of list.sort(byName)) ul.append(memberRow(u, true));
+      for (const u of list.sort(byShown)) ul.append(memberRow(u, true));
     }
     const off = members.filter((m) => !users.some((u) => keyOf(u) === keyOf(m.nick))).map((m) => m.nick).sort(byName);
     if (off.length) {
@@ -3008,36 +3646,86 @@ window.setIcon = (btn, name, label, extra) => {
   }
 
   // cartao de perfil ao clicar num nome (como o popout do Discord)
+  const CONN = { steam: ["Steam", "https://steamcommunity.com/id/"], instagram: ["Instagram", "https://instagram.com/"], youtube: ["YouTube", "https://youtube.com/@"], twitch: ["Twitch", "https://twitch.tv/"], spotify: ["Spotify", ""], github: ["GitHub", "https://github.com/"], x: ["X", "https://x.com/"], tiktok: ["TikTok", "https://tiktok.com/@"], xbox: ["Xbox", ""], playstation: ["PlayStation", ""], epic: ["Epic Games", ""], riot: ["Riot Games", ""] };
+  window.ChatPedro_CONN = CONN;
   function showPopout(u, anchor) {
     const pop = $("popout"), p = profiles[keyOf(u)] || {};
     const online = users.some((x) => keyOf(x) === keyOf(u));
     const role = roleOfNick(u);
-    const banner = span("banner", ""); banner.style.background = p.color || "var(--accent)";
-    const pres = span("pres big" + (online ? (p.status === "ausente" || p.status === "ocupado" ? " " + p.status : "") : " none"), ""); pres.append(avatar(u, true));
-    const name = span("pname", u);
+    const banner = span("banner", ""); banner.style.background = p.banner || colorOf(u) || p.color || "var(--accent)";
+    const pres = span("pres big" + (online ? (p.status === "ausente" || p.status === "ocupado" ? " " + p.status : "") : " none") + (p.deco ? " deco-" + p.deco : ""), ""); pres.append(avatar(u, true));
+    const name = span("pname", dispName(u));
+    const parts = [banner, pres, name];
+    if (dispName(u) !== u) parts.push(span("puser", u));
+    if (p.text) parts.push(span("ptext", p.text));
     const info = span("pinfo", "");
     if (role !== "member") info.append(span("rbadge", role === "owner" ? "Dono" : "ADM"));
-    info.append(span("pst", online ? (p.status === "ausente" ? "Ausente" : p.status === "ocupado" ? "Ocupado" : "Online") : "Offline"));
-    const parts = [banner, pres, name];
-    if (p.text) parts.push(span("ptext", p.text));
-    if (p.bio) { parts.push(span("plabel", "SOBRE MIM")); parts.push(span("pbio", p.bio)); }
+    info.append(span("pst", online ? (p.status === "ausente" ? "Ausente" : p.status === "ocupado" ? "Não perturbe" : "Online") : "Offline"));
+    if (p.bio) { parts.push(span("plabel", "SOBRE MIM")); const bio = span("pbio", ""); renderText(p.bio, bio); parts.push(bio); }
     const act = online ? activityOf(u) : "";
     if (act) parts.push(span("pact", act));
+    // cargos (quem pode, adiciona e tira daqui mesmo)
+    const myRoles = p.id ? rolesOf(p.id) : [];
+    if (!isDm && (myRoles.length || (can("roles") && guild.roles.length && p.id))) {
+      parts.push(span("plabel", "CARGOS"));
+      const box = span("proles", "");
+      for (const r of myRoles) {
+        const pill = span("rpill", ""); const dot = span("rdot", ""); dot.style.background = r.color || "#b5bac1"; pill.append(dot, span("", r.name));
+        if (can("roles")) { pill.title = "Clique para tirar o cargo"; pill.classList.add("rm"); pill.addEventListener("click", (e) => { e.stopPropagation(); socket.emit("role:assign", { uid: p.id, role: r.id, on: false }); pop.hidden = true; }); }
+        box.append(pill);
+      }
+      if (can("roles") && guild.roles.some((r) => !myRoles.includes(r))) {
+        const add = document.createElement("button"); add.type = "button"; add.className = "rpill add"; add.title = "Dar cargo"; add.append(icon("plus"));
+        add.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const rr = add.getBoundingClientRect();
+          showMenu(guild.roles.filter((r) => !myRoles.includes(r)).map((r) => [r.name, "tag", () => { socket.emit("role:assign", { uid: p.id, role: r.id, on: true }); pop.hidden = true; }]), rr.left, rr.bottom + 4);
+        });
+        box.append(add);
+      }
+      parts.push(box);
+    }
+    // conexoes (Steam, Instagram...)
+    if (Array.isArray(p.conn) && p.conn.length) {
+      parts.push(span("plabel", "CONEXÕES"));
+      const box = span("pconn", "");
+      for (const c of p.conn) {
+        const def = CONN[c.type]; if (!def) continue;
+        const el = document.createElement(def[1] ? "a" : "span"); el.className = "connrow";
+        if (def[1]) { el.href = def[1] + encodeURIComponent(c.name); el.target = "_blank"; el.rel = "noopener noreferrer nofollow"; }
+        el.append(span("cn", def[0]), span("cv", c.name));
+        box.append(el);
+      }
+      parts.push(box);
+    }
     parts.push(info);
+    const row = span("pbtns", "");
     if (u !== nick) {
-      const row = span("pbtns", "");
-      if (p.id && !isDm) {
+      if (p.id) {
         const dm = document.createElement("button"); dm.type = "button"; dm.className = "cmd big"; dm.textContent = "Mandar mensagem";
         dm.addEventListener("click", () => { pop.hidden = true; if (window.ChatPedroAuth) window.ChatPedroAuth.openDm(p.id); });
-        row.append(dm);
+        const fr = document.createElement("button"); fr.type = "button"; fr.className = "cmd"; fr.title = "Adicionar amigo"; fr.append(icon("user-plus"));
+        fr.addEventListener("click", async () => { pop.hidden = true; try { const r = await window.ChatPedroAuth.api("/api/friends", { method: "POST", body: { nick: u } }); setNote(r.accepted ? "Agora você e " + u + " são amigos!" : "Pedido de amizade enviado para " + u + "."); } catch (err) { setNote(err.message, true); } });
+        row.append(dm, fr);
       }
       const b = document.createElement("button"); b.type = "button"; b.className = "cmd"; b.textContent = "Mencionar";
       b.addEventListener("click", () => { pop.hidden = true; input.value = (input.value ? input.value.replace(/\s*$/, " ") : "") + "@" + u + " "; input.focus(); autosize(); });
       const bl = document.createElement("button"); bl.type = "button"; bl.className = "cmd danger"; bl.textContent = isBlocked(u) ? "Desbloquear" : "Bloquear";
       bl.addEventListener("click", () => { pop.hidden = true; toggleBlock(u); });
       row.append(b, bl);
-      parts.push(row);
     }
+    // apelido no servidor: o seu, ou o dos outros se voce modera
+    const target = members.find((x) => keyOf(x.nick) === keyOf(u));
+    if (!isDm && p.id && (u === nick || (can("members") && target && target.role !== "owner"))) {
+      const nb = document.createElement("button"); nb.type = "button"; nb.className = "cmd"; nb.textContent = u === nick ? "Mudar meu apelido aqui" : "Mudar apelido";
+      nb.addEventListener("click", () => {
+        pop.hidden = true;
+        const v = prompt("Apelido em " + $("serverName").textContent + " (vazio volta para " + u + "):", guild.nicks[p.id] || "");
+        if (v !== null) socket.emit("nick:set", { uid: p.id, nick: v });
+      });
+      row.append(nb);
+    }
+    if (row.children.length) parts.push(row);
     pop.replaceChildren(...parts);
     pop.hidden = false;
     const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
@@ -3062,7 +3750,9 @@ window.setIcon = (btn, name, label, extra) => {
   // O servidor diz quem eu sou e em que servidor estou (o apelido vem da conta)
   let firstMe = true;
   socket.on("me", (me) => {
-    nick = me.nick; myUid = me.uid; myRole = me.role; isAdmin = me.role === "owner" || me.role === "admin";
+    nick = me.nick; myUid = me.uid; myRole = me.role;
+    myPerms = new Set(me.perms || (me.role === "owner" || me.role === "admin" ? ["channels", "messages", "members", "ban", "server", "roles", "everyone"] : []));
+    isAdmin = can("members") || can("ban") || can("server");
     serverId = me.server.id; isDm = !!me.server.dm;
     document.body.classList.toggle("dm", isDm);
     $("serverName").textContent = isDm ? (window.ChatPedroAuth && window.ChatPedroAuth.peerName()) || me.server.name : me.server.name;
@@ -3106,7 +3796,7 @@ window.setIcon = (btn, name, label, extra) => {
     if (replyTo) mine.reply = { id: replyTo.id, nick: replyTo.nick, text: replyTo.type === "img" ? "foto" : replyTo.type === "audio" ? "áudio" : replyTo.text };
     addLine(mine, true);
     const drop = () => { if (!entries.includes(mine)) return false; entries = entries.filter((x) => x !== mine); rerenderAll(); return true; };
-    socket.emit("message", { text, replyTo: replyTo ? replyTo.id : undefined, ch: curCh, tts: ttsNext || undefined }, (ok) => { if (ok === false) drop(); });
+    socket.emit("message", { text, replyTo: replyTo ? replyTo.id : undefined, replyPing: replyTo ? replyPing : undefined, ch: curCh, tts: ttsNext || undefined }, (ok) => { if (ok === false) drop(); });
     ttsNext = false;
     setTimeout(() => { if (drop()) setNote("Não deu para enviar a mensagem. Tente de novo.", true); }, 15000);
     clearReply();
@@ -3126,11 +3816,15 @@ window.setIcon = (btn, name, label, extra) => {
   socket.on("connect", () => { for (const info of chData.values()) info.loaded = false; });
   socket.on("channels", (list) => {
     channels = Array.isArray(list) ? list : [];
-    const texts = channels.filter((c) => c.type === "text");
+    const texts = channels.filter((c) => c.type === "text" || c.type === "thread");
     if (!texts.length) return;
-    const want = curCh && texts.some((c) => c.id === curCh) ? curCh : startCh && texts.some((c) => c.id === startCh) ? startCh : texts[0].id;
+    if (curForum && !channels.some((c) => c.id === curForum)) curForum = null;
+    if (curForum) { renderForum(); renderChannels(); return; }
+    const want = curCh && texts.some((c) => c.id === curCh) ? curCh : startCh && channels.some((c) => c.id === startCh) ? startCh : channels.find((c) => c.type === "text").id;
     startCh = null;
-    if (want !== curCh || !chInfo(want).loaded) openChannel(want, startJump); else updateHead();
+    const fc = channels.find((c) => c.id === want);
+    if (fc && fc.type === "forum") openForum(want);
+    else if (want !== curCh || !chInfo(want).loaded) openChannel(want, startJump); else updateHead();
     startJump = null;
     renderChannels();
   });
@@ -3142,9 +3836,9 @@ window.setIcon = (btn, name, label, extra) => {
     if (m.type !== "sys" && m.nick !== nick && !isBlocked(m.nick)) {
       info.unread++;
       if (!info.firstUnreadId) info.firstUnreadId = m.id;
-      if (m.type === "msg" && mentionsMe(m.text, m.nick)) info.mentions++;
+      if (pingsMe(m)) info.mentions++;
       renderChannels();
-      if (!mutedChans.has(ch) || (m.type === "msg" && mentionsMe(m.text, m.nick))) alertFor(m);
+      if (!mutedChans.has(ch) || pingsMe(m)) alertFor(m);
     }
   });
   // acha a mensagem em qualquer canal ja carregado
@@ -3161,7 +3855,8 @@ window.setIcon = (btn, name, label, extra) => {
     if (u.text !== undefined) { m.text = u.text; m.edited = u.edited; }
     if (u.pinned !== undefined) m.pinned = u.pinned;
     if (u.poll !== undefined) m.poll = u.poll;
-    if (it && (u.text !== undefined || u.pinned !== undefined || u.poll !== undefined)) {
+    if (u.thread !== undefined) m.thread = u.thread || undefined;
+    if (it && (u.text !== undefined || u.pinned !== undefined || u.poll !== undefined || u.thread !== undefined)) {
       if (!editing) rerenderAll(); else pendingRerender = true;
     }
     if (panelMode === "pins") renderPins();
@@ -3183,10 +3878,30 @@ window.setIcon = (btn, name, label, extra) => {
   socket.on("notice", (text) => setNote(text, true));
   socket.on("ice", (list) => { window.ChatPedro.ice = list; });
   socket.on("members", (list) => { members = list || []; renderPeople(); renderMod(); });
+  let welcomeShown = false;
+  socket.on("guild", (g) => {
+    guild = { ...guild, ...(g || {}) };
+    renderPeople(); renderChannels(); updateHead();
+    if (entries.length) { if (!editing) rerenderAll(); else pendingRerender = true; }
+    if (window.ChatPedro.onGuild) window.ChatPedro.onGuild(guild);
+    if (!welcomeShown) { welcomeShown = true; maybeWelcome(); }
+  });
+  socket.on("banner", (src) => {
+    $("srvBtn").classList.toggle("hasbanner", !!src);
+    $("srvBtn").style.backgroundImage = src ? "linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.1) 40%, rgba(0,0,0,.6)), url(" + JSON.stringify(src) + ")" : "";
+  });
+  socket.on("thread:touch", (t) => {
+    const c = channels.find((x) => x.id === t.id);
+    if (!c) return;
+    c.count = t.count; c.last = t.last;
+    if (c.id === curCh) updateHead();
+    if (curForum && c.parent === curForum) renderForum();
+    renderChannels();
+  });
   socket.on("profiles", (map) => {
     setTimeout(renderMe, 0);
     profiles = map || {};
-    document.querySelectorAll(".who[data-nick]").forEach((w) => { const p = profiles[w.dataset.nick]; w.style.color = p && p.color ? p.color : ""; });
+    document.querySelectorAll(".who[data-nick]").forEach((w) => { w.style.color = colorOf(w.dataset.nick); });
     renderPeople();
   });
   socket.on("users", (list) => { users = list; renderPeople(); if (isAdmin) renderMod(); });
@@ -3327,13 +4042,13 @@ window.setIcon = (btn, name, label, extra) => {
     const others = members.filter((m) => m.id !== myUid);
     $("modUsers").replaceChildren(...(others.length ? others.map((m) => {
       // ADM nao mexe no dono nem em outro ADM; o dono mexe em todo mundo
-      const can = m.role !== "owner" && (myRole === "owner" || m.role === "member");
+      const ok = m.role !== "owner" && (myRole === "owner" || m.role === "member");
       const buttons = [];
-      if (can) buttons.push(
+      if (ok && myPerms.has("members")) buttons.push(
         btn("Silenciar", () => socket.emit("admin:mute", { id: m.id, minutes: Number($("modMinutes").value) })),
         confirmBtn("Expulsar", () => socket.emit("admin:kick", { id: m.id })),
-        confirmBtn("Banir", () => socket.emit("admin:ban", { id: m.id, minutes: Number($("banMinutes").value) })),
       );
+      if (ok && myPerms.has("ban")) buttons.push(confirmBtn("Banir", () => socket.emit("admin:ban", { id: m.id, minutes: Number($("banMinutes").value) })));
       if (myRole === "owner" && m.role !== "owner") buttons.push(btn(m.role === "admin" ? "Tirar ADM" : "Tornar ADM", () => socket.emit("admin:role", { id: m.id, role: m.role === "admin" ? "member" : "admin" })));
       return row(nameOf(m), ...buttons);
     }) : [span("lbl2", "só tem você aqui. Chame a galera pela engrenagem > Gerar link.")]));
@@ -3453,7 +4168,15 @@ window.setIcon = (btn, name, label, extra) => {
   $("recCancel").addEventListener("click", () => { if (rec) { rec.send = false; rec.mr.stop(); } });
 
   window.ChatPedro = {
-    socket, avatar, setNote, store, renderPeople, openMod,
+    socket, avatar, setNote, store, renderPeople, openMod, showMenu, icon, dispName,
+    can: (p) => can(p),
+    get guild() { return guild; },
+    get members() { return members; },
+    get channels() { return channels; },
+    get serverId() { return serverId; },
+    get myUid() { return myUid; },
+    get isDm() { return isDm; },
+    onGuild: null,
     get nick() { return nick; },
     get role() { return myRole; },
     setColor(c) { myColor = c || ""; },
@@ -3493,5 +4216,7 @@ window.setIcon = (btn, name, label, extra) => {
 <script src="/poker.js"></script>
 <script src="/truco.js"></script>
 <script src="/boot.js"></script>
+<script src="/guild.js"></script>
+<script src="/home.js"></script>
 </body>
 </html>

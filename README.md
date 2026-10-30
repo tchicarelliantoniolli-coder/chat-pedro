@@ -83,5 +83,15 @@ Compre um dominio (ex.: no Registro.br para `.com.br`). No Render, em **Settings
 - **Caixa de entrada** (ícone no topo): suas menções e as mensagens salvas. **Busca** (use `de: nome`) e **fixadas** no alfinete.
 - **Eventos**: crie eventos com data e hora; quem quiser marca "Tenho interesse".
 - **Membros** agrupados em Dono, ADM, Online e Offline, com status e "Sobre mim". Dá para bloquear alguém (as mensagens dele ficam escondidas para você).
+- **Cargos personalizados** (Configurações do servidor > Cargos): nome, cor, permissões (canais, mensagens, moderar, banir, servidor, cargos, @everyone) e "mostrar separado" na lista de membros. Dá e tira cargo pelo cartão de perfil.
+- **Apelido no servidor**: no seu cartão de perfil, "Mudar meu apelido aqui". Quem modera muda o dos outros.
+- **Tipos de canal**: texto, anúncios (só a moderação escreve), fórum (posts em cartões), voz e palco (oradores falam, a plateia levanta a mão). **Tópicos**: botão direito numa mensagem > Criar tópico.
+- **Emojis e figurinhas do servidor** (Configurações do servidor): use `:nome:` e o botão de figurinha da caixa de texto.
+- **Início** (ícone de balão no topo da barra): amigos (online, todos, pendentes, adicionar pelo apelido), conversas diretas e DM em grupo.
+- **Descobrir** (bússola): servidores públicos, que qualquer um entra sem convite. Ligue em Configurações do servidor > Descobrir.
+- **Modelos** ao criar servidor (Amigos, Jogos, Estudos, Comunidade), **tela de boas-vindas** com regras, **link personalizado** (`/convite/galera`), **banner** e **webhooks** (Integrações).
+- **Prévia de links** (título, descrição e imagem do site), **traduzir mensagem**, responder com ou sem menção (@ ATIVADO), aviso de menção em outros servidores na barra da esquerda.
+- **Perfil**: cor do banner, decoração do avatar, conexões (Steam, Instagram, YouTube...), verificação em 2 etapas (app autenticador) e modo streamer.
+- **Call**: sensibilidade de entrada do microfone (corta barulho de fundo) em Áudio e vídeo.
 - **Atividades**: Poker (Texas Hold'em, até 9) e Truco Paulista (mesa de 4 ou 6).
 - **Moderação** (nome do servidor > Moderar membros): silenciar, expulsar, banir, AutoMod com palavras bloqueadas, registro de moderação e limpar o canal. Convites ativos podem ser vistos e cancelados. O anti-flood silencia por 2 min quem insistir.

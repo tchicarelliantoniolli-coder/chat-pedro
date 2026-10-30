@@ -1,5 +1,8 @@
 const path = require("path");
 const http = require("http");
+const https = require("https");
+const dns = require("dns");
+const net = require("net");
 const crypto = require("crypto");
 const express = require("express");
 const compression = require("compression");
@@ -33,6 +36,32 @@ const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "\u2764\u
 const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
 const STATUSES = ["online", "ausente", "ocupado", "invisivel"];
 const INVITE_HOURS = [1, 24, 168, 0]; // 0 = nunca vence
+// permissoes dos cargos personalizados (dono e ADM tem todas)
+const PERMS = ["channels", "messages", "members", "ban", "server", "roles", "everyone"];
+const MAX_ROLES = 20;
+const MAX_THREADS = 100;
+const MAX_EMOJIS = 50;
+const MAX_STICKERS = 30;
+const MAX_EMOJI_IMG = 16 * 1024;    // emoji do servidor (64x64)
+const MAX_STICKER_IMG = 160 * 1024; // figurinha (ate 320x320)
+const MAX_BANNER = 300 * 1024;      // banner do servidor
+const CUSTOM_EMOJI_RE = /^<:([A-Za-z0-9_]{2,32}):([a-f0-9]{10})>$/;
+const INVITE_CODE_RE = /^[A-Za-z0-9_-]{3,32}$/;
+const DECORATIONS = ["", "fogo", "neon", "arco-iris", "ouro", "gelo", "coracoes"];
+const CONNECTION_TYPES = ["steam", "instagram", "youtube", "twitch", "spotify", "github", "x", "tiktok", "xbox", "playstation", "epic", "riot"];
+// modelos de servidor (canais que ja vem prontos)
+const TEMPLATES = {
+  amigos: [["geral", "text"], ["memes", "text"], ["fotos", "text"], ["Call", "voice"], ["Jogando", "voice"]],
+  jogos: [["avisos", "text", { announce: true }], ["geral", "text"], ["procurando-time", "text"], ["dicas", "forum"], ["Lobby", "voice"], ["Partida 1", "voice"], ["Partida 2", "voice"]],
+  estudos: [["avisos", "text", { announce: true }], ["geral", "text"], ["duvidas", "forum"], ["Sala de estudo", "voice"], ["Aula", "voice", { stage: true }]],
+  comunidade: [["regras", "text", { announce: true }], ["boas-vindas", "text"], ["geral", "text"], ["sugestoes", "forum"], ["Bate-papo", "voice"], ["Palco", "voice", { stage: true }]],
+};
+const newId = () => crypto.randomBytes(5).toString("hex");
+function templateChannels(name) {
+  const t = TEMPLATES[name];
+  if (!t) return null;
+  return t.map(([n, type, extra]) => ({ id: newId(), name: n, type, ...(type === "text" ? { topic: "", slow: 0 } : {}), ...(type === "forum" ? { topic: "" } : {}), ...(extra || {}) }));
+}
 
 // Servidores para a call atravessar redes chatas (4G, escola, empresa). O TURN e opcional e vem do Render.
 const ICE_SERVERS = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
@@ -82,7 +111,7 @@ const profileCache = new Map(); // id da conta -> { id, nick, avatar, color }
 async function getProfiles(ids) {
   const missing = [...new Set(ids)].filter((id) => !profileCache.has(id));
   if (missing.length) {
-    const rows = await db.select("profiles", { select: "id,nick,avatar,color,status_text,bio", id: db.inList(missing) });
+    const rows = await db.select("profiles", { select: "id,nick,avatar,color,status_text,bio,banner,decoration,connections", id: db.inList(missing) });
     for (const r of rows) profileCache.set(r.id, r);
   }
   return ids.map((id) => profileCache.get(id)).filter(Boolean);
@@ -96,7 +125,11 @@ async function userFromToken(token) {
   if (hit && hit.until > Date.now()) return hit.user;
   try {
     const u = await auth.getUser(token);
-    const user = { id: u.id, email: u.email };
+    // conta com verificacao em 2 etapas: o token precisa ter passado pelo codigo (aal2)
+    const mfa = Array.isArray(u.factors) && u.factors.some((f) => f.status === "verified");
+    let aal = null;
+    try { aal = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()).aal; } catch {}
+    const user = { id: u.id, email: u.email, mfa, needCode: mfa && aal !== "aal2" };
     tokenCache.set(token, { user, until: Date.now() + 60000 });
     if (tokenCache.size > 2000) tokenCache.delete(tokenCache.keys().next().value);
     return user;
@@ -132,11 +165,14 @@ function getCtx(serverId) {
 }
 
 async function buildCtx(serverId) {
-  const [srv] = await db.select("servers", { select: "id,name,owner_id,icon,dm", id: "eq." + serverId });
+  const [srv] = await db.select("servers", { select: "id,name,owner_id,icon,dm,public,description", id: "eq." + serverId });
   if (!srv) throw new Error("servidor não existe");
   const ctx = {
     id: serverId, name: srv.name, icon: srv.icon || null, ownerId: srv.owner_id, room: "srv:" + serverId, dm: !!srv.dm,
     channels: DEFAULT_CHANNELS(), automod: { words: [] }, audit: [], events: [],
+    isPublic: !!srv.public, description: srv.description || "",
+    roles: [], memberRoles: {}, nicks: {}, emojis: [], stickers: [], webhooks: [], welcome: { desc: "", rules: [] }, banner: null, vanity: null,
+    memberIds: new Set(),
     history: [], nextId: 1, storage: createStorage(serverId),
     sockets: new Map(),     // socket.id -> socket (so deste servidor)
     online: new Map(),      // socket.id -> apelido
@@ -162,6 +198,10 @@ async function buildCtx(serverId) {
       if (meta.automod && Array.isArray(meta.automod.words)) ctx.automod = meta.automod;
       if (Array.isArray(meta.audit)) ctx.audit = meta.audit;
       if (Array.isArray(meta.events)) ctx.events = meta.events;
+      for (const n of ["roles", "emojis", "stickers", "webhooks"]) if (Array.isArray(meta[n])) ctx[n] = meta[n];
+      for (const n of ["memberRoles", "nicks", "welcome"]) if (meta[n] && typeof meta[n] === "object") ctx[n] = meta[n];
+      if (typeof meta.banner === "string") ctx.banner = meta.banner;
+      if (typeof meta.vanity === "string") ctx.vanity = meta.vanity;
     } catch (e) {
       console.error("Não deu para carregar os canais do servidor " + serverId + ":", e.message);
     }
@@ -183,7 +223,26 @@ async function loadMembers(ctx) {
   const profiles = await getProfiles(rows.map((r) => r.user_id));
   const byId = new Map(profiles.map((p) => [p.id, p]));
   ctx.members = rows.filter((r) => byId.has(r.user_id)).map((r) => ({ ...byId.get(r.user_id), role: r.role }));
+  ctx.memberIds = new Set(ctx.members.map((m) => m.id));
 }
+
+// permissoes de alguem no servidor: dono e ADM tem todas; membro tem as dos cargos dele
+function permsOf(ctx, uid, role) {
+  if (role === "owner" || role === "admin") return new Set(PERMS);
+  const out = new Set();
+  for (const rid of ctx.memberRoles[uid] || []) { const r = ctx.roles.find((x) => x.id === rid); if (r) for (const p of r.perms) out.add(p); }
+  return out;
+}
+const sockCan = (ctx, s, perm) => permsOf(ctx, s.data.user.id, s.data.role).has(perm);
+// dados do servidor que todo mundo precisa (cargos, apelidos, emojis, figurinhas, boas-vindas)
+function guildOf(ctx) {
+  return {
+    roles: ctx.roles, memberRoles: ctx.memberRoles, nicks: ctx.nicks, emojis: ctx.emojis,
+    stickers: ctx.stickers.map((x) => ({ id: x.id, name: x.name })), welcome: ctx.welcome, vanity: ctx.vanity,
+    isPublic: ctx.isPublic, description: ctx.description,
+  };
+}
+const sendGuild = (ctx) => toRoom(ctx, "guild", guildOf(ctx));
 
 const toRoom = (ctx, ev, data) => io.to(ctx.room).emit(ev, data);
 const persist = (ctx) => ctx.storage && !ctx.dead && ctx.storage.saveSoon({ history: ctx.history, nextId: ctx.nextId });
@@ -209,8 +268,27 @@ function pushMessage(ctx, msg) {
   dropMessages(ctx, old);
   toRoom(ctx, "message", msg);
   persist(ctx);
+  if (msg.type === "sys") return;
+  // topico: conta as respostas e mostra a ultima atividade
+  const th = ctx.channels.find((c) => c.id === msg.ch && c.type === "thread");
+  if (th) {
+    th.count = (th.count || 0) + 1; th.last = msg.ts;
+    toRoom(ctx, "thread:touch", { id: th.id, count: th.count, last: th.last });
+    const root = th.msg && ctx.history.find((x) => x.id === th.msg);
+    if (root) { root.thread = { id: th.id, name: th.name, count: th.count, last: th.last }; toRoom(ctx, "message:update", { id: root.id, thread: root.thread }); }
+    saveMeta(ctx, "channels");
+  }
   // mensagem direta: avisa a outra pessoa mesmo se ela estiver em outro servidor
-  if (ctx.dm && msg.uid) for (const m of ctx.members) if (m.id !== msg.uid) toUser(m.id, "dm:ping", { server: ctx.id, nick: msg.nick, text: msg.type === "text" ? String(msg.text || "").slice(0, 120) : "" }, ctx);
+  if (ctx.dm) { for (const m of ctx.members) if (m.id !== msg.uid) toUser(m.id, "dm:ping", { server: ctx.id, nick: msg.nick, text: msg.type === "msg" ? String(msg.text || "").slice(0, 120) : "" }, ctx); return; }
+  // servidor: bolinha de "nao lido" (e contador de mencao) para quem esta com outro servidor aberto
+  const text = msg.type === "msg" ? String(msg.text || "").toLowerCase() : "";
+  const mentioned = (m) => msg.everyone || (text && text.includes("@" + m.nick.toLowerCase())) || (msg.reply && msg.reply.ping && msg.reply.uid === m.id);
+  const byId = new Map(ctx.members.map((m) => [m.id, m]));
+  for (const s of io.sockets.sockets.values()) {
+    const u = s.data.user && s.data.user.id;
+    if (!u || s.data.ctx === ctx || u === msg.uid || !byId.has(u)) continue;
+    s.emit("srv:ping", { server: ctx.id, mention: !!mentioned(byId.get(u)) });
+  }
 }
 // manda um evento para todas as abas abertas de uma conta (em qualquer servidor, menos o skip)
 function toUser(uid, event, data, skip) {
@@ -218,8 +296,9 @@ function toUser(uid, event, data, skip) {
 }
 // Historico sem o conteudo das fotos e audios (que sao pesados): o navegador pede cada um quando precisa
 const historyFor = (ctx, ch) => ctx.history.filter((m) => chOf(m) === ch).map((m) => (isMedia(m) ? { ...m, src: undefined, lazy: true } : m));
-const sys = (ctx, text, ch) => pushMessage(ctx, { type: "sys", text, ts: Date.now(), ch: ch || (ctx.channels.find((c) => c.type === "text") || {}).id || "chat" });
-const textChannel = (ctx, id) => ctx.channels.find((c) => c.id === id && c.type === "text");
+const sys = (ctx, text, ch, extra) => pushMessage(ctx, { type: "sys", text, ts: Date.now(), ch: ch || (ctx.channels.find((c) => c.type === "text") || {}).id || "chat", ...(extra || {}) });
+// canais onde da para mandar mensagem: texto e topicos (o forum so tem posts, que sao topicos)
+const textChannel = (ctx, id) => ctx.channels.find((c) => c.id === id && (c.type === "text" || c.type === "thread"));
 const voiceChannel = (ctx, id) => ctx.channels.find((c) => c.id === id && c.type === "voice");
 const saveMeta = (ctx, name) => ctx.storage && !ctx.dead && ctx.storage.saveMeta(name, ctx[name]);
 const sendChannels = (ctx) => toRoom(ctx, "channels", ctx.channels);
@@ -257,7 +336,7 @@ function sendUsers(ctx, withAvatars) {
   const onlineIds = new Set([...ctx.sockets.values()].filter((s) => ctx.statuses.get(s.id) !== "invisivel").map((s) => s.data.user.id));
   toRoom(ctx, "users", [...new Set(visible.map(([, n]) => n))].sort());
   const profiles = {};
-  for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline", text: m.status_text || undefined, bio: m.bio || undefined, id: m.id };
+  for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline", text: m.status_text || undefined, bio: m.bio || undefined, id: m.id, banner: m.banner || undefined, deco: m.decoration || undefined, conn: m.connections || undefined };
   for (const [id, nick] of visible) profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online" };
   if (withAvatars) toRoom(ctx, "avatars", avatarsOf(ctx));
   toRoom(ctx, "profiles", profiles);
@@ -274,8 +353,8 @@ function blockedUntil(map, key) {
 function quoteOf(ctx, id) {
   const m = ctx.history.find((x) => x.id === Number(id));
   if (!m || m.type === "sys") return null;
-  const text = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.type === "file" ? "arquivo " + (m.name || "") : m.type === "poll" ? "enquete: " + m.poll.q : m.text.slice(0, 90);
-  return { id: m.id, nick: m.nick, text };
+  const text = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.type === "file" ? "arquivo " + (m.name || "") : m.type === "poll" ? "enquete: " + m.poll.q : m.type === "sticker" ? "figurinha" : String(m.text || "").slice(0, 90);
+  return { id: m.id, nick: m.nick, uid: m.uid, text };
 }
 
 // Lista de silenciados, so para quem modera
@@ -284,7 +363,7 @@ function sendModeration(ctx) {
     const m = ctx.members.find((x) => x.id === uid);
     return { id: uid, nick: m ? m.nick : "?", min: minutesLeft(until) };
   });
-  for (const s of ctx.sockets.values()) if (["owner", "admin"].includes(s.data.role)) s.emit("admin:moderation", { muted });
+  for (const s of ctx.sockets.values()) if (sockCan(ctx, s, "members")) s.emit("admin:moderation", { muted });
 }
 
 // Tira alguem do servidor (expulso, banido ou servidor apagado)
@@ -310,6 +389,7 @@ async function requireUser(req, res) {
   const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   const user = await userFromToken(token);
   if (!user) { fail(res, 401, "Sua sessão acabou. Entre de novo."); return null; }
+  if (user.needCode && !req.allowPartial) { fail(res, 401, "Digite o código da verificação em 2 etapas."); return null; }
   return user;
 }
 
@@ -356,10 +436,16 @@ api.get("/me", wrap(async (req, res) => {
   const dms = list.filter((x) => x.dm);
   if (dms.length) {
     const mem = await db.select("server_members", { select: "server_id,user_id", server_id: db.inList(dms.map((d) => d.id)) });
-    const other = new Map(mem.filter((m) => m.user_id !== user.id).map((m) => [m.server_id, m.user_id]));
-    const profs = await getProfiles([...new Set(other.values())]);
+    const others = new Map();
+    for (const m of mem) if (m.user_id !== user.id) others.set(m.server_id, [...(others.get(m.server_id) || []), m.user_id]);
+    const profs = await getProfiles([...new Set(mem.map((m) => m.user_id).filter((id) => id !== user.id))]);
     const byId = new Map(profs.map((p) => [p.id, p]));
-    for (const d of dms) { const o = byId.get(other.get(d.id)); d.name = o ? o.nick : "Conversa"; d.icon = o ? o.avatar || null : null; d.peer = o ? o.id : null; }
+    for (const d of dms) {
+      const list = (others.get(d.id) || []).map((id) => byId.get(id)).filter(Boolean);
+      // conversa em grupo: nome escolhido ou os apelidos de quem esta nela
+      if (list.length > 1) { d.group = true; d.name = d.name && d.name !== "DM" ? d.name : list.map((o) => o.nick).join(", ").slice(0, 60); d.icon = d.icon || null; continue; }
+      const o = list[0]; d.name = o ? o.nick : "Conversa"; d.icon = o ? o.avatar || null : null; d.peer = o ? o.id : null;
+    }
   }
   res.json({ user: { id: user.id, email: user.email }, profile, servers: list });
 }));
@@ -387,6 +473,21 @@ api.patch("/me", wrap(async (req, res) => {
     patch.status_text = t || null;
   }
   if (req.body.color !== undefined) { if (!NAME_COLORS.includes(req.body.color)) return fail(res, 400, "Cor inválida."); patch.color = req.body.color; }
+  if (req.body.banner !== undefined) {
+    if (req.body.banner !== null && !/^#[0-9a-f]{6}$/i.test(String(req.body.banner))) return fail(res, 400, "Cor do banner inválida.");
+    patch.banner = req.body.banner;
+  }
+  if (req.body.decoration !== undefined) {
+    if (!DECORATIONS.includes(String(req.body.decoration || ""))) return fail(res, 400, "Decoração inválida.");
+    patch.decoration = req.body.decoration || null;
+  }
+  if (req.body.connections !== undefined) {
+    const list = (Array.isArray(req.body.connections) ? req.body.connections : [])
+      .filter((c) => c && CONNECTION_TYPES.includes(c.type))
+      .map((c) => ({ type: c.type, name: String(c.name || "").replace(/[\s<>"]/g, "").slice(0, 60) }))
+      .filter((c) => c.name).slice(0, 8);
+    patch.connections = list.length ? list : null;
+  }
   if (req.body.avatar !== undefined) {
     const a = String(req.body.avatar);
     if (a.length > MAX_AVATAR || !IMAGE_RE.test(a)) return fail(res, 400, "Foto inválida.");
@@ -437,6 +538,8 @@ api.post("/servers", wrap(async (req, res) => {
   if (owned.length >= MAX_SERVERS_OWNED) return fail(res, 400, "Você já é dono de " + MAX_SERVERS_OWNED + " servidores.");
   const [srv] = await db.insert("servers", [{ name, owner_id: user.id }]);
   await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "owner" }], false);
+  const chans = templateChannels(String(req.body.template || ""));
+  if (chans) await db.upsert("chat_kv", [{ key: "srv:" + srv.id + ":channels", value: JSON.stringify(chans), expires_at: null }], "key");
   res.json({ server: { id: srv.id, name: srv.name, icon: null, role: "owner" } });
 }));
 
@@ -493,7 +596,8 @@ api.delete("/servers/:id", wrap(async (req, res) => {
 api.post("/servers/:id/leave", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const role = await requireRole(req, res, user, ["admin", "member", "owner"]); if (!role) return;
-  if (role === "owner") return fail(res, 400, "O dono não pode sair. Apague o servidor se não quiser mais ele.");
+  const [srvRow] = await db.select("servers", { select: "dm", id: "eq." + req.params.id });
+  if (role === "owner" && !(srvRow && srvRow.dm)) return fail(res, 400, "O dono não pode sair. Apague o servidor se não quiser mais ele.");
   await db.remove("server_members", { server_id: "eq." + req.params.id, user_id: "eq." + user.id });
   if (contexts.has(req.params.id)) {
     const ctx = await contexts.get(req.params.id);
@@ -505,17 +609,41 @@ api.post("/servers/:id/leave", wrap(async (req, res) => {
 
 // Mensagem direta: conversa privada entre duas pessoas que estao em algum servidor juntas.
 // Por baixo e um "servidor" de 2 pessoas (dm = true), entao tem chat, call, fotos e tudo mais.
+async function friendsOf(uid) {
+  const [a, b] = await Promise.all([
+    db.select("friendships", { select: "user_id,friend_id,status", user_id: "eq." + uid }),
+    db.select("friendships", { select: "user_id,friend_id,status", friend_id: "eq." + uid }),
+  ]);
+  return [...a, ...b];
+}
+const areFriends = (rows, a, b) => rows.some((r) => r.status === "accepted" && ((r.user_id === a && r.friend_id === b) || (r.user_id === b && r.friend_id === a)));
 api.post("/dm", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
+  // conversa em grupo (ate 10 pessoas, todas amigas de quem cria)
+  if (Array.isArray(req.body.userIds)) {
+    const ids = [...new Set(req.body.userIds.map(String))].filter((id) => UUID_RE.test(id) && id !== user.id);
+    if (ids.length < 1 || ids.length > 9) return fail(res, 400, "Escolha de 1 a 9 amigos.");
+    const fr = await friendsOf(user.id);
+    if (!ids.every((id) => areFriends(fr, user.id, id))) return fail(res, 403, "Só dá para colocar amigos no grupo.");
+    const [srv] = await db.insert("servers", [{ name: "DM", owner_id: user.id, dm: true }]);
+    await db.insert("server_members", [user.id, ...ids].map((id) => ({ server_id: srv.id, user_id: id, role: id === user.id ? "owner" : "member" })), false);
+    for (const id of ids) toUser(id, "dm:new", { server: srv.id });
+    return res.json({ server: { id: srv.id } });
+  }
   const other = String(req.body.userId || "");
   if (!UUID_RE.test(other) || other === user.id) return fail(res, 400, "Pessoa inválida.");
   const mine = await db.select("server_members", { select: "server_id,server:servers(dm)", user_id: "eq." + user.id });
   const theirs = await db.select("server_members", { select: "server_id,server:servers(dm)", user_id: "eq." + other });
   const theirSet = new Set(theirs.map((m) => m.server_id));
   const shared = mine.filter((m) => theirSet.has(m.server_id));
-  const existing = shared.find((m) => m.server && m.server.dm);
-  if (existing) return res.json({ server: { id: existing.server_id } });
-  if (!shared.some((m) => m.server && !m.server.dm)) return fail(res, 403, "Você só pode mandar mensagem para quem está em um servidor com você.");
+  // conversa de 2 que ja existe (grupo nao conta)
+  const dmIds = shared.filter((m) => m.server && m.server.dm).map((m) => m.server_id);
+  if (dmIds.length) {
+    const mem = await db.select("server_members", { select: "server_id,user_id", server_id: db.inList(dmIds) });
+    const two = dmIds.find((id) => mem.filter((m) => m.server_id === id).length === 2);
+    if (two) return res.json({ server: { id: two } });
+  }
+  if (!shared.some((m) => m.server && !m.server.dm) && !areFriends(await friendsOf(user.id), user.id, other)) return fail(res, 403, "Você só pode mandar mensagem para amigos ou para quem está em um servidor com você.");
   const [srv] = await db.insert("servers", [{ name: "DM", owner_id: user.id, dm: true }]);
   await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "member" }, { server_id: srv.id, user_id: other, role: "member" }], false);
   toUser(other, "dm:new", { server: srv.id });
@@ -535,7 +663,7 @@ api.get("/servers/:id/invites", wrap(async (req, res) => {
 api.delete("/servers/:id/invites/:code", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   if (!(await requireRole(req, res, user, ["owner", "admin"]))) return;
-  if (!/^[A-Za-z0-9_-]{6,20}$/.test(req.params.code)) return fail(res, 400, "Convite inválido.");
+  if (!INVITE_CODE_RE.test(req.params.code)) return fail(res, 400, "Convite inválido.");
   await db.remove("server_invites", { code: "eq." + req.params.code, server_id: "eq." + req.params.id });
   if (contexts.has(req.params.id)) { const ctx = await contexts.get(req.params.id).catch(() => null); if (ctx) audit(ctx, (await getProfile(user.id) || {}).nick || "?", "cancelou o convite", req.params.code); }
   res.json({ ok: true });
@@ -553,7 +681,7 @@ api.post("/servers/:id/invites", wrap(async (req, res) => {
 }));
 
 async function findInvite(code) {
-  if (!/^[A-Za-z0-9_-]{6,20}$/.test(code)) return null;
+  if (!INVITE_CODE_RE.test(code)) return null;
   const rows = await db.select("server_invites", { select: "code,server_id,expires_at,uses,server:servers(id,name,icon)", code: "eq." + code });
   const inv = rows[0];
   if (!inv || !inv.server || (inv.expires_at && Date.parse(inv.expires_at) <= Date.now())) return null;
@@ -581,10 +709,196 @@ api.post("/invites/:code/accept", wrap(async (req, res) => {
       const ctx = await contexts.get(inv.server_id);
       await loadMembers(ctx); sendUsers(ctx, true);
       const p = await getProfile(user.id);
-      if (p) sys(ctx, p.nick + " entrou no servidor pelo convite");
+      if (p) sys(ctx, p.nick + " entrou no servidor pelo convite", null, { join: p.nick });
     }
   }
   res.json({ server: inv.server });
+}));
+
+
+// ---------- amigos ----------
+// online de verdade: alguma aba aberta e nao invisivel
+function presenceOf(uid) {
+  let st = "offline";
+  for (const s of io.sockets.sockets.values()) {
+    if (!s.data.user || s.data.user.id !== uid) continue;
+    const v = s.data.ctx.statuses.get(s.id) || "online";
+    if (v === "invisivel") return "offline";
+    if (st === "offline" || v === "online") st = v;
+  }
+  return st;
+}
+api.get("/friends", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  const rows = await friendsOf(user.id);
+  const ids = rows.map((r) => (r.user_id === user.id ? r.friend_id : r.user_id));
+  const profs = await getProfiles(ids);
+  const byId = new Map(profs.map((p) => [p.id, p]));
+  res.json({ friends: rows.map((r) => {
+    const id = r.user_id === user.id ? r.friend_id : r.user_id, p = byId.get(id);
+    if (!p) return null;
+    const kind = r.status === "accepted" ? "friend" : r.user_id === user.id ? "outgoing" : "incoming";
+    return { id, nick: p.nick, avatar: p.avatar || null, color: p.color || null, text: p.status_text || null, kind, status: kind === "friend" ? presenceOf(id) : "offline" };
+  }).filter(Boolean) });
+}));
+api.post("/friends", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  const nick = cleanNick(req.body.nick);
+  if (!nick || NICK_BAD.test(nick)) return fail(res, 400, "Digite o apelido certinho da pessoa.");
+  const [other] = await db.select("profiles", { select: "id,nick", nick: "ilike." + nick });
+  if (!other) return fail(res, 404, "Ninguém com esse apelido. Confira se digitou certo.");
+  if (other.id === user.id) return fail(res, 400, "Você não pode adicionar você mesmo.");
+  const rows = await friendsOf(user.id);
+  if (rows.length >= 300) return fail(res, 400, "Lista de amigos cheia.");
+  const rel = rows.find((r) => r.user_id === other.id || r.friend_id === other.id);
+  if (rel && rel.status === "accepted") return fail(res, 409, "Vocês já são amigos.");
+  if (rel && rel.user_id === user.id) return fail(res, 409, "Pedido já enviado. Espere " + other.nick + " aceitar.");
+  if (rel) await db.update("friendships", { user_id: "eq." + other.id, friend_id: "eq." + user.id }, { status: "accepted" });
+  else await db.insert("friendships", [{ user_id: user.id, friend_id: other.id, status: "pending" }], false);
+  toUser(other.id, "friends:update", { from: (await getProfile(user.id) || {}).nick, accepted: !!rel });
+  res.json({ ok: true, accepted: !!rel, nick: other.nick });
+}));
+api.post("/friends/:id/accept", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  if (!UUID_RE.test(req.params.id)) return fail(res, 400, "Pedido inválido.");
+  const rows = await db.update("friendships", { user_id: "eq." + req.params.id, friend_id: "eq." + user.id, status: "eq.pending" }, { status: "accepted" });
+  if (!rows.length) return fail(res, 404, "Esse pedido não existe mais.");
+  toUser(req.params.id, "friends:update", { from: (await getProfile(user.id) || {}).nick, accepted: true });
+  res.json({ ok: true });
+}));
+api.delete("/friends/:id", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  if (!UUID_RE.test(req.params.id)) return fail(res, 400, "Pessoa inválida.");
+  await db.remove("friendships", { user_id: "eq." + user.id, friend_id: "eq." + req.params.id });
+  await db.remove("friendships", { user_id: "eq." + req.params.id, friend_id: "eq." + user.id });
+  toUser(req.params.id, "friends:update", {});
+  res.json({ ok: true });
+}));
+
+// ---------- Descobrir: servidores publicos ----------
+api.get("/discover", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  const rows = await db.select("servers", { select: "id,name,icon,description", public: "eq.true", dm: "eq.false", order: "created_at.desc" });
+  const list = rows.slice(0, 60);
+  const mem = list.length ? await db.select("server_members", { select: "server_id,user_id", server_id: db.inList(list.map((x) => x.id)) }) : [];
+  const q = String(req.query.q || "").toLowerCase();
+  res.json({ servers: list.map((x) => {
+    const ms = mem.filter((m) => m.server_id === x.id);
+    return { id: x.id, name: x.name, icon: x.icon || null, description: x.description || "", members: ms.length, online: ms.filter((m) => presenceOf(m.user_id) !== "offline").length, joined: ms.some((m) => m.user_id === user.id) };
+  }).filter((x) => !q || (x.name + " " + x.description).toLowerCase().includes(q)).sort((a, b) => b.members - a.members) });
+}));
+api.post("/servers/:id/join", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  if (!UUID_RE.test(req.params.id)) return fail(res, 404, "Servidor não encontrado.");
+  const [srv] = await db.select("servers", { select: "id,name,icon,public,dm", id: "eq." + req.params.id });
+  if (!srv || !srv.public || srv.dm) return fail(res, 404, "Esse servidor não está aberto no Descobrir.");
+  const ban = await activeBan(srv.id, user.id);
+  if (ban) return fail(res, 403, "Você foi banido desse servidor.");
+  if (!(await membership(srv.id, user.id))) {
+    await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "member" }], false);
+    if (contexts.has(srv.id)) {
+      const ctx = await contexts.get(srv.id);
+      await loadMembers(ctx); sendUsers(ctx, true);
+      const p = await getProfile(user.id);
+      if (p) sys(ctx, p.nick + " chegou pelo Descobrir", null, { join: p.nick });
+    }
+  }
+  res.json({ server: { id: srv.id, name: srv.name, icon: srv.icon || null } });
+}));
+
+// ---------- webhooks: POST com { content, username } manda mensagem no canal ----------
+const hookHits = new Map(); // webhook -> [horarios]
+api.post("/webhooks/:server/:id/:token", wrap(async (req, res) => {
+  if (!UUID_RE.test(req.params.server)) return fail(res, 404, "Webhook não existe.");
+  const ctx = await getCtx(req.params.server).catch(() => null);
+  const w = ctx && ctx.webhooks.find((x) => x.id === req.params.id);
+  const tok = Buffer.from(String(req.params.token)), real = Buffer.from(w ? w.token : "x");
+  if (!w || tok.length !== real.length || !crypto.timingSafeEqual(tok, real)) return fail(res, 404, "Webhook não existe.");
+  const now = Date.now(), hits = (hookHits.get(w.id) || []).filter((t) => now - t < 60000);
+  if (hits.length >= 30) return fail(res, 429, "Muitas mensagens. Máximo de 30 por minuto.");
+  hits.push(now); hookHits.set(w.id, hits);
+  const text = String(req.body.content || req.body.text || "").replace(/\r/g, "").trim().slice(0, MAX_TEXT);
+  if (!text) return fail(res, 400, "Mande o texto em \"content\".");
+  if (!ctx.channels.some((c) => c.id === w.ch)) return fail(res, 410, "O canal desse webhook foi apagado.");
+  const nick = cleanNick(req.body.username) || w.name;
+  pushMessage(ctx, { type: "msg", nick, bot: true, text, ts: now, ch: w.ch });
+  res.status(204).end();
+}));
+
+// ---------- previa de links (titulo, descricao e imagem do site) ----------
+const embedCache = new Map(); // url -> { data, until }
+const embedHits = new Map();  // conta -> [horarios]
+function privateIp(ip) {
+  if (net.isIPv4(ip)) {
+    const [a, b] = ip.split(".").map(Number);
+    return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  }
+  const v = ip.toLowerCase();
+  if (v.startsWith("::ffff:")) return privateIp(v.slice(7));
+  return v === "::1" || v === "::" || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe80");
+}
+// so deixa o servidor buscar sites da internet aberta (nunca a rede interna)
+function safeLookup(host, opts, cb) {
+  dns.lookup(host, { family: 0 }, (err, address, family) => {
+    if (err) return cb(err);
+    if (privateIp(address) && !process.env.EMBED_ALLOW_LOCAL) return cb(new Error("endereço bloqueado"));
+    if (opts && opts.all) return cb(null, [{ address, family }]);
+    cb(null, address, family);
+  });
+}
+function fetchHtml(url, hops = 3) {
+  return new Promise((resolve, reject) => {
+    let u;
+    try { u = new URL(url); } catch { return reject(new Error("link inválido")); }
+    if (!/^https?:$/.test(u.protocol) || (u.port && !["80", "443"].includes(u.port) && !process.env.EMBED_ALLOW_LOCAL)) return reject(new Error("link inválido"));
+    const lib = u.protocol === "https:" ? https : http;
+    const req = lib.get(u, { lookup: safeLookup, timeout: 5000, headers: { "User-Agent": "Mozilla/5.0 (compatible; ChatPedroBot/1.0; +https://chat-pedro.onrender.com)", Accept: "text/html", "Accept-Language": "pt-BR,pt;q=0.9" } }, (r) => {
+      if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location && hops > 0) { r.resume(); return resolve(fetchHtml(new URL(r.headers.location, u).href, hops - 1)); }
+      if (r.statusCode !== 200 || !/text\/html|xhtml/i.test(r.headers["content-type"] || "")) { r.resume(); return reject(new Error("sem página")); }
+      let size = 0; const chunks = [];
+      r.on("data", (c) => { size += c.length; chunks.push(c); if (size > 400 * 1024) r.destroy(); });
+      r.on("close", () => resolve({ html: Buffer.concat(chunks).toString("utf8"), url: u.href }));
+      r.on("error", reject);
+    });
+    req.on("timeout", () => req.destroy(new Error("demorou demais")));
+    req.on("error", reject);
+  });
+}
+const decodeHtml = (t) => String(t || "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n))).replace(/\s+/g, " ").trim();
+function metaOf(html, base) {
+  const head = html.slice(0, 200000);
+  const get = (...names) => {
+    for (const n of names) {
+      const re = new RegExp("<meta[^>]+(?:property|name)=[\"']" + n + "[\"'][^>]*>", "i");
+      const tag = head.match(re);
+      if (tag) { const c = tag[0].match(/content=["']([^"']*)["']/i); if (c && c[1].trim()) return decodeHtml(c[1]); }
+    }
+    return "";
+  };
+  const title = get("og:title", "twitter:title") || decodeHtml((head.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1]);
+  let image = get("og:image", "og:image:url", "twitter:image");
+  try { image = image ? new URL(image, base).href : ""; } catch { image = ""; }
+  if (image && !/^https:/.test(image)) image = "";
+  const color = get("theme-color");
+  return {
+    site: get("og:site_name").slice(0, 80) || new URL(base).hostname.replace(/^www\./, ""),
+    title: title.slice(0, 200), desc: get("og:description", "description", "twitter:description").slice(0, 350),
+    image, big: get("twitter:card") === "summary_large_image", color: /^#[0-9a-f]{3,8}$/i.test(color) ? color : "",
+  };
+}
+api.get("/embed", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  const url = String(req.query.url || "").slice(0, 1000);
+  const hit = embedCache.get(url);
+  if (hit && hit.until > Date.now()) return res.json(hit.data);
+  const now = Date.now(), times = (embedHits.get(user.id) || []).filter((t) => now - t < 60000);
+  if (times.length >= 40) return fail(res, 429, "Calma.");
+  times.push(now); embedHits.set(user.id, times);
+  let data = null;
+  try { const page = await fetchHtml(url); const m = metaOf(page.html, page.url); if (m.title || m.desc) data = { ...m, url }; } catch {}
+  embedCache.set(url, { data, until: now + (data ? 3600000 : 600000) });
+  if (embedCache.size > 1000) embedCache.delete(embedCache.keys().next().value);
+  res.json(data);
 }));
 
 // ---------- conexao em tempo real: so com login e sendo membro do servidor ----------
@@ -594,6 +908,7 @@ io.use(async (socket, next) => {
     const { token, server: serverId } = socket.handshake.auth || {};
     const user = await userFromToken(token);
     if (!user) return next(new Error("login"));
+    if (user.needCode) return next(new Error("codigo"));
     if (!UUID_RE.test(String(serverId || ""))) return next(new Error("nao_membro"));
     const role = await membership(serverId, user.id);
     if (!role) return next(new Error("nao_membro"));
@@ -611,7 +926,7 @@ io.use(async (socket, next) => {
 });
 
 function meOf(ctx, s) {
-  return { uid: s.data.user.id, nick: s.data.nick, role: s.data.role, server: { id: ctx.id, name: ctx.name, icon: ctx.icon, dm: ctx.dm } };
+  return { uid: s.data.user.id, nick: s.data.nick, role: s.data.role, perms: [...permsOf(ctx, s.data.user.id, s.data.role)], server: { id: ctx.id, name: ctx.name, icon: ctx.icon, dm: ctx.dm } };
 }
 
 io.on("connection", (socket) => {
@@ -624,8 +939,10 @@ io.on("connection", (socket) => {
 
   socket.emit("me", meOf(ctx, socket));
   socket.emit("avatars", avatarsOf(ctx));
+  socket.emit("guild", guildOf(ctx));
   socket.emit("channels", ctx.channels);
   socket.emit("events", ctx.events);
+  if (ctx.banner) socket.emit("banner", ctx.banner);
   socket.emit("call:members", [...ctx.callMembers.values()]);
   socket.emit("ice", ICE_SERVERS);
   socket.emit("watch:state", watchMsg(ctx));
@@ -637,9 +954,9 @@ io.on("connection", (socket) => {
   ctx.poker.refresh();
 
   const nickNow = () => ctx.online.get(socket.id);
-  const isMod = () => ["owner", "admin"].includes(socket.data.role);
+  const can = (perm) => permsOf(ctx, uid, socket.data.role).has(perm);
   const notice = (text) => socket.emit("notice", text);
-  if (isMod()) sendModeration(ctx);
+  if (can("members")) sendModeration(ctx);
 
   // ---------- anti-flood ----------
   const flood = { times: [], last: "", lastAt: 0, repeats: 0, strikes: [] };
@@ -674,7 +991,7 @@ io.on("connection", (socket) => {
 
   // AutoMod: palavras bloqueadas pela moderacao (quem modera nao e bloqueado)
   const blockedWord = (text) => {
-    if (isMod() || !ctx.automod.words.length) return null;
+    if (can("server") || !ctx.automod.words.length) return null;
     const low = " " + text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") + " ";
     return ctx.automod.words.find((w) => low.includes(w)) || null;
   };
@@ -686,7 +1003,8 @@ io.on("connection", (socket) => {
     if (!c) { notice("Esse canal não existe mais."); return null; }
     const muted = blockedUntil(ctx.mutes, uid);
     if (muted) { notice("Você está silenciado " + (ctx.floodMuted.has(uid) ? "por flood" : "pela moderação") + " por mais " + minutesLeft(muted) + " min."); return null; }
-    if (c.slow && !isMod()) {
+    if (c.announce && !can("messages")) { notice("Só a moderação manda mensagem em canais de anúncios."); return null; }
+    if (c.slow && !can("messages")) {
       const wait = (lastPost.get(ch) || 0) + c.slow * 1000 - Date.now();
       if (wait > 0) { notice("Modo lento: espere " + Math.ceil(wait / 1000) + " s para mandar outra mensagem em #" + c.name + "."); return null; }
     }
@@ -708,7 +1026,9 @@ io.on("connection", (socket) => {
     const nick = canPost(text, ch);
     if (!nick) return done(false);
     const reply = msg && typeof msg === "object" && msg.replyTo ? quoteOf(ctx, msg.replyTo) : null;
-    pushMessage(ctx, { type: "msg", nick, uid, text, ts: Date.now(), ch, reply: reply || undefined, tts: msg && msg.tts ? true : undefined });
+    if (reply && msg.replyPing !== false) reply.ping = true;
+    const everyone = /@(everyone|here)\b/.test(text) && can("everyone") ? true : undefined;
+    pushMessage(ctx, { type: "msg", nick, uid, text, ts: Date.now(), ch, reply: reply || undefined, tts: msg && msg.tts ? true : undefined, everyone });
     done(true);
   });
 
@@ -794,7 +1114,9 @@ io.on("connection", (socket) => {
   // Reacao: clicar de novo tira a sua
   socket.on("react", (msg) => {
     const nick = nickNow();
-    if (!msg || typeof msg.emoji !== "string" || msg.emoji.length > 16 || !EMOJI_RE.test(msg.emoji)) return;
+    if (!msg || typeof msg.emoji !== "string") return;
+    const ce = CUSTOM_EMOJI_RE.exec(msg.emoji);
+    if (ce ? !ctx.emojis.some((e) => e.id === ce[2]) : msg.emoji.length > 16 || !EMOJI_RE.test(msg.emoji)) return;
     if (blockedUntil(ctx.mutes, uid)) return notice("Você está silenciado.");
     const m = ctx.history.find((x) => x.id === Number(msg.id));
     if (!m || m.type === "sys") return;
@@ -845,7 +1167,7 @@ io.on("connection", (socket) => {
   socket.on("delete", (id) => {
     const m = ctx.history.find((x) => x.id === Number(id));
     if (!m) return;
-    if (!isMod() && m.uid !== uid) return;
+    if (!can("messages") && m.uid !== uid) return;
     if (m.uid !== uid) audit(ctx, nickNow(), "apagou uma mensagem de", m.nick || "sistema");
     dropMessages(ctx, [m]);
     toRoom(ctx, "message:delete", m.id);
@@ -870,9 +1192,10 @@ io.on("connection", (socket) => {
   const target = (id) => ctx.members.find((m) => m.id === id);
   // ADM nao mexe no dono nem em outro ADM; o dono mexe em todo mundo
   const canTouch = (t) => t && t.id !== uid && t.role !== "owner" && (socket.data.role === "owner" || t.role === "member");
+  const wrapAsync = (fn) => (...args) => fn(...args).catch((e) => { console.error("Erro na moderação:", e.message); notice("Deu erro. Tente de novo."); });
 
   socket.on("admin:clear", (ch) => {
-    if (!isMod()) return;
+    if (!can("messages")) return;
     ch = chIn(ch);
     const c = textChannel(ctx, ch);
     if (!c) return;
@@ -885,54 +1208,64 @@ io.on("connection", (socket) => {
   // ---------- canais (dono e ADMs criam, editam e apagam) ----------
   const cleanName = (n, type) => {
     const t = String(n || "").trim().slice(0, 32);
-    return type === "text" ? t.toLowerCase().replace(/\s+/g, "-").replace(/[^\p{L}\p{N}_-]/gu, "") : t.replace(/\s+/g, " ");
+    return type === "text" || type === "forum" ? t.toLowerCase().replace(/\s+/g, "-").replace(/[^\p{L}\p{N}_-]/gu, "") : t.replace(/\s+/g, " ");
   };
   socket.on("channel:create", (c) => {
-    if (!isMod() || ctx.dm || !c) return;
-    const type = c.type === "voice" ? "voice" : "text";
+    if (!can("channels") || ctx.dm || !c) return;
+    const type = ["voice", "forum"].includes(c.type) ? c.type : "text";
     const name = cleanName(c.name, type);
     if (!name) return notice("Dê um nome para o canal.");
-    if (ctx.channels.length >= MAX_CHANNELS) return notice("Máximo de " + MAX_CHANNELS + " canais.");
-    const ch = { id: crypto.randomBytes(5).toString("hex"), name, type };
-    if (type === "text") { ch.topic = String(c.topic || "").trim().slice(0, 300); ch.slow = SLOW_STEPS.includes(Number(c.slow)) ? Number(c.slow) : 0; }
+    if (ctx.channels.filter((x) => x.type !== "thread").length >= MAX_CHANNELS) return notice("Máximo de " + MAX_CHANNELS + " canais.");
+    const ch = { id: newId(), name, type };
+    if (type === "text") { ch.topic = String(c.topic || "").trim().slice(0, 300); ch.slow = SLOW_STEPS.includes(Number(c.slow)) ? Number(c.slow) : 0; if (c.announce) ch.announce = true; }
+    if (type === "forum") ch.topic = String(c.topic || "").trim().slice(0, 300);
+    if (type === "voice" && c.stage) ch.stage = true;
     ctx.channels.push(ch);
     saveMeta(ctx, "channels"); sendChannels(ctx);
     audit(ctx, nickNow(), "criou o canal", (type === "text" ? "#" : "") + name);
   });
   socket.on("channel:update", (c) => {
-    if (!isMod() || !c) return;
+    if (!c) return;
     const ch = ctx.channels.find((x) => x.id === c.id);
     if (!ch) return;
-    if (c.name !== undefined) { const n = cleanName(c.name, ch.type); if (n) ch.name = n; }
-    if (ch.type === "text") {
+    // topico: quem criou tambem pode renomear
+    if (!can("channels") && !(ch.type === "thread" && ch.uid === uid)) return;
+    if (c.name !== undefined) { const n = cleanName(c.name, ch.type === "thread" ? "voice" : ch.type).slice(0, 100); if (n) ch.name = n; }
+    if (ch.type === "text" || ch.type === "forum") {
       if (c.topic !== undefined) ch.topic = String(c.topic || "").trim().slice(0, 300);
-      if (c.slow !== undefined) ch.slow = SLOW_STEPS.includes(Number(c.slow)) ? Number(c.slow) : 0;
+      if (c.slow !== undefined && ch.type === "text") ch.slow = SLOW_STEPS.includes(Number(c.slow)) ? Number(c.slow) : 0;
+      if (c.announce !== undefined && ch.type === "text") { if (c.announce) ch.announce = true; else delete ch.announce; }
     }
+    if (ch.type === "voice" && c.stage !== undefined) { if (c.stage) ch.stage = true; else delete ch.stage; }
+    if (ch.type === "thread" && ch.msg) { const root = ctx.history.find((x) => x.id === ch.msg); if (root && root.thread) { root.thread.name = ch.name; toRoom(ctx, "message:update", { id: root.id, thread: root.thread }); } }
     if (Number.isInteger(c.pos)) { const i = ctx.channels.indexOf(ch); ctx.channels.splice(i, 1); ctx.channels.splice(Math.max(0, Math.min(ctx.channels.length, c.pos)), 0, ch); }
     saveMeta(ctx, "channels"); sendChannels(ctx);
     audit(ctx, nickNow(), "editou o canal", (ch.type === "text" ? "#" : "") + ch.name);
   });
   socket.on("channel:delete", (id) => {
-    if (!isMod() || ctx.dm) return;
     const ch = ctx.channels.find((x) => x.id === id);
-    if (!ch) return;
+    if (!ch || (ctx.dm && ch.type !== "thread")) return;
+    if (!can("channels") && !(ch.type === "thread" && ch.uid === uid)) return;
     if (ch.type === "text" && ctx.channels.filter((x) => x.type === "text").length <= 1) return notice("O servidor precisa de pelo menos um canal de texto.");
     if (ch.type === "voice" && [...ctx.callMembers.values()].some((m) => m.ch === ch.id)) return notice("Tem gente nesse canal de voz. Espere todo mundo sair.");
-    ctx.channels = ctx.channels.filter((x) => x !== ch);
-    if (ch.type === "text") { dropMessages(ctx, ctx.history.filter((m) => chOf(m) === ch.id)); persist(ctx); }
+    // apagar um canal apaga os topicos dele junto
+    const gone = new Set([ch.id, ...ctx.channels.filter((x) => x.type === "thread" && x.parent === ch.id).map((x) => x.id)]);
+    ctx.channels = ctx.channels.filter((x) => !gone.has(x.id));
+    if (ch.type !== "voice") { dropMessages(ctx, ctx.history.filter((m) => gone.has(chOf(m)))); persist(ctx); }
+    if (ch.type === "thread" && ch.msg) { const root = ctx.history.find((x) => x.id === ch.msg); if (root) { delete root.thread; toRoom(ctx, "message:update", { id: root.id, thread: null }); persist(ctx); } }
     saveMeta(ctx, "channels"); sendChannels(ctx);
     audit(ctx, nickNow(), "apagou o canal", (ch.type === "text" ? "#" : "") + ch.name);
   });
 
   // ---------- AutoMod e registro de moderacao ----------
-  socket.on("automod:get", (reply) => { if (isMod() && typeof reply === "function") reply(ctx.automod); });
+  socket.on("automod:get", (reply) => { if (can("server") && typeof reply === "function") reply(ctx.automod); });
   socket.on("automod:set", (a) => {
-    if (!isMod() || !a || !Array.isArray(a.words)) return;
+    if (!can("server") || !a || !Array.isArray(a.words)) return;
     ctx.automod.words = [...new Set(a.words.map((w) => String(w || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().slice(0, 40)).filter(Boolean))].slice(0, 200);
     saveMeta(ctx, "automod");
     audit(ctx, nickNow(), "mudou as palavras bloqueadas do AutoMod", ctx.automod.words.length + " palavras");
   });
-  socket.on("admin:audit", (reply) => { if (isMod() && typeof reply === "function") reply(ctx.audit); });
+  socket.on("admin:audit", (reply) => { if ((can("server") || can("members")) && typeof reply === "function") reply(ctx.audit); });
 
   // ---------- eventos do servidor ----------
   socket.on("event:create", (e) => {
@@ -955,13 +1288,13 @@ io.on("connection", (socket) => {
   });
   socket.on("event:delete", (id) => {
     const ev = ctx.events.find((x) => x.id === id);
-    if (!ev || (!isMod() && ev.by !== nickNow())) return;
+    if (!ev || (!can("server") && ev.by !== nickNow())) return;
     ctx.events = ctx.events.filter((x) => x !== ev);
     saveMeta(ctx, "events"); toRoom(ctx, "events", ctx.events);
   });
 
   socket.on("admin:mute", (msg) => {
-    if (!isMod() || !msg) return;
+    if (!can("members") || !msg) return;
     const t = target(msg.id);
     if (!canTouch(t)) return notice("Você não pode silenciar essa pessoa.");
     const min = Math.min(24 * 60, Math.max(0, Number(msg.minutes) || 0));
@@ -973,7 +1306,7 @@ io.on("connection", (socket) => {
 
   // Expulsar: tira do servidor (volta so com convite). Banir: tira e impede de voltar.
   socket.on("admin:kick", wrapAsync(async (msg) => {
-    if (!isMod() || !msg) return;
+    if (!can("members") || !msg) return;
     const t = target(msg.id);
     if (!canTouch(t)) return notice("Você não pode expulsar essa pessoa.");
     await db.remove("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id });
@@ -984,7 +1317,7 @@ io.on("connection", (socket) => {
   }));
 
   socket.on("admin:ban", wrapAsync(async (msg) => {
-    if (!isMod() || !msg) return;
+    if (!can("ban") || !msg) return;
     const t = target(msg.id);
     if (!canTouch(t)) return notice("Você não pode banir essa pessoa.");
     const min = Math.max(0, Number(msg.minutes) || 0); // 0 = para sempre
@@ -999,17 +1332,17 @@ io.on("connection", (socket) => {
   }));
 
   async function sendBans() {
-    if (!isMod()) return;
+    if (!can("ban")) return;
     const rows = await db.select("server_bans", { select: "user_id,until", server_id: "eq." + ctx.id });
     const live = rows.filter((b) => !b.until || Date.parse(b.until) > Date.now());
     const profiles = await getProfiles(live.map((b) => b.user_id));
     const nick = new Map(profiles.map((p) => [p.id, p.nick]));
-    for (const s of ctx.sockets.values()) if (["owner", "admin"].includes(s.data.role)) s.emit("admin:bans", live.map((b) => ({ id: b.user_id, nick: nick.get(b.user_id) || "?", until: b.until })));
+    for (const s of ctx.sockets.values()) if (sockCan(ctx, s, "ban")) s.emit("admin:bans", live.map((b) => ({ id: b.user_id, nick: nick.get(b.user_id) || "?", until: b.until })));
   }
   socket.on("admin:bans", wrapAsync(sendBans));
 
   socket.on("admin:unban", wrapAsync(async (id) => {
-    if (!isMod() || !UUID_RE.test(String(id))) return;
+    if (!can("ban") || !UUID_RE.test(String(id))) return;
     await db.remove("server_bans", { server_id: "eq." + ctx.id, user_id: "eq." + id });
     audit(ctx, nickNow(), "desbaniu", ((await getProfile(id)) || {}).nick || "?");
     sendBans();
@@ -1029,9 +1362,233 @@ io.on("connection", (socket) => {
     sendModeration(ctx);
   }));
 
-  function wrapAsync(fn) {
-    return (...args) => fn(...args).catch((e) => { console.error("Erro na moderação:", e.message); notice("Deu erro. Tente de novo."); });
+
+
+  // ---------- cargos personalizados (quem tem a permissao "roles") ----------
+  const cleanColor = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || "")) ? String(c).toLowerCase() : null);
+  // depois de mexer em cargos: todo mundo recebe as permissoes novas
+  function rolesChanged() {
+    saveMeta(ctx, "roles"); saveMeta(ctx, "memberRoles");
+    sendGuild(ctx);
+    for (const s of ctx.sockets.values()) s.emit("me", meOf(ctx, s));
+    sendModeration(ctx);
   }
+  socket.on("role:save", (r) => {
+    if (!can("roles") || !r || ctx.dm) return;
+    const name = String(r.name || "").replace(/\s+/g, " ").trim().slice(0, 32);
+    if (!name) return notice("Dê um nome para o cargo.");
+    const perms = (Array.isArray(r.perms) ? r.perms : []).filter((x) => PERMS.includes(x));
+    // so o dono distribui a permissao de mexer em cargos
+    if (socket.data.role !== "owner" && perms.includes("roles")) return notice("Só o dono pode dar a permissão de gerenciar cargos.");
+    let role = r.id && ctx.roles.find((x) => x.id === r.id);
+    if (!role) {
+      if (ctx.roles.length >= MAX_ROLES) return notice("Máximo de " + MAX_ROLES + " cargos.");
+      role = { id: newId() }; ctx.roles.push(role);
+    }
+    Object.assign(role, { name, color: cleanColor(r.color), perms, hoist: !!r.hoist, mention: !!r.mention });
+    audit(ctx, nickNow(), "salvou o cargo", name);
+    rolesChanged();
+  });
+  socket.on("role:delete", (id) => {
+    if (!can("roles")) return;
+    const role = ctx.roles.find((x) => x.id === id);
+    if (!role) return;
+    ctx.roles = ctx.roles.filter((x) => x !== role);
+    for (const k of Object.keys(ctx.memberRoles)) { ctx.memberRoles[k] = ctx.memberRoles[k].filter((x) => x !== id); if (!ctx.memberRoles[k].length) delete ctx.memberRoles[k]; }
+    audit(ctx, nickNow(), "apagou o cargo", role.name);
+    rolesChanged();
+  });
+  socket.on("role:move", (m) => {
+    if (!can("roles") || !m) return;
+    const i = ctx.roles.findIndex((x) => x.id === m.id), j = i + (m.dir < 0 ? -1 : 1);
+    if (i < 0 || j < 0 || j >= ctx.roles.length) return;
+    [ctx.roles[i], ctx.roles[j]] = [ctx.roles[j], ctx.roles[i]];
+    rolesChanged();
+  });
+  socket.on("role:assign", (a) => {
+    if (!can("roles") || !a) return;
+    const t = target(a.uid), role = ctx.roles.find((x) => x.id === a.role);
+    if (!t || !role) return;
+    if (role.perms.includes("roles") && socket.data.role !== "owner") return notice("Só o dono dá esse cargo.");
+    const list = new Set(ctx.memberRoles[t.id] || []);
+    if (a.on) list.add(role.id); else list.delete(role.id);
+    if (list.size) ctx.memberRoles[t.id] = [...list]; else delete ctx.memberRoles[t.id];
+    audit(ctx, nickNow(), (a.on ? "deu o cargo " : "tirou o cargo ") + role.name, t.nick);
+    rolesChanged();
+  });
+
+  // ---------- apelido no servidor (cada um muda o seu; a moderacao muda o dos outros) ----------
+  socket.on("nick:set", (n) => {
+    if (!n || ctx.dm) return;
+    const who = n.uid && n.uid !== uid ? target(n.uid) : target(uid);
+    if (!who) return;
+    if (who.id !== uid && (!can("members") || !canTouch(who))) return notice("Você não pode mudar o apelido dessa pessoa.");
+    const nick = cleanNick(n.nick);
+    if (nick && NICK_BAD.test(nick)) return notice("O apelido não pode ter estes caracteres: * % _ , ( ) \" \\ : @ < >");
+    if (nick && nick !== who.nick) ctx.nicks[who.id] = nick; else delete ctx.nicks[who.id];
+    saveMeta(ctx, "nicks"); sendGuild(ctx);
+    if (who.id !== uid) audit(ctx, nickNow(), "mudou o apelido de", who.nick + (nick ? " para " + nick : ""));
+  });
+
+  // ---------- topicos (de uma mensagem ou de um post de forum) ----------
+  socket.on("thread:create", (t, reply) => {
+    const done = typeof reply === "function" ? reply : () => {};
+    if (!t) return done(null);
+    const parent = ctx.channels.find((c) => c.id === t.parent && (c.type === "text" || c.type === "forum"));
+    if (!parent) return done(null);
+    if (ctx.channels.filter((c) => c.type === "thread").length >= MAX_THREADS) {
+      // os topicos mais antigos sem movimento saem para dar lugar
+      const old = ctx.channels.filter((c) => c.type === "thread").sort((a, b) => (a.last || 0) - (b.last || 0))[0];
+      const gone = new Set([old.id]);
+      ctx.channels = ctx.channels.filter((c) => c !== old);
+      dropMessages(ctx, ctx.history.filter((m) => gone.has(chOf(m))));
+    }
+    const root = t.msg ? ctx.history.find((x) => x.id === Number(t.msg) && chOf(x) === parent.id && x.type !== "sys") : null;
+    if (t.msg && (!root || root.thread)) return done(root && root.thread ? root.thread.id : null);
+    const text = String(t.text || "").replace(/\r/g, "").trim().slice(0, MAX_TEXT);
+    if (parent.type === "forum" && !text) { notice("Escreva a mensagem do post."); return done(null); }
+    let name = String(t.name || "").replace(/\s+/g, " ").trim().slice(0, 100);
+    if (!name && root) name = String(root.text || root.name || "Tópico").replace(/\s+/g, " ").slice(0, 40) || "Tópico";
+    if (!name) { notice("Dê um nome para o tópico."); return done(null); }
+    if (blockedWord(name + " " + text)) { notice("Bloqueado pelo AutoMod deste servidor."); return done(null); }
+    if (blockedUntil(ctx.mutes, uid)) { notice("Você está silenciado."); return done(null); }
+    const th = { id: newId(), name, type: "thread", parent: parent.id, msg: root ? root.id : null, by: nickNow(), uid, ts: Date.now(), last: Date.now(), count: 0 };
+    if (parent.type === "forum") th.preview = text.slice(0, 200);
+    ctx.channels.push(th);
+    if (root) { root.thread = { id: th.id, name, count: 0, last: th.ts }; toRoom(ctx, "message:update", { id: root.id, thread: root.thread }); persist(ctx); }
+    saveMeta(ctx, "channels"); sendChannels(ctx);
+    if (text) pushMessage(ctx, { type: "msg", nick: nickNow(), uid, text, ts: Date.now(), ch: th.id });
+    else if (root) sys(ctx, nickNow() + " começou o tópico " + name, parent.id);
+    done(th.id);
+  });
+
+  // ---------- emojis e figurinhas do servidor ----------
+  socket.on("emoji:add", (e) => {
+    if (!can("server") || !e) return;
+    const name = String(e.name || "").replace(/[^A-Za-z0-9_]/g, "").slice(0, 32);
+    if (name.length < 2) return notice("O nome do emoji precisa de 2 letras ou mais (só letras, números e _).");
+    if (typeof e.data !== "string" || e.data.length > MAX_EMOJI_IMG || !IMAGE_RE.test(e.data)) return notice("Imagem do emoji inválida ou grande demais.");
+    if (ctx.emojis.length >= MAX_EMOJIS) return notice("Máximo de " + MAX_EMOJIS + " emojis.");
+    if (ctx.emojis.some((x) => x.name.toLowerCase() === name.toLowerCase())) return notice("Já existe um emoji com esse nome.");
+    ctx.emojis.push({ id: newId(), name, src: e.data, by: nickNow() });
+    saveMeta(ctx, "emojis"); sendGuild(ctx);
+  });
+  socket.on("emoji:delete", (id) => {
+    if (!can("server")) return;
+    ctx.emojis = ctx.emojis.filter((x) => x.id !== id);
+    saveMeta(ctx, "emojis"); sendGuild(ctx);
+  });
+  socket.on("sticker:add", (e) => {
+    if (!can("server") || !e) return;
+    const name = String(e.name || "").replace(/\s+/g, " ").trim().slice(0, 30);
+    if (!name) return notice("Dê um nome para a figurinha.");
+    if (typeof e.data !== "string" || e.data.length > MAX_STICKER_IMG || !IMAGE_RE.test(e.data)) return notice("Imagem da figurinha inválida ou grande demais.");
+    if (ctx.stickers.length >= MAX_STICKERS) return notice("Máximo de " + MAX_STICKERS + " figurinhas.");
+    ctx.stickers.push({ id: newId(), name, src: e.data, by: nickNow() });
+    saveMeta(ctx, "stickers"); sendGuild(ctx);
+  });
+  socket.on("sticker:delete", (id) => {
+    if (!can("server")) return;
+    ctx.stickers = ctx.stickers.filter((x) => x.id !== id);
+    saveMeta(ctx, "stickers"); sendGuild(ctx);
+  });
+  socket.on("sticker:get", (id, reply) => {
+    if (typeof reply !== "function") return;
+    const st = ctx.stickers.find((x) => x.id === id);
+    reply(st ? st.src : null);
+  });
+  socket.on("sticker", (m) => {
+    if (!m) return;
+    const st = ctx.stickers.find((x) => x.id === m.id);
+    if (!st) return;
+    const ch = chIn(m.ch);
+    const nick = canPost("[figurinha " + Date.now() + "]", ch);
+    if (!nick) return;
+    pushMessage(ctx, { type: "sticker", nick, uid, sticker: { id: st.id, name: st.name }, ts: Date.now(), ch, reply: quoteOf(ctx, m.replyTo) || undefined });
+  });
+
+  // ---------- webhooks (outros programas mandam mensagem num canal) ----------
+  socket.on("webhook:list", (reply) => {
+    if (!can("server") || typeof reply !== "function") return;
+    reply(ctx.webhooks.map((w) => ({ id: w.id, name: w.name, ch: w.ch, url: "/api/webhooks/" + ctx.id + "/" + w.id + "/" + w.token })));
+  });
+  socket.on("webhook:create", (w) => {
+    if (!can("server") || !w || ctx.dm) return;
+    if (!ctx.channels.some((c) => c.id === w.ch && c.type === "text")) return notice("Escolha um canal de texto.");
+    if (ctx.webhooks.length >= 10) return notice("Máximo de 10 webhooks.");
+    const name = cleanNick(w.name) || "Capitão Gancho";
+    ctx.webhooks.push({ id: newId(), token: crypto.randomBytes(24).toString("base64url"), name, ch: w.ch });
+    saveMeta(ctx, "webhooks");
+    audit(ctx, nickNow(), "criou o webhook", name);
+    socket.emit("webhooks:changed");
+  });
+  socket.on("webhook:delete", (id) => {
+    if (!can("server")) return;
+    ctx.webhooks = ctx.webhooks.filter((x) => x.id !== id);
+    saveMeta(ctx, "webhooks");
+    socket.emit("webhooks:changed");
+  });
+
+  // ---------- tela de boas-vindas, link personalizado, banner e Descobrir ----------
+  socket.on("welcome:set", (w) => {
+    if (!can("server") || !w) return;
+    ctx.welcome = {
+      desc: String(w.desc || "").trim().slice(0, 500),
+      rules: (Array.isArray(w.rules) ? w.rules : []).map((r) => String(r || "").trim().slice(0, 200)).filter(Boolean).slice(0, 10),
+    };
+    saveMeta(ctx, "welcome"); sendGuild(ctx);
+    audit(ctx, nickNow(), "mudou a tela de boas-vindas", "");
+  });
+  socket.on("vanity:set", wrapAsync(async (code) => {
+    if (!can("server") || ctx.dm) return;
+    code = String(code || "").trim().toLowerCase();
+    if (code && !/^[a-z0-9-]{3,32}$/.test(code)) return notice("O link precisa ter de 3 a 32 letras, números ou hífen.");
+    if (code === ctx.vanity) return;
+    if (code) {
+      try { await db.insert("server_invites", [{ code, server_id: ctx.id, created_by: uid, expires_at: null }], false); }
+      catch { return notice("Esse link já está em uso. Escolha outro."); }
+    }
+    if (ctx.vanity) await db.remove("server_invites", { code: "eq." + ctx.vanity, server_id: "eq." + ctx.id }).catch(() => {});
+    ctx.vanity = code || null;
+    saveMeta(ctx, "vanity"); sendGuild(ctx);
+    audit(ctx, nickNow(), "mudou o link personalizado", code || "(nenhum)");
+  }));
+  socket.on("banner:set", (data) => {
+    if (!can("server") || ctx.dm) return;
+    if (data !== null && (typeof data !== "string" || data.length > MAX_BANNER || !IMAGE_RE.test(data))) return notice("Banner inválido ou grande demais.");
+    ctx.banner = data;
+    saveMeta(ctx, "banner");
+    toRoom(ctx, "banner", data);
+  });
+  socket.on("discover:set", wrapAsync(async (d) => {
+    if (!can("server") || !d || ctx.dm) return;
+    const patch = { public: !!d.isPublic, description: String(d.description || "").trim().slice(0, 300) || null };
+    await db.update("servers", { id: "eq." + ctx.id }, patch);
+    ctx.isPublic = patch.public; ctx.description = patch.description || "";
+    sendGuild(ctx);
+    audit(ctx, nickNow(), patch.public ? "colocou o servidor no Descobrir" : "tirou o servidor do Descobrir", "");
+  }));
+
+  // ---------- palco: so quem e orador fala; a plateia levanta a mao ----------
+  const isStage = (ch) => !!(ctx.channels.find((c) => c.id === ch) || {}).stage;
+  socket.on("stage:hand", (up) => {
+    const me = ctx.callMembers.get(socket.id);
+    if (!me || !isStage(me.ch) || me.speaker) return;
+    me.hand = !!up;
+    sendCall(ctx);
+  });
+  socket.on("stage:speaker", (m) => {
+    const me = ctx.callMembers.get(socket.id);
+    if (!m) return;
+    const t = ctx.callMembers.get(m.sid);
+    if (!t || !isStage(t.ch)) return;
+    // a moderacao convida e tira; cada um pode descer do palco sozinho
+    if (!(can("members") || (m.sid === socket.id && !m.on))) return;
+    t.speaker = !!m.on; t.hand = false;
+    if (!t.speaker) { t.mic = false; t.cam = null; t.screen = null; }
+    sendCall(ctx);
+    if (me && t !== me) io.to(m.sid).emit("notice", m.on ? me.nick + " convidou você para falar no palco." : "Você voltou para a plateia.");
+  });
 
   // ---------- call ----------
   socket.on("call:join", (state, reply) => {
@@ -1039,7 +1596,9 @@ io.on("connection", (socket) => {
     const ch = state && voiceChannel(ctx, state.ch) ? state.ch : (ctx.channels.find((c) => c.type === "voice") || {}).id;
     if (!ch) return reply({ ok: false });
     const others = [...ctx.callMembers.values()].filter((m) => m.id !== socket.id && m.ch === ch).map((m) => m.id);
-    ctx.callMembers.set(socket.id, { id: socket.id, nick: nickNow(), ...cleanCallState(state), ch });
+    const member = { id: socket.id, nick: nickNow(), uid, ...cleanCallState(state), ch };
+    if (isStage(ch)) { member.speaker = can("members"); member.hand = false; if (!member.speaker) Object.assign(member, { mic: false, cam: null, screen: null }); }
+    ctx.callMembers.set(socket.id, member);
     reply({ ok: true, others });
     sendCall(ctx);
   });
@@ -1048,6 +1607,7 @@ io.on("connection", (socket) => {
     const member = ctx.callMembers.get(socket.id);
     if (!member) return;
     Object.assign(member, cleanCallState(state));
+    if (isStage(member.ch) && !member.speaker) Object.assign(member, { mic: false, cam: null, screen: null });
     sendCall(ctx);
   });
 

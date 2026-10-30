@@ -32,6 +32,7 @@
     master: Number(store.get("cp-master") || 100),
     simple: store.get("cp-simplemic") === "on",
     outId: store.get("cp-out") || "",
+    sens: Number(store.get("cp-sens") || 0), // sensibilidade de entrada (0 = automatica, sempre passa)
   };
   const canPickOutput = "setSinkId" in HTMLMediaElement.prototype;
   let micBlocked = false; // o navegador negou o microfone da ultima vez
@@ -71,6 +72,13 @@
       vc.title = here ? "Mostrar a call" : "Entrar em " + vc.querySelector(".vn").textContent;
     });
     $("voicePanel").hidden = !inCall;
+    const me = meInCall(), stage = inCall && isStageCh(myCh);
+    $("handBtn").hidden = !stage || !me;
+    if (stage && me) {
+      const lab = me.speaker ? "Descer do palco" : me.hand ? "Baixar a mão" : "Levantar a mão";
+      setIcon($("handBtn"), me.speaker ? "log-out" : "hand", lab);
+      $("handBtn").classList.toggle("on", !!me.hand);
+    }
     $("vpWhere").textContent = voiceName(myCh) + " / " + n + (n === 1 ? " pessoa" : " pessoas");
     // microfone e fone do painel do usuario, embaixo da barra
     setIcon($("upMic"), micOn ? "mic" : "mic-off", micOn ? "Desligar o microfone" : "Ligar o microfone");
@@ -109,7 +117,8 @@
   // Com o volume em 100% o microfone vai direto para a call (o jeito mais confiavel);
   // com outro volume ele passa pelo ajuste do navegador
   const rawTrack = () => micRaw && micRaw.getAudioTracks()[0];
-  const useRaw = () => prefs.micGain === 100 || !micDest;
+  // com a sensibilidade ligada o som passa pelo ajuste (o microfone cru continua ouvindo para abrir o portao)
+  const useRaw = () => (prefs.micGain === 100 && !prefs.sens) || !micDest;
   const micTrack = () => (useRaw() ? rawTrack() : micDest.stream.getAudioTracks()[0]) || null;
   const micStream = () => (useRaw() ? micRaw : micDest.stream);
   // troca o som enviado para todo mundo sem refazer a conexao
@@ -298,6 +307,7 @@
 
   // ---------- controles ----------
   async function toggleCam() {
+    if (!camStream && stageBlocked()) return;
     if (camStream) {
       removeTrackFromAll(camStream.getVideoTracks()[0]);
       camStream.getTracks().forEach((t) => t.stop());
@@ -318,6 +328,7 @@
 
   async function toggleScreen() {
     if (screenStream) return stopScreen();
+    if (stageBlocked()) return;
     try { screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false }); }
     catch { return; } // a pessoa cancelou
     if (!inCall) { screenStream.getTracks().forEach((t) => t.stop()); screenStream = null; return; }
@@ -334,8 +345,25 @@
     sendState(); refreshButtons(); renderTiles();
   }
 
+  // ---------- palco: so oradores falam ----------
+  const chanOf = (id) => (app.channels || []).find((c) => c.id === id);
+  const isStageCh = (id) => !!(chanOf(id) || {}).stage;
+  const meInCall = () => allMembers.find((m) => m.id === socket.id);
+  const audience = () => inCall && isStageCh(myCh) && !(meInCall() || {}).speaker;
+  function stageBlocked() {
+    if (!audience()) return false;
+    setNote("Você está na plateia. Levante a mão para pedir para falar.", true);
+    return true;
+  }
+  $("handBtn").addEventListener("click", () => {
+    const me = meInCall();
+    if (!me) return;
+    if (me.speaker) socket.emit("stage:speaker", { sid: socket.id, on: false });
+    else socket.emit("stage:hand", !me.hand);
+  });
   function toggleMic() {
     if (!inCall) { micOn = !micOn; if (micOn) deaf = false; refreshButtons(); return; } // fora da call: so guarda a escolha
+    if (!micOn && stageBlocked()) return;
     if (!micRaw) { setNote("Sem acesso ao microfone. Libere o microfone no navegador e entre de novo.", true); return; }
     micOn = !micOn;
     if (!micOn && deaf) {} // mutar nao mexe no fone
@@ -447,6 +475,20 @@
       camStream.removeTrack(oldTrack); oldTrack.stop(); camStream.addTrack(newTrack);
       renderTiles();
     } catch { setNote("ERRO: não deu para usar essa câmera.", true); }
+  });
+  // sensibilidade de entrada: a marca na barra mostra o volume minimo para o microfone abrir
+  const showSens = () => {
+    $("sensRange").value = prefs.sens;
+    $("sensVal").textContent = prefs.sens ? prefs.sens * 4 + "%" : "automática";
+    $("sensMark").hidden = !prefs.sens;
+    $("sensMark").style.left = Math.min(100, (prefs.sens / 250) * 400) + "%";
+  };
+  showSens();
+  $("sensRange").addEventListener("input", (e) => {
+    const was = !!prefs.sens;
+    prefs.sens = Number(e.target.value); store.set("cp-sens", prefs.sens);
+    showSens();
+    if (was !== !!prefs.sens && inCall) syncMicTrack(); // troca entre o som cru e o ajustado
   });
   $("micGain").value = prefs.micGain;
   $("micGainVal").textContent = prefs.micGain + "%";
@@ -576,10 +618,19 @@
   function renderSidebar() {
     document.querySelectorAll("ul.vpeople[data-vp]").forEach((ul) => {
     ul.replaceChildren();
-    for (const m of allMembers.filter((x) => x.ch === ul.dataset.vp)) {
+    const stage = isStageCh(ul.dataset.vp);
+    // no palco: oradores primeiro, depois a plateia
+    const list = allMembers.filter((x) => x.ch === ul.dataset.vp).sort((a, b) => (stage ? (b.speaker ? 1 : 0) - (a.speaker ? 1 : 0) : 0));
+    let lastGroup = null;
+    for (const m of list) {
+      if (stage) {
+        const g = m.speaker ? "Oradores" : "Plateia";
+        if (g !== lastGroup) { const h = document.createElement("li"); h.className = "vgrp"; h.textContent = g + " — " + list.filter((x) => !!x.speaker === !!m.speaker).length; ul.append(h); lastGroup = g; }
+      }
       const li = document.createElement("li");
       li.dataset.member = m.id;
-      const name = document.createElement("span"); name.className = "name"; name.textContent = m.nick;
+      if (stage && !m.speaker) li.classList.add("aud");
+      const name = document.createElement("span"); name.className = "name"; name.textContent = app.dispName ? app.dispName(m.nick) : m.nick;
       const tags = [];
       if (m.deaf) tags.push("surdo"); else if (!m.mic) tags.push("mudo");
       if (m.cam) tags.push("cam");
@@ -588,8 +639,17 @@
       if (m.deaf) t.append(icon("headphones-off")); else if (!m.mic) t.append(icon("mic-off"));
       if (m.cam) t.append(icon("video"));
       if (m.screen) { const live = document.createElement("b"); live.className = "live"; live.textContent = "AO VIVO"; t.append(live); }
+      if (stage && m.hand) { t.append(icon("hand")); tags.push("levantou a mão"); }
       t.title = tags.join(" · ");
       li.append(avatar(m.nick), name, t);
+      // a moderacao convida para o palco ou manda para a plateia
+      if (stage && app.can && app.can("members")) {
+        li.classList.add("click");
+        li.addEventListener("click", (e) => {
+          e.stopPropagation();
+          app.showMenu([m.speaker ? ["Mover para a plateia", "users", () => socket.emit("stage:speaker", { sid: m.id, on: false })] : ["Convidar para falar", "mic", () => socket.emit("stage:speaker", { sid: m.id, on: true })]], e.clientX, e.clientY);
+        });
+      }
       ul.append(li);
     }
     });
@@ -599,7 +659,14 @@
   }
 
   socket.on("call:members", (list) => {
+    const wasAudience = audience();
     allMembers = Array.isArray(list) ? list : [];
+    // plateia do palco fica muda (e sem camera/tela); virar orador libera
+    if (inCall && audience()) {
+      if (micOn) { micOn = false; applyMic(); }
+      if (camStream) toggleCam();
+      if (screenStream) stopScreen();
+    } else if (inCall && wasAudience && isStageCh(myCh)) setNote("Você agora é orador no palco. Ligue o microfone para falar.");
     members = inCall && myCh ? allMembers.filter((m) => m.ch === myCh) : [];
     if (inCall) {
       const ids = new Set(members.map((m) => m.id));
@@ -629,6 +696,12 @@
       if (hint.textContent !== text) { hint.textContent = text; hint.className = "hint" + (warn ? " warn" : ""); }
     }
     if (!inCall) return;
+    if (prefs.sens && micAnalyser) {
+      const loud = level(micAnalyser) * (prefs.micGain / 100) > prefs.sens / 250;
+      if (loud) gateUntil = Date.now() + 350;
+      const open = Date.now() < gateUntil;
+      if (open !== gateOpen) { gateOpen = open; applyMic(); }
+    } else if (!gateOpen) { gateOpen = true; applyMic(); }
     const speaking = new Set();
     if (micAnalyser && micLive() && level(micAnalyser) * (prefs.micGain / 100) > 0.04) speaking.add(socket.id);
     for (const [id, p] of peers) if (p.analyser && level(p.analyser) > 0.04) speaking.add(id);
@@ -637,8 +710,8 @@
   }, 120);
 
   // ---------- apertar para falar ----------
-  let pttHeld = false;
-  const micLive = () => micOn && (!prefs.ptt || pttHeld);
+  let pttHeld = false, gateOpen = true, gateUntil = 0;
+  const micLive = () => micOn && (!prefs.ptt || pttHeld) && (!prefs.sens || gateOpen);
   function applyMic() {
     const t = micTrack();
     if (rawTrack() && t !== rawTrack()) rawTrack().enabled = true; // o ajuste de volume precisa do som cru ligado

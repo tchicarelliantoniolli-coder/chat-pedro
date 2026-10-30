@@ -30,6 +30,13 @@
   }
 
   window.ChatPedroAuth = {
+    api,
+    paintIcon,
+    goServer: (id) => goServer(id),
+    get me() { return me; },
+    get profile() { return profile; },
+    get current() { return current; },
+    refreshServers: () => refreshServers(),
     handshake: () => ({ token: session && session.access_token, server: current }),
     onMe(m) {
       const srv = currentServer();
@@ -49,6 +56,7 @@
       $("nickInput").value = profile ? profile.nick : "";
       $("statusTextInput").value = profile && profile.status_text ? profile.status_text : "";
       $("bioInput").value = profile && profile.bio ? profile.bio : "";
+      fillExtras();
     },
     // conversa privada: o nome mostrado e o da outra pessoa
     peerName: () => { const srv = currentServer(); return srv && srv.dm ? srv.name : null; },
@@ -67,7 +75,7 @@
   // ---------- telas de entrada ----------
   function showGate(which) {
     document.body.classList.add("ready", "gate");
-    for (const id of ["gAuth", "gHome", "gInvite"]) $(id).hidden = id !== which;
+    for (const id of ["gAuth", "gHome", "gInvite", "gMfa"]) $(id).hidden = id !== which;
   }
   function hideGate() { document.body.classList.remove("gate"); document.body.classList.add("ready"); }
 
@@ -129,8 +137,31 @@
     gmsg(error ? authErr(error.message) : "Se esse e-mail tiver conta, chega um link para criar uma senha nova. Olhe também o spam.");
   });
 
+  // ---------- verificacao em 2 etapas ----------
+  async function needsCode() {
+    try {
+      const { data } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      return !!data && data.nextLevel === "aal2" && data.currentLevel !== "aal2";
+    } catch { return false; }
+  }
+  $("mfaForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    gmsg("");
+    try {
+      const { data: f } = await sb.auth.mfa.listFactors();
+      const factor = f && f.totp && f.totp[0];
+      if (!factor) throw new Error("Nenhum autenticador encontrado.");
+      const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: factor.id, code: $("mfaCode").value.trim() });
+      if (error) throw new Error("Código errado. Confira o app e tente de novo.");
+      const { data } = await sb.auth.getSession(); session = data.session;
+      $("mfaCode").value = "";
+      afterLogin();
+    } catch (err) { gmsg(err.message); }
+  });
+
   // ---------- depois do login: para qual servidor ir ----------
   async function afterLogin() {
+    if (await needsCode()) { showGate("gMfa"); setTimeout(() => $("mfaCode").focus(), 50); return; }
     try {
       const r = await api("/api/me");
       me = r.user; profile = r.profile; servers = r.servers;
@@ -174,18 +205,24 @@
     e.preventDefault();
     const name = $("createName").value.trim();
     if (!name) return gmsg("Dê um nome para o servidor.");
-    try { const r = await api("/api/servers", { method: "POST", body: { name } }); goServer(r.server.id); }
+    const template = ($("tplPick").querySelector(".tpl.on") || {}).dataset?.t || "";
+    try { const r = await api("/api/servers", { method: "POST", body: { name, template } }); goServer(r.server.id); }
     catch (err) { gmsg(err.message); }
+  });
+  $("tplPick").addEventListener("click", (e) => {
+    const b = e.target.closest(".tpl"); if (!b) return;
+    $("tplPick").querySelectorAll(".tpl").forEach((x) => x.classList.toggle("on", x === b));
   });
   $("joinForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const v = $("joinCode").value.trim();
-    const code = (v.match(/convite\/([A-Za-z0-9_-]+)/) || v.match(/^([A-Za-z0-9_-]{6,20})$/) || [])[1];
+    const code = (v.match(/convite\/([A-Za-z0-9_-]+)/) || v.match(/^([A-Za-z0-9_-]{3,32})$/) || [])[1];
     if (!code) return gmsg("Cole o link inteiro do convite (ou só o código do final).");
     location.href = "/convite/" + code;
   });
   const logout = async () => { await sb.auth.signOut().catch(() => {}); store.set("chatpedro-server", ""); location.href = "/"; };
   $("homeLogout").addEventListener("click", logout);
+  $("mfaLogout").addEventListener("click", logout);
   $("logoutBtn").addEventListener("click", logout);
 
   // ---------- convite ----------
@@ -220,8 +257,9 @@
       const b = document.createElement("button");
       b.type = "button"; b.className = "srv" + (s.id === current ? " on" : "") + (s.dm ? " dmsrv" : "");
       paintIcon(b, s);
-      const n = dmUnread.get(s.id);
+      const n = dmUnread.get(s.id) || (srvUnread.get(s.id) || {}).mentions;
       if (n) { const d = document.createElement("span"); d.className = "srvbadge"; d.textContent = n > 99 ? "99+" : String(n); b.append(d); }
+      if (s.id !== current && (dmUnread.get(s.id) || srvUnread.has(s.id))) b.classList.add("unread");
       b.title = s.dm ? "Conversa com " + s.name : s.name;
       b.setAttribute("aria-label", b.title);
       b.addEventListener("click", () => { if (s.id !== current) goServer(s.id); else document.body.classList.remove("railopen"); });
@@ -242,6 +280,7 @@
     const srv = currentServer();
     if (!srv) return;
     const mod = srv.role === "owner" || srv.role === "admin";
+    const can = (p) => (app.can ? app.can(p) : mod);
     $("srvTitle").textContent = srv.name;
     $("srvRole").textContent = srv.role === "owner" ? "você é o dono" : srv.role === "admin" ? "você é ADM" : "você é membro";
     paintIcon($("srvIcon"), srv);
@@ -250,10 +289,11 @@
     $("topName").textContent = srv.name;
     $("srvIconDel").hidden = !srv.icon;
     $("srvRenameBox").hidden = !mod;
-    $("srvMod").hidden = !mod;
+    $("srvMod").hidden = !(can("members") || can("ban") || can("server"));
     $("srvLeave").hidden = srv.role === "owner" && !srv.dm;
     $("srvDelete").hidden = srv.role !== "owner" || !!srv.dm;
-    $("srvNewChan").hidden = $("srvInvites").hidden = !mod || !!srv.dm;
+    $("srvNewChan").hidden = !can("channels") || !!srv.dm;
+    $("srvInvites").hidden = !mod || !!srv.dm;
     if (srv.dm) { $("invSect").hidden = true; $("srvRenameBox").hidden = true; $("srvMod").hidden = true; $("srvRole").textContent = "conversa privada"; $("srvLeave").querySelector("span").textContent = "Fechar conversa"; }
     else $("invSect").hidden = false;
   }
@@ -359,6 +399,103 @@
     catch (err) { $("profMsg").textContent = err.message; }
   });
 
+  const DECOS = [["", "Nenhuma"], ["fogo", "Fogo"], ["neon", "Neon"], ["arco-iris", "Arco-íris"], ["ouro", "Ouro"], ["gelo", "Gelo"], ["coracoes", "Corações"]];
+  let conns = [];
+  function fillExtras() {
+    if (!profile) return;
+    $("bannerColor").value = profile.banner || "#5865f2";
+    $("decoPick").replaceChildren(...DECOS.map(([k, label]) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "deco" + ((profile.decoration || "") === k ? " on" : "");
+      const av = document.createElement("span"); av.className = "pres" + (k ? " deco-" + k : ""); av.append(app.avatar(profile.nick, true));
+      b.append(av, document.createTextNode(label));
+      b.addEventListener("click", async () => { try { await window.ChatPedroAuth.updateProfile({ decoration: k }); fillExtras(); } catch (err) { $("profMsg").textContent = err.message; } });
+      return b;
+    }));
+    conns = Array.isArray(profile.connections) ? profile.connections.slice() : [];
+    renderConns();
+    const CONN = window.ChatPedro_CONN || {};
+    if (!$("connType").options.length) for (const [k, [label]] of Object.entries(CONN)) { const o = document.createElement("option"); o.value = k; o.textContent = label; $("connType").append(o); }
+    $("streamerMode").checked = document.body.classList.contains("streamer");
+    mfaState();
+  }
+  function renderConns() {
+    const CONN = window.ChatPedro_CONN || {};
+    $("connList").replaceChildren(...conns.map((c, i) => {
+      const r = document.createElement("div"); r.className = "connrow";
+      const a = document.createElement("span"); a.className = "cn"; a.textContent = (CONN[c.type] || [c.type])[0];
+      const v = document.createElement("span"); v.className = "cv"; v.textContent = c.name;
+      const x = document.createElement("button"); x.type = "button"; x.className = "ib sm"; x.title = "Tirar"; x.append(app.icon("x"));
+      x.addEventListener("click", async () => { conns.splice(i, 1); await saveConns(); });
+      r.append(a, v, x); return r;
+    }));
+  }
+  async function saveConns() {
+    try { await window.ChatPedroAuth.updateProfile({ connections: conns }); conns = (profile.connections || []).slice(); renderConns(); $("profMsg").textContent = ""; }
+    catch (err) { $("profMsg").textContent = err.message; }
+  }
+  $("connAdd").addEventListener("click", async () => {
+    const name = $("connName").value.trim();
+    if (!name) return;
+    conns = conns.filter((c) => c.type !== $("connType").value);
+    conns.push({ type: $("connType").value, name });
+    $("connName").value = "";
+    await saveConns();
+  });
+  $("bannerSave").addEventListener("click", async () => { try { await window.ChatPedroAuth.updateProfile({ banner: $("bannerColor").value }); app.setNote("Banner do perfil salvo."); } catch (err) { $("profMsg").textContent = err.message; } });
+  $("bannerReset").addEventListener("click", async () => { try { await window.ChatPedroAuth.updateProfile({ banner: null }); fillExtras(); } catch (err) { $("profMsg").textContent = err.message; } });
+  // modo streamer: esconde e-mail, convites e o texto das notificacoes
+  if (store.get("chatpedro-streamer") === "on") document.body.classList.add("streamer");
+  $("streamerMode").addEventListener("change", () => {
+    document.body.classList.toggle("streamer", $("streamerMode").checked);
+    store.set("chatpedro-streamer", $("streamerMode").checked ? "on" : "");
+  });
+  // verificacao em 2 etapas (TOTP do Supabase): QR code no app autenticador e um codigo para confirmar
+  let enrolling = null;
+  async function mfaState() {
+    try {
+      const { data } = await sb.auth.mfa.listFactors();
+      const on = !!(data && data.totp && data.totp.length);
+      $("mfaState").textContent = on ? "Ativada: entrar pede o código do app autenticador." : "Proteja a conta com um código do celular além da senha.";
+      $("mfaOn").hidden = on; $("mfaOff").hidden = !on;
+    } catch { $("mfaOn").hidden = false; $("mfaOff").hidden = true; }
+  }
+  $("mfaOn").addEventListener("click", async () => {
+    try {
+      // tira tentativas antigas que ficaram pela metade
+      const { data: list } = await sb.auth.mfa.listFactors();
+      for (const f of (list && list.all) || []) if (f.status !== "verified") await sb.auth.mfa.unenroll({ factorId: f.id }).catch(() => {});
+      const { data, error } = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "Chat Pedro " + Date.now() });
+      if (error) throw error;
+      enrolling = data.id;
+      $("mfaQr").src = data.totp.qr_code;
+      $("mfaSecret").textContent = data.totp.secret;
+      $("mfaSetup").hidden = false;
+      $("mfaVerifyCode").focus();
+    } catch (err) { $("profMsg").textContent = "Não deu para ativar: " + (err.message || err); }
+  });
+  $("mfaVerify").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: enrolling, code: $("mfaVerifyCode").value.trim() });
+      if (error) throw new Error("Código errado. Confira o app.");
+      const { data } = await sb.auth.getSession(); session = data.session;
+      $("mfaSetup").hidden = true; $("mfaVerifyCode").value = "";
+      app.setNote("Verificação em 2 etapas ativada!");
+      mfaState();
+    } catch (err) { $("profMsg").textContent = err.message; }
+  });
+  let mfaOffArmed = false;
+  $("mfaOff").addEventListener("click", async () => {
+    if (!mfaOffArmed) { mfaOffArmed = true; $("mfaOff").textContent = "Certeza? Clique de novo"; setTimeout(() => { mfaOffArmed = false; $("mfaOff").textContent = "Desativar"; }, 4000); return; }
+    try {
+      const { data } = await sb.auth.mfa.listFactors();
+      for (const f of (data && data.all) || []) { const { error } = await sb.auth.mfa.unenroll({ factorId: f.id }); if (error) throw error; }
+      await sb.auth.refreshSession().catch(() => {});
+      app.setNote("Verificação em 2 etapas desativada.");
+      mfaState();
+    } catch (err) { $("profMsg").textContent = "Não deu para desativar: " + (err.message || err); }
+  });
+
   // ---------- conexao em tempo real ----------
   let retried = false;
   socket.on("connect", () => { retried = false; });
@@ -381,6 +518,7 @@
       gmsg(err.message === "banido" ? "Você está banido desse servidor." : "Você não está mais nesse servidor.");
       return showHome(false);
     }
+    if (err.message === "codigo") { showGate("gMfa"); return; }
     if (err.message === "sem_banco") { showGate("gAuth"); return gmsg("O site ainda não foi ligado ao banco (falta SUPABASE_SECRET_KEY no Render)."); }
     app.setNote("Não deu para conectar. Tentando de novo...", true);
     // erro do proprio servidor: tenta de novo; queda de rede o socket.io ja tenta sozinho
@@ -388,6 +526,14 @@
   });
   // mensagens diretas que chegam enquanto voce esta em outro servidor: bolinha vermelha na barra
   const dmUnread = new Map(); // id da conversa -> quantas
+  const srvUnread = new Map(); // id do servidor -> { mentions }
+  socket.on("srv:ping", (p) => {
+    if (!p || p.server === current) return;
+    const u = srvUnread.get(p.server) || { mentions: 0 };
+    if (p.mention) { u.mentions++; app.dmAlert({ nick: "Menção em outro servidor", text: (servers.find((x) => x.id === p.server) || {}).name || "" }); }
+    srvUnread.set(p.server, u);
+    renderRail();
+  });
   async function refreshServers() {
     try { const r = await api("/api/me"); servers = r.servers; renderRail(); } catch {}
   }
