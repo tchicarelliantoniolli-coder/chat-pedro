@@ -226,6 +226,8 @@
     $("srvRole").textContent = srv.role === "owner" ? "você é o dono" : srv.role === "admin" ? "você é ADM" : "você é membro";
     paintIcon($("srvIcon"), srv);
     paintIcon($("headIcon"), srv);
+    paintIcon($("topIcon"), srv);
+    $("topName").textContent = srv.name;
     $("srvIconDel").hidden = !srv.icon;
     $("srvRenameBox").hidden = !mod;
     $("srvMod").hidden = !mod;
