@@ -40,6 +40,7 @@ const db = {
   upsert: (table, rows, onConflict) => call("/rest/v1/" + table + "?" + q({ on_conflict: onConflict }), { method: "POST", body: rows, headers: { Prefer: "resolution=merge-duplicates,return=minimal" } }),
   update: (table, params, patch) => call("/rest/v1/" + table + "?" + q(params), { method: "PATCH", body: patch, headers: { Prefer: "return=representation" } }),
   remove: (table, params) => call("/rest/v1/" + table + "?" + q(params), { method: "DELETE", headers: { Prefer: "return=minimal" } }),
+  rpc: (name, args = {}) => call("/rest/v1/rpc/" + name, { method: "POST", body: args }), // funcoes do banco (ex.: faxina)
   inList,
 };
 

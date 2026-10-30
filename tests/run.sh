@@ -22,11 +22,13 @@ trap stop EXIT
 
 start() {
   stop
+  # um teste pode pedir variaveis proprias numa linha "// env: NOME=valor ..." (ex.: limites pequenos da faxina)
+  local EXTRA=""; [ -n "$1" ] && EXTRA=$(grep -m1 -oP '^// env: \K.*' "$1")
   node tests/fake-supabase.js 3330 > "$OUT/fake-supabase.log" 2>&1 &
   FAKE_PID=$!
   sleep 0.5
   EMBED_ALLOW_LOCAL=1 SUPABASE_URL=http://localhost:3330 SUPABASE_PUBLISHABLE_KEY=sb_publishable_teste \
-    SUPABASE_SECRET_KEY=sb_secret_teste ADMIN_PASSWORD=senha-de-teste PORT=3331 node server.js > "$OUT/site.log" 2>&1 &
+    SUPABASE_SECRET_KEY=sb_secret_teste ADMIN_PASSWORD=senha-de-teste PORT=3331 env $EXTRA node server.js > "$OUT/site.log" 2>&1 &
   SITE_PID=$!
   for _ in $(seq 1 30); do curl -s -o /dev/null http://localhost:3331/ && return 0; sleep 0.2; done
   echo "O site nao subiu. Veja $OUT/site.log"; return 1
@@ -54,7 +56,7 @@ for t in tests/[0-9][0-9]-*.js; do
     [ $hit -eq 0 ] && continue
   fi
   echo "== $name"
-  start || { FAILED=1; continue; }
+  start "$t" || { FAILED=1; continue; }
   out=$(timeout 300 node "$t" "$OUT" 2>&1)
   echo "$out" | grep -v "^OK"
   if echo "$out" | grep -qE "^(FALHA|ERRO)" || ! echo "$out" | grep -q "^erros: \[\]"; then FAILED=1; fi

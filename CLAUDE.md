@@ -51,6 +51,12 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   separado (canais, histórico, call, poker, truco, cargos, emojis...). DM e DM em grupo são servidores com
   `dm = true`. O evento `profile` leva o status e `hideAct` (esconder "jogando poker", "na call").
 - `db.js` (acesso ao Supabase), `storage.js` (salva o chat e os dados do servidor no `chat_kv`).
+- Espaço do banco (500 MB grátis): fotos saem do navegador em WebP (JPEG se não der), no máximo 1 MB; áudio em mono a
+  24 kbps; cada foto/áudio/arquivo fica numa linha `srv:<id>:media:<n>` (nunca dentro do histórico). Faxina no
+  `server.js` (`trimStorage`, 1 min depois de ligar e a cada 30 min): chama a função do banco `chat_kv_trim_media`
+  (migração `chat_kv_faxina_de_midias`); passando de `STORAGE_LIMIT_MB` (380) apaga as mídias mais antigas até
+  `STORAGE_TARGET_MB` (300). Texto nunca é apagado pela faxina. Teste `14-espaco-do-banco` (usa a linha `// env:`
+  do próprio teste, que o `run.sh` lê, para limites pequenos).
 - `poker.js` e `truco.js` (servidor) e `public/poker.js`, `public/truco.js` (tela dos jogos).
 - `blefe.js` (servidor) e `public/blefe.js` (tela): Mesa do Blefe, jogo NOSSO de blefe em 3D (estilo "Duvido" com
   revólver; não é cópia de nenhum jogo). De 2 a 6, baralho de 36 (8 por naipe + 4 coringas), 5 cartas, a mesa

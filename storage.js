@@ -4,7 +4,7 @@ const { db, ready } = require("./db");
 
 const TABLE = "chat_kv";
 const MEDIA_TTL_DAYS = 30; // fotos e audios ficam guardados por 30 dias
-const isMedia = (m) => m.type === "img" || m.type === "audio";
+const isMedia = (m) => m.type === "img" || m.type === "audio" || m.type === "file"; // igual ao server.js
 let saving = Promise.resolve();
 const queue = (fn, what) => { saving = saving.then(fn).catch((e) => console.error("Nao deu para " + what + ":", e.message)); };
 

@@ -4817,9 +4817,10 @@ window.setIcon = (btn, name, label, extra) => {
   });
   socket.on("users", (list) => { users = list; renderPeople(); if (isAdmin) renderMod(); });
 
-  // Fotos: reduz para no maximo 1280px e converte para JPEG antes de enviar.
-  // GIFs pequenos vao como estao para manter a animacao.
-  const MAX_SIDE = 1280, MAX_BYTES = 3 * 1024 * 1024, AVATAR_SIDE = 48;
+  // Fotos: reduz para no maximo 1280px e converte para WebP (bem mais leve que JPEG, quase a mesma
+  // qualidade) antes de enviar; o navegador que nao sabe fazer WebP (Safari antigo) manda JPEG.
+  // Cada foto fica com no maximo 1 MB. GIFs pequenos vao como estao para manter a animacao.
+  const MAX_SIDE = 1280, MAX_BYTES = 1024 * 1024, AVATAR_SIDE = 48;
   const readAsDataURL = (file) => new Promise((ok, fail) => {
     const r = new FileReader();
     r.onload = () => ok(r.result); r.onerror = fail; r.readAsDataURL(file);
@@ -4832,16 +4833,20 @@ window.setIcon = (btn, name, label, extra) => {
     const raw = await readAsDataURL(file);
     if (file.type === "image/gif" && raw.length < MAX_BYTES) return raw;
     const img = await loadImage(raw);
-    const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); // fundo para PNG transparente
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    for (const q of [0.82, 0.7, 0.55, 0.4]) {
-      const out = canvas.toDataURL("image/jpeg", q);
-      if (out.length < MAX_BYTES) return out;
+    // se nem com qualidade baixa couber em 1 MB, diminui a foto e tenta de novo
+    for (let side = MAX_SIDE; side >= 480; side = Math.round(side * 0.75)) {
+      const scale = Math.min(1, side / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); // fundo para PNG transparente
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const webp = canvas.toDataURL("image/webp", 0.8).startsWith("data:image/webp");
+      for (const q of [0.8, 0.7, 0.6, 0.5]) {
+        const out = canvas.toDataURL(webp ? "image/webp" : "image/jpeg", webp ? q : q + 0.02);
+        if (out.length < MAX_BYTES) return out;
+      }
     }
     throw new Error("grande demais");
   }
@@ -5034,10 +5039,11 @@ window.setIcon = (btn, name, label, extra) => {
     if (rec) return;
     if (!nick) return;
     let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } }); }
     catch { setNote("Sem acesso ao microfone. Libere o microfone no navegador.", true); return; }
     const type = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
-    const mr = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 32000 } : undefined);
+    // 24 kbps em mono: qualidade de mensagem de voz, 1 minuto fica com uns 180 KB
+    const mr = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 24000 } : undefined);
     const chunks = [];
     rec = { mr, stream, send: true, started: Date.now(), reply: replyTo };
     mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };

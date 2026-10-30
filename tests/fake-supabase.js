@@ -108,6 +108,24 @@ http.createServer((req, res) => {
     }
     if (u.pathname === "/auth/v1/logout") { tokens.delete(bearer); return send(res, 204); }
     if (u.pathname === "/auth/v1/recover") return send(res, 200, {});
+    // ---------- funcoes (faxina das midias, igual a migracao chat_kv_faxina_de_midias) ----------
+    const fn = u.pathname.match(/^\/rest\/v1\/rpc\/([a-z_]+)$/);
+    if (fn) {
+      if (bearer !== SECRET) return send(res, 401, { message: "permission denied" });
+      const size = (r) => Buffer.byteLength(String(r.value || ""));
+      const isMediaKey = (k) => /^srv:.*:media:/.test(k);
+      const total = T.chat_kv.reduce((n, r) => n + size(r), 0);
+      if (fn[1] === "chat_kv_usage") return send(res, 200, [{ total_bytes: total, media_bytes: T.chat_kv.filter((r) => isMediaKey(r.key)).reduce((n, r) => n + size(r), 0) }]);
+      if (fn[1] === "chat_kv_trim_media") {
+        if (total <= data.limit_bytes) return send(res, 200, []);
+        const media = T.chat_kv.filter((r) => isMediaKey(r.key)).sort((a, b) => String(a.expires_at || "~").localeCompare(String(b.expires_at || "~")) || a.key.localeCompare(b.key));
+        const gone = []; let freed = 0;
+        for (const r of media) { if (freed >= total - data.target_bytes) break; freed += size(r); gone.push(r); }
+        T.chat_kv = T.chat_kv.filter((r) => !gone.includes(r));
+        return send(res, 200, gone.map((r) => r.key));
+      }
+      return send(res, 404, { message: "funcao nao existe" });
+    }
     // ---------- tabelas ----------
     const m = u.pathname.match(/^\/rest\/v1\/([a-z_]+)$/);
     if (!m || !T[m[1]]) return send(res, 404, { message: "nao existe " + u.pathname });

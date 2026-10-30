@@ -20,7 +20,7 @@ const MAX_LINES = 12;
 const MAX_NICK = 20;
 const MAX_SERVER_NAME = 40;
 const MAX_SERVERS_OWNED = 10;
-const MAX_IMAGE = 3 * 1024 * 1024; // tamanho maximo da foto (ja comprimida) em bytes de texto
+const MAX_IMAGE = 1.1 * 1024 * 1024; // tamanho maximo da foto (ja comprimida pelo navegador, ate 1 MB) em bytes de texto
 const MAX_AUDIO = 1.5 * 1024 * 1024; // audio de ate ~1 minuto
 const MAX_MEDIA_KEPT = 40; // fotos e audios mais antigos que isso saem do historico
 const IMAGE_RE = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/;
@@ -96,7 +96,7 @@ async function iceServers() {
 const app = express();
 const server = http.createServer(app);
 // perMessageDeflate compacta as mensagens grandes (historico, listas); as pequenas vao como estao
-const io = new Server(server, { maxHttpBufferSize: MAX_IMAGE + 64 * 1024, serveClient: false, perMessageDeflate: { threshold: 2048 } });
+const io = new Server(server, { maxHttpBufferSize: Math.max(MAX_IMAGE, MAX_FILE, MAX_AUDIO) + 64 * 1024, serveClient: false, perMessageDeflate: { threshold: 2048 } });
 const INDEX = path.join(__dirname, "public", "index.html");
 
 app.set("trust proxy", true); // o Render fica na frente do servidor
@@ -1751,6 +1751,37 @@ io.on("connection", (socket) => {
 
 if (!ready()) console.log("ATENÇÃO: falta SUPABASE_SECRET_KEY no Render. Sem ela ninguém consegue entrar no site.");
 cleanupExpired();
+
+// ---------- faxina: o banco gratis do Supabase tem 500 MB ----------
+// Passando de STORAGE_LIMIT_MB, as fotos, audios e arquivos mais antigos (de todos os servidores) sao
+// apagados ate o chat voltar a STORAGE_TARGET_MB. Mensagens de texto nunca sao apagadas pela faxina.
+const STORAGE_LIMIT = Number(process.env.STORAGE_LIMIT_MB || 380) * 1024 * 1024;
+const STORAGE_TARGET = Number(process.env.STORAGE_TARGET_MB || 300) * 1024 * 1024;
+async function trimStorage() {
+  if (!ready()) return;
+  try {
+    const keys = await db.rpc("chat_kv_trim_media", { limit_bytes: Math.round(STORAGE_LIMIT), target_bytes: Math.round(STORAGE_TARGET) });
+    if (!Array.isArray(keys) || !keys.length) return;
+    console.log("Faxina: " + keys.length + " fotos/áudios/arquivos antigos apagados para liberar espaço no banco");
+    // tira essas midias tambem dos servidores que estao abertos agora
+    const byServer = new Map();
+    for (const k of keys) {
+      const m = /^srv:([^:]+):media:(\d+)$/.exec(String(k));
+      if (m) byServer.set(m[1], [...(byServer.get(m[1]) || []), Number(m[2])]);
+    }
+    for (const [sid, ids] of byServer) {
+      const ctx = contexts.has(sid) ? await contexts.get(sid).catch(() => null) : null;
+      if (!ctx) continue;
+      const gone = ctx.history.filter((m) => isMedia(m) && ids.includes(m.id));
+      if (!gone.length) continue;
+      dropMessages(ctx, gone);
+      for (const m of gone) toRoom(ctx, "message:delete", m.id);
+      persist(ctx);
+    }
+  } catch (e) { console.error("Faxina do banco:", e.message); }
+}
+setTimeout(trimStorage, Number(process.env.FAXINA_FIRST_MS || 60000));
+setInterval(trimStorage, Number(process.env.FAXINA_MS || 30 * 60000));
 // ---------- Painel "adm" do site: som, foto, video e audio na tela de todo mundo ----------
 // A senha fica so no Render (ADMIN_PASSWORD); sem ela o painel fica desligado.
 const fs = require("fs");
