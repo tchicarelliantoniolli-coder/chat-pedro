@@ -253,9 +253,13 @@
     build(pop);
     pop.hidden = false;
     popFor = anchor; anchor.setAttribute("aria-expanded", "true");
+    place(anchor, align);
+  }
+  // abre em cima do botao; se nao couber (barra da call, no topo), abre embaixo
+  function place(anchor, align) {
     const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
     pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, align === "card" ? r.left : r.left + r.width / 2 - w / 2)) + "px";
-    pop.style.top = Math.max(8, r.top - h - 8) + "px";
+    pop.style.top = (r.top - h - 8 >= 8 ? r.top - h - 8 : Math.min(innerHeight - h - 8, r.bottom + 8)) + "px";
   }
   document.addEventListener("click", (e) => { if (!pop.hidden && !pop.contains(e.target) && !(popFor && popFor.contains(e.target))) closePops(); });
   window.addEventListener("resize", closePops);
@@ -346,12 +350,9 @@
     e.stopPropagation();
     openPop(btn, (box) => { box.replaceChildren(el("small", "uhint", "carregando...")); deviceMenu(box, kind).then(() => { if (popFor === btn) reposition(btn); }); });
   };
-  function reposition(anchor) {
-    const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
-    pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
-    pop.style.top = Math.max(8, r.top - h - 8) + "px";
-  }
+  const reposition = (anchor) => place(anchor);
   $("upMicMenu").addEventListener("click", devPop($("upMicMenu"), "audioinput"));
+  app.openDeviceMenu = (btn, kind) => devPop(btn, kind)({ stopPropagation() {} });
   $("upDeafMenu").addEventListener("click", devPop($("upDeafMenu"), "audiooutput"));
 
   $("usAgent").textContent = navigator.platform || "";

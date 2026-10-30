@@ -41,6 +41,21 @@
     if (!list.length) $("hDms").append(el("p", "hempty", "Nenhuma conversa ainda."));
   }
 
+  // ---------- dentro de uma conversa privada: a coluna da esquerda lista as conversas (como no Discord) ----------
+  function renderDmSide() {
+    const list = auth.serverList().filter((s) => s.dm);
+    $("dmList").replaceChildren(...list.map((s) => {
+      const b = button("chan dmrow" + (s.id === auth.current ? " on" : ""), "", () => { if (s.id !== auth.current) auth.goServer(s.id); });
+      const ic = el("span", "srvicon dmav"); auth.paintIcon(ic, s);
+      const t = el("span", "dmt"); t.append(el("span", "vn", s.name));
+      if (s.group) t.append(el("small", "dmsub", "grupo"));
+      b.append(ic, t);
+      return b;
+    }));
+  }
+  app.renderDmSide = renderDmSide;
+  renderDmSide();
+
   // ---------- amigos ----------
   async function load() {
     try { const r = await auth.api("/api/friends"); friends = r.friends || []; loaded = true; }

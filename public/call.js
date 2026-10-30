@@ -44,11 +44,23 @@
   const btn = (id, ic, label, cls) => { setIcon($(id), ic, label); $(id).classList.remove("on", "off"); if (cls) $(id).classList.add(cls); };
   function refreshButtons() {
     // desligado fica vermelho; ligado mostra ON
-    btn("micBtn", micOn ? "mic" : "mic-off", !micOn ? "Ligar o microfone" : prefs.ptt ? "Microfone no modo segurar para falar" : "Desligar o microfone", micOn ? "" : "off");
-    btn("deafBtn", deaf ? "headphones-off" : "headphones", deaf ? "Voltar a ouvir a call" : "Parar de ouvir a call", deaf ? "off" : "");
-    btn("camBtn", camStream ? "video" : "video-off", camStream ? "Desligar a câmera" : "Ligar a câmera", camStream ? "on" : "");
-    btn("screenBtn", "monitor", screenStream ? "Parar de compartilhar a tela" : "Compartilhar a tela", screenStream ? "on" : "");
+    btn("micBtn", micOn ? "umic" : "umic-off", !micOn ? "Dessilenciar" : prefs.ptt ? "Microfone no modo segurar para falar" : "Silenciar", micOn ? "" : "off");
+    $("micBtn").parentElement.classList.toggle("off", !micOn);
+    btn("deafBtn", deaf ? "uhead-off" : "uhead", deaf ? "Reativar áudio" : "Desativar áudio", deaf ? "off" : "");
+    btn("camBtn", camStream ? "ucam" : "ucam-off", camStream ? "Desligar câmera" : "Ligar câmera", camStream ? "on" : "");
+    btn("screenBtn", "uscreen", screenStream ? "Parar de compartilhar" : "Compartilhar sua tela", screenStream ? "on" : "");
     $("screenBtn").hidden = !canShareScreen;
+    // painel "Voz conectada": camera, tela e atividades (iguais aos da call)
+    btn("vpCam", camStream ? "ucam" : "ucam-off", camStream ? "Desligar câmera" : "Ligar câmera", camStream ? "on" : "");
+    btn("vpScreen", "uscreen", screenStream ? "Parar de compartilhar" : "Compartilhar sua tela", screenStream ? "on" : "");
+    $("vpScreen").hidden = !canShareScreen;
+    $("vpNoise").classList.toggle("on", !prefs.simple);
+    setIcon($("vpNoise"), "wave", prefs.simple ? "Supressão de ruído: desligada" : "Supressão de ruído: ligada");
+    if (app.renderMe) app.renderMe();
+    // conversa privada: alguem ja esta na chamada -> o telefone do topo fica verde
+    const ringing = !inCall && allMembers.length > 0;
+    $("dmCallBtn").classList.toggle("ring", ringing);
+    setIcon($("dmCallBtn"), "uphone", inCall ? "Mostrar a chamada" : ringing ? "Entrar na chamada" : "Iniciar chamada de voz");
     $("pttBtn").hidden = !(inCall && prefs.ptt);
     const min = $("call").classList.contains("min");
     setIcon($("minBtn"), min ? "chevron-down" : "chevron-up", min ? "Mostrar os vídeos" : "Esconder os vídeos");
@@ -562,7 +574,13 @@
     if (!label) { label = document.createElement("div"); label.className = "label"; el.append(label); }
     label.replaceChildren();
     const n = document.createElement("span"); n.className = "n"; n.textContent = opts.title; label.append(n);
-    if (!opts.screen && opts.muted) { const f = document.createElement("span"); f.className = "flag"; f.textContent = opts.deaf ? "SURDO" : "MUDO"; label.append(f); }
+    el.querySelector(".mbadge")?.remove();
+    if (!opts.screen && opts.muted) {
+      const f = document.createElement("span"); f.className = "flag"; f.title = opts.deaf ? "Sem áudio" : "Mudo"; f.append(icon(opts.deaf ? "uhead-off" : "umic-off")); label.append(f);
+      // na call so com avatares: bolinha vermelha no canto da foto
+      const b = document.createElement("span"); b.className = "mbadge"; b.title = f.title; b.append(icon(opts.deaf ? "uhead-off" : "umic-off")); el.append(b);
+    }
+    el.title = opts.screen ? "" : opts.title;
     // volume de cada pessoa (so nos outros, no quadro principal)
     let vol = el.querySelector(".vol");
     if (opts.volume) {
@@ -627,6 +645,7 @@
     // so mexe na ordem quando ela muda de verdade: tirar um quadro da pagina fecha a tela cheia dele
     const box = $("tiles"), cur = [...box.children];
     if (cur.length !== want.length || cur.some((el, i) => el !== want[i])) box.replaceChildren(...want);
+    box.classList.toggle("avmode", !want.some((el) => el.querySelector("video")));
     for (const v of box.querySelectorAll("video")) if (v.paused) v.play().catch(() => {});
     syncFullButtons();
   }
@@ -893,7 +912,7 @@
   setInterval(() => { // corrige quem atrasou ou adiantou
     if (player && watchState && watchState.playing && player.getCurrentTime && Math.abs(player.getCurrentTime() - expectedPos()) > 2.5) applyWatch();
   }, 3000);
-  $("watchBtn").addEventListener("click", () => { $("watchForm").hidden = !$("watchForm").hidden; if (!$("watchForm").hidden) $("watchUrl").focus(); });
+  $("watchBtn").addEventListener("click", (e) => { e.stopPropagation(); actsMenu($("watchBtn")); });
   $("watchForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const url = $("watchUrl").value.trim();
@@ -932,12 +951,41 @@
   $("camBtn").addEventListener("click", toggleCam);
   $("screenBtn").addEventListener("click", toggleScreen);
   $("minBtn").addEventListener("click", () => { $("call").classList.toggle("min"); refreshButtons(); });
-  $("setBtn").addEventListener("click", openSettings);
+  // "..." da call: configuracoes, esconder os videos e apertar para falar
+  $("moreBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const r = $("moreBtn").getBoundingClientRect(), min = $("call").classList.contains("min");
+    app.showMenu([
+      ["Configurações de voz e vídeo", "ugear", openSettings],
+      [min ? "Mostrar os vídeos" : "Esconder os vídeos", min ? "chevron-down" : "chevron-up", () => $("minBtn").click()],
+      [prefs.ptt ? "Desligar \"apertar para falar\"" : "Ligar \"apertar para falar\"", "hand", () => $("pttCheck").click()],
+    ], r.left, r.bottom + 6);
+  });
+  // atividades: assistir YouTube junto (na call), poker e truco
+  function actsMenu(anchor, up) {
+    const r = anchor.getBoundingClientRect();
+    const items = [
+      inCall ? ["Assistir YouTube junto", "play", () => { $("watchForm").hidden = !$("watchForm").hidden; if (!$("watchForm").hidden) $("watchUrl").focus(); }] : null,
+      ["Poker", "spade", () => $("actOpen").click()],
+      ["Truco", "club", () => $("trOpen").click()],
+    ];
+    app.showMenu(items, r.left, up ? r.top - 8 - items.filter(Boolean).length * 40 : r.bottom + 6);
+  }
+  app.actsMenu = actsMenu;
+  $("micMenuBtn").addEventListener("click", (e) => { e.stopPropagation(); if (app.openDeviceMenu) app.openDeviceMenu($("micMenuBtn"), "audioinput"); });
+  $("vpCam").addEventListener("click", () => $("camBtn").click());
+  $("vpScreen").addEventListener("click", () => $("screenBtn").click());
+  $("vpAct").addEventListener("click", (e) => { e.stopPropagation(); actsMenu($("vpAct"), true); });
+  $("vpNoise").addEventListener("click", () => { $("simpleMic").click(); setTimeout(refreshButtons, 50); });
+  // conversa privada: ligar e ligar com video pelo topo (como no Discord)
+  $("dmCallBtn").addEventListener("click", () => { if (!inCall) join(firstVoice()); else { $("call").classList.remove("min"); refreshButtons(); } });
+  $("dmVideoBtn").addEventListener("click", async () => { if (!inCall) await join(firstVoice()); if (inCall && !camStream) toggleCam(); });
   window.addEventListener("beforeunload", () => { if (inCall) socket.emit("call:leave"); });
 
   app.onJoin = () => { refreshButtons(); renderSidebar(); };
   app.renderVoice = renderSidebar;
   app.isDeaf = () => deaf;
+  app.inCall = () => inCall;
   refreshButtons();
   renderSidebar();
 })();

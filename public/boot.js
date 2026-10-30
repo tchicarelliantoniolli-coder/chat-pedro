@@ -271,6 +271,7 @@
   // ---------- barra de servidores ----------
   // barra da esquerda: primeiro as conversas privadas (fotos redondas), depois os servidores
   function renderRail() {
+    if (app.renderDmSide) app.renderDmSide();
     const btn = (s) => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "srv" + (s.id === current ? " on" : "") + (s.dm ? " dmsrv" : "");

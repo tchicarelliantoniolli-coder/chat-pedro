@@ -40,6 +40,10 @@ em português simples (a pessoa não é programadora), explique o que mudou no s
   markdown, emojis, membros, cartão de perfil, moderação).
 - `public/boot.js`: login, 2 etapas, barra de servidores, menu do servidor, perfil.
 - `public/call.js`: call (WebRTC), canais de voz, palco, sensibilidade do microfone, assistir YouTube junto.
+  Visual da call igual ao do Discord: fundo preto, só fotos redondas quando ninguém tem câmera (`#tiles.avmode`),
+  barra de botões em grupos (`.ctray`), menu "..." e Atividades (`app.actsMenu`); painel "Voz conectada" com 3 botões.
+- Conversa privada (`body.dm`): coluna da esquerda com as conversas (`#dmSide`), botões de ligar/vídeo no topo,
+  começo da conversa com o perfil (`#dmIntro`) e o perfil da pessoa na coluna da direita.
 - `public/guild.js`: Configurações do servidor (cargos, emojis, figurinhas, boas-vindas, Descobrir,
   link personalizado, banner, webhooks).
 - `public/home.js`: Início (amigos, DMs, DM em grupo) e Descobrir.
@@ -65,7 +69,7 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
 Mensagens de commit em português. Não escreva nome/versão de modelo de IA em código, commits ou PR.
 
 ## O que ficou de fora do Discord (e por quê)
-GIFs e soundboard (pedido do dono); Nitro, impulsos, loja, missões e super reações (sistema pago);
+GIFs e soundboard (pedido do dono; por isso o painel "Voz conectada" tem 3 botões e não 4); Nitro, impulsos, loja, missões e super reações (sistema pago);
 bots com comandos e apps (rodar código de terceiros); conexões verificadas (precisa de conta de
 desenvolvedor em cada site; hoje a pessoa digita o usuário); clipes e fundo de vídeo (pesado demais
 para o plano grátis); temas claros (o dono pediu só o do Discord); atalhos de teclado personalizáveis, jogos
