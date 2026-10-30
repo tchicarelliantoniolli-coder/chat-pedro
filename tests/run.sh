@@ -2,7 +2,7 @@
 # Roda os testes do Chat Pedro.
 #   tests/run.sh            -> todos os testes de navegador + os de poker e truco
 #   tests/run.sh 05 07      -> so os testes que comecam com esses numeros
-#   tests/run.sh fuzz       -> so os testes de poker e truco (sem navegador)
+#   tests/run.sh fuzz       -> so os testes de poker, truco e Mesa do Blefe (sem navegador)
 # Cada teste de navegador sobe um Supabase falso (porta 3330) e o site (porta 3331) do zero,
 # porque as contas criadas ficam guardadas enquanto o Supabase falso estiver ligado.
 # As fotos de tela ficam em tests/out/. Precisa do Playwright com Chromium instalado.
@@ -40,6 +40,8 @@ run_fuzz() {
   echo "== truco (4 e 6 jogadores)"
   timeout 180 node tests/fuzz-truco.js "$ROOT" 4 20 | tail -3
   timeout 180 node tests/fuzz-truco.js "$ROOT" 6 20 | tail -3
+  echo "== mesa do blefe (2, 4 e 6 jogadores)"
+  for n in 2 4 6; do timeout 120 node tests/fuzz-blefe.js "$ROOT" $n 40 | tail -2; done
 }
 
 WANT=("$@")

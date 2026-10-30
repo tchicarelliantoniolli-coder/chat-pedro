@@ -393,7 +393,7 @@
 
   function show() {
     $("truco").hidden = false;
-    $("activity").hidden = true; // um jogo aberto por vez
+    $("activity").hidden = true; $("blefe").hidden = true; // um jogo aberto por vez
     document.body.classList.remove("drawer");
     render();
   }

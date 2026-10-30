@@ -52,6 +52,13 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   `dm = true`. O evento `profile` leva o status e `hideAct` (esconder "jogando poker", "na call").
 - `db.js` (acesso ao Supabase), `storage.js` (salva o chat e os dados do servidor no `chat_kv`).
 - `poker.js` e `truco.js` (servidor) e `public/poker.js`, `public/truco.js` (tela dos jogos).
+- `blefe.js` (servidor) e `public/blefe.js` (tela): Mesa do Blefe, jogo NOSSO de blefe em 3D (estilo "Duvido" com
+  revólver; não é cópia de nenhum jogo). De 2 a 6, baralho de 36 (8 por naipe + 4 coringas), 5 cartas, a mesa
+  sorteia um naipe, joga 1 a 3 viradas ou grita DUVIDO; quem perde puxa o gatilho (6 espaços, 1 bala que só o
+  servidor sabe). Porão com lâmpada; bonecos feitos no código com a foto de perfil no rosto, cor e chapéu
+  (`chatpedro-blefe-look`), reações, boca mexe com a voz da call (`app.speakingNicks`, vem do `call.js`).
+  three.js fica no `node_modules` e é servido em `/vendor/three` só quando abre a mesa; "modo leve" sem sombras.
+  Testes `11-mesa-do-blefe` e `fuzz-blefe.js`.
 - `public/index.html`: todo o CSS e o JS principal do chat (mensagens, canais, tópicos, fórum, markdown,
   emojis, membros, cartão de perfil, moderação, painel do usuário, tela de carregamento "Você sabia").
   As páginas das Configurações de usuário também estão no HTML (`#userSettings`, uma `.us-page` por seção).
@@ -91,7 +98,7 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
 `roles`, `everyone`. No servidor use `can(perm)`; no navegador `can(perm)` / `app.can(perm)`.
 
 ## Testes (rode depois de qualquer mudança)
-- `tests/run.sh` roda tudo; `tests/run.sh 05 07` só alguns; `tests/run.sh fuzz` só poker e truco.
+- `tests/run.sh` roda tudo; `tests/run.sh 05 07` só alguns; `tests/run.sh fuzz` só poker, truco e Mesa do Blefe.
   O `run.sh` só mostra as falhas; "TUDO OK" no fim quer dizer que passou.
 - Usa um Supabase falso (`tests/fake-supabase.js`, porta 3330) e o site na porta 3331, com Playwright
   e Chromium (já instalados na nuvem). Fotos de tela em `tests/out/` (fora do git).

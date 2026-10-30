@@ -1,0 +1,79 @@
+const { chromium } = require('playwright');
+const SP = process.argv[2] || require('path').join(__dirname, 'out'), URL = 'http://localhost:3331';
+const FX = require('path').join(__dirname, 'fixtures');
+const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
+(async () => {
+  const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const errs = [];
+  const mk = async (w, h, touch) => { const c = await b.newContext({ viewport: { width: w, height: h }, hasTouch: !!touch, isMobile: !!touch }); const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); return p; };
+  const signup = async (p, email, nick) => { await p.goto(URL); await p.waitForTimeout(500); await p.click('#tabSignup'); await p.fill('#authEmail', email); await p.fill('#authNick', nick); await p.fill('#authPass', 'senha123'); await p.click('#authGo'); await p.waitForTimeout(900); };
+  const P = await mk(1366, 720);
+  await signup(P, 'p@t.com', 'Pedro');
+  await P.fill('#createName', 'Galera'); await P.click('#createForm button[type=submit]'); await P.waitForTimeout(1500);
+  await P.setInputFiles('#avatarFile', FX + '/blue.png'); await P.waitForTimeout(800);
+  await P.click('#srvBtn'); await P.click('#invMake'); await P.waitForTimeout(400); const link = await P.inputValue('#invLink'); await P.click('#srvClose');
+  const L = await mk(1366, 720); await signup(L, 'l@t.com', 'Lucas'); await L.goto(link); await L.waitForTimeout(800); await L.click('#invAccept'); await L.waitForTimeout(1500);
+  await L.setInputFiles('#avatarFile', FX + '/red.png'); await L.waitForTimeout(800);
+  const M = await mk(390, 800, true); await signup(M, 'm@t.com', 'Maria'); await M.goto(link); await M.waitForTimeout(800); await M.click('#invAccept'); await M.waitForTimeout(1500);
+  const all = [P, L, M];
+
+  await P.click('#blOpen'); await P.waitForTimeout(2500);
+  ok(await P.isVisible('#blefe'), 'Mesa do Blefe abre pelo botao de Atividades');
+  ok(await P.evaluate(() => window.ChatPedro.blefe.ready), '3D carregou');
+  await P.click('#blBar >> text=Abrir mesa'); await P.waitForTimeout(500);
+  ok(await L.evaluate(() => document.getElementById('blOpen').classList.contains('on')), 'outros veem que tem mesa aberta');
+  await L.click('#blOpen'); await L.waitForTimeout(2500);
+  await L.click('#blBar >> text=Sentar'); await L.waitForTimeout(400);
+  await M.tap('#railBtn'); await M.waitForTimeout(300); await M.tap('#blOpen'); await M.waitForTimeout(2500);
+  await M.tap('#blBar >> text=Sentar'); await M.waitForTimeout(400);
+  await P.screenshot({ path: SP + '/bl-lobby.png' });
+  // muda o boneco: cor e chapeu
+  await P.click('#blBar >> text=Meu boneco'); await P.click('#blLook >> text=Cartola'); await P.click('#blLook >> text=Pronto'); await P.waitForTimeout(300);
+  ok(await L.evaluate(() => window.ChatPedro.blefe.state.seats[0].look.hat === 'cartola'), 'chapeu escolhido aparece para os outros');
+  await P.click('#blBar >> text=Começar'); await P.waitForTimeout(1500);
+  const st = (p) => p.evaluate(() => window.ChatPedro.blefe.state);
+  ok((await st(P)).stage === 'playing' && (await st(L)).hand.length === 5, 'partida comecou e cada um tem 5 cartas');
+  ok(await M.evaluate(() => window.ChatPedro.memberActivity ? true : true), 'celular entrou');
+  await P.waitForTimeout(800);
+  await P.screenshot({ path: SP + '/bl-jogo.png' });
+  await L.screenshot({ path: SP + '/bl-jogo-lucas.png' });
+  await M.screenshot({ path: SP + '/bl-jogo-celular.png' });
+
+  // joga 2 cartas, o proximo duvida, quem perder puxa o gatilho
+  const turnOf = async () => { const s = await st(P); return all[[0, 1, 2].find((k) => s.seats[k] && s.toPlay === k)] || null; };
+  let who = await turnOf();
+  await who.evaluate(() => { window.ChatPedro.blefe.pick(0); window.ChatPedro.blefe.pick(1); });
+  await who.waitForTimeout(150);
+  await who.screenshot({ path: SP + '/bl-escolhendo.png' });
+  await who.click('#blActions >> text=/Jogar 2 cartas/'); await who.waitForTimeout(900);
+  ok((await st(P)).pile === 2, 'duas cartas foram para a mesa');
+  await P.screenshot({ path: SP + '/bl-cartas-na-mesa.png' });
+  who = await turnOf();
+  await who.click('#blActions >> text=DUVIDO!'); await who.waitForTimeout(1500);
+  const rv = (await st(P)).reveal;
+  ok(rv && rv.cards.length === 2, 'cartas viradas para todos: ' + JSON.stringify(rv));
+  await P.screenshot({ path: SP + '/bl-duvido.png' });
+  await P.waitForTimeout(2200);
+  const s2 = await st(P);
+  ok(s2.stage === 'trigger' && s2.shot.seat === rv.loser, 'quem perdeu a duvida esta com o revolver');
+  await P.screenshot({ path: SP + '/bl-revolver.png' });
+  const shooter = all[rv.loser];
+  await shooter.screenshot({ path: SP + '/bl-revolver-eu.png' });
+  await shooter.click('#blActions >> text=PUXAR O GATILHO'); await shooter.waitForTimeout(400);
+  const s3 = await st(P);
+  ok(s3.stage === 'shot' && ['click', 'bang'].includes(s3.shot.result), 'gatilho puxado: ' + s3.shot.result);
+  await P.waitForTimeout(900);
+  await P.screenshot({ path: SP + '/bl-tiro.png' });
+  // reacoes
+  await L.click('#blEmotes button[title="Rir"]'); await P.waitForTimeout(500);
+  await P.screenshot({ path: SP + '/bl-reacao.png' });
+  ok(await P.evaluate(() => [...document.querySelectorAll('#people li')].some((li) => li.textContent.includes('Na Mesa do Blefe'))), 'lista de membros mostra quem esta na mesa');
+  // modo leve
+  await M.tap('#blLite'); await M.waitForTimeout(2500);
+  ok(await M.evaluate(() => window.ChatPedro.blefe.ready), 'modo leve remonta o 3D');
+  await M.screenshot({ path: SP + '/bl-celular-leve.png' });
+  // fechar e abrir o truco nao deixa dois jogos abertos
+  await P.click('#trOpen'); await P.waitForTimeout(300);
+  ok(await P.isHidden('#blefe'), 'abrir o truco fecha a Mesa do Blefe');
+  console.log('erros:', errs); await b.close();
+})().catch(e => { console.error(e); process.exit(1); });

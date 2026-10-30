@@ -742,7 +742,7 @@
       else if (Date.now() - lastHeard > 4000) { text = "Não estou ouvindo nada de \"" + rawTrack().label + "\". Confira se o microfone do fone não está mutado e teste a opção \"Padrão\" da lista."; warn = true; }
       if (hint.textContent !== text) { hint.textContent = text; hint.className = "hint" + (warn ? " warn" : ""); }
     }
-    if (!inCall) return;
+    if (!inCall) { if (app.speakingNicks.size) app.speakingNicks = new Set(); return; }
     if (prefs.sens && micAnalyser) {
       const loud = level(micAnalyser) * (prefs.micGain / 100) > prefs.sens / 250;
       if (loud) gateUntil = Date.now() + 350;
@@ -752,6 +752,7 @@
     const speaking = new Set();
     if (micAnalyser && micLive() && level(micAnalyser) * (prefs.micGain / 100) > 0.04) speaking.add(socket.id);
     for (const [id, p] of peers) if (p.analyser && level(p.analyser) > 0.04) speaking.add(id);
+    app.speakingNicks = new Set(allMembers.filter((m) => speaking.has(m.id)).map((m) => m.nick)); // boca dos bonecos da Mesa do Blefe
     document.querySelectorAll("#tiles .tile").forEach((el) => el.classList.toggle("speaking", !el.classList.contains("screen") && speaking.has(el.dataset.member)));
     document.querySelectorAll(".vpeople li").forEach((li) => li.classList.toggle("speaking", speaking.has(li.dataset.member)));
   }, 120);
@@ -1007,6 +1008,7 @@
       inCall ? ["Assistir YouTube junto", "play", () => { $("watchForm").hidden = !$("watchForm").hidden; if (!$("watchForm").hidden) $("watchUrl").focus(); }] : null,
       ["Poker", "spade", () => $("actOpen").click()],
       ["Truco", "club", () => $("trOpen").click()],
+      ["Mesa do Blefe", "bluff", () => $("blOpen").click()],
     ];
     app.showMenu(items, r.left, up ? r.top - 8 - items.filter(Boolean).length * 40 : r.bottom + 6);
   }

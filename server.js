@@ -9,6 +9,7 @@ const compression = require("compression");
 const { Server } = require("socket.io");
 const { createPoker } = require("./poker");
 const { createTruco } = require("./truco");
+const { createBlefe } = require("./blefe");
 const { createStorage, cleanupExpired } = require("./storage");
 const { db, auth, ready, SUPABASE_URL, PUBLISHABLE_KEY } = require("./db");
 
@@ -107,6 +108,8 @@ app.use(express.static(path.join(__dirname, "public"), { cacheControl: true, max
 const vendor = (dir) => express.static(dir, { maxAge: "7d" });
 app.use("/vendor/supabase", vendor(path.join(__dirname, "node_modules", "@supabase", "supabase-js", "dist", "umd")));
 app.use("/vendor/socket.io", vendor(path.join(__dirname, "node_modules", "socket.io", "client-dist")));
+// 3D da Mesa do Blefe: so e baixado quando alguem abre a mesa
+app.use("/vendor/three", vendor(path.join(__dirname, "node_modules", "three", "build")));
 app.get(["/s/:id", "/convite/:code"], (req, res) => res.sendFile(INDEX));
 
 const keyOf = (nick) => String(nick || "").toLowerCase();
@@ -233,6 +236,7 @@ async function buildCtx(serverId) {
   };
   ctx.poker = createPoker(scopedIo, helpers);
   ctx.truco = createTruco(scopedIo, helpers);
+  ctx.blefe = createBlefe(scopedIo, helpers);
   await loadMembers(ctx);
   return ctx;
 }
@@ -544,6 +548,7 @@ api.patch("/me", wrap(async (req, res) => {
       persist(ctx);
       ctx.poker.rename(old.nick, patch.nick);
       ctx.truco.rename(old.nick, patch.nick);
+      ctx.blefe.rename(old.nick, patch.nick);
       if (wasOnline) sendCall(ctx);
       sys(ctx, old.nick + " agora se chama " + patch.nick);
     }
@@ -992,8 +997,10 @@ io.on("connection", (socket) => {
   sendUsers(ctx);
   ctx.poker.handle(socket);
   ctx.truco.handle(socket);
+  ctx.blefe.handle(socket);
   ctx.poker.broadcast();
   ctx.truco.broadcast();
+  ctx.blefe.broadcast();
   ctx.poker.refresh();
 
   const nickNow = () => ctx.online.get(socket.id);
@@ -1402,7 +1409,7 @@ io.on("connection", (socket) => {
     sys(ctx, t.nick + (msg.role === "admin" ? " agora é ADM do servidor" : " não é mais ADM"));
     audit(ctx, nickNow(), msg.role === "admin" ? "deu ADM para" : "tirou o ADM de", t.nick);
     await loadMembers(ctx); sendUsers(ctx);
-    ctx.poker.broadcast(); ctx.truco.broadcast();
+    ctx.poker.broadcast(); ctx.truco.broadcast(); ctx.blefe.broadcast();
     sendModeration(ctx);
   }));
 
@@ -1704,7 +1711,7 @@ io.on("connection", (socket) => {
     ctx.statuses.delete(socket.id);
     sendUsers(ctx);
     // a mesma conta pode estar em outra aba: so sai dos jogos quando fecha a ultima
-    if (nick && ![...ctx.online.values()].includes(nick)) { ctx.poker.left(nick); ctx.truco.left(nick); }
+    if (nick && ![...ctx.online.values()].includes(nick)) { ctx.poker.left(nick); ctx.truco.left(nick); ctx.blefe.left(nick); }
   });
 });
 
@@ -1735,7 +1742,7 @@ const SITE_VERSION = (() => {
   };
   try {
     walk(path.join(__dirname, "public"));
-    for (const f of ["server.js", "db.js", "storage.js", "poker.js", "truco.js"]) h.update(fs.readFileSync(path.join(__dirname, f)));
+    for (const f of ["server.js", "db.js", "storage.js", "poker.js", "truco.js", "blefe.js"]) h.update(fs.readFileSync(path.join(__dirname, f)));
   } catch (e) { console.error("Versao do site:", e.message); h.update(String(Date.now())); }
   return h.digest("hex").slice(0, 12);
 })();
