@@ -310,14 +310,15 @@
   const sendState = () => { if (inCall) socket.emit("call:state", myState()); };
 
   let joining = false;
-  async function join(ch) {
+  // video: comecou pelo botao de video (na conversa privada a outra pessoa ve "Chamada de video recebida...")
+  async function join(ch, video) {
     if (inCall || joining || !app.nick) return;
     myCh = ch || firstVoice();
     if (!myCh) return;
     joining = true;
-    try { await doJoin(); } finally { joining = false; }
+    try { await doJoin(video); } finally { joining = false; }
   }
-  async function doJoin() {
+  async function doJoin(video) {
     if (!window.RTCPeerConnection || !navigator.mediaDevices) { setNote("ERRO: seu navegador não suporta chamadas. Tente o Chrome.", true); return; }
     if (preview) stopPreview();
     if (micBlocked) { micOn = true; micBlocked = false; } // da outra vez nao deu; tenta ligado de novo
@@ -325,7 +326,7 @@
     try { await startMic(); }
     catch { micOn = false; micBlocked = true; setNote("Sem acesso ao microfone. Você entrou mudo; libere o microfone no navegador (no cadeado ao lado do endereço) para falar.", true); }
     applyMic();
-    await new Promise((done) => socket.timeout(10000).emit("call:join", { ...myState(), ch: myCh }, (err, res) => {
+    await new Promise((done) => socket.timeout(10000).emit("call:join", { ...myState(), ch: myCh, video: !!video }, (err, res) => {
       done();
       if (err) res = null; // o servidor nao respondeu
       if (!res || !res.ok) { setNote("ERRO: não deu para entrar na chamada.", true); cleanup(); return; }
@@ -338,6 +339,8 @@
       refreshButtons();
       renderTiles();
       fillDevices();
+      if (app.ringSync) app.ringSync();
+      syncCalling();
     }));
   }
 
@@ -353,6 +356,7 @@
     inCall = false; myCh = null; members = [];
     focused.clear();
     $("call").hidden = true;
+    if (app.ringTone) app.ringTone.calling(false);
   }
 
   function leave() {
@@ -742,6 +746,12 @@
       }));
       if (scr) want.push(videoTile(m.id + ":screen", scr, { id: m.id, nick: m.nick, title: "Tela de " + m.nick + (me ? " (você)" : ""), screen: true }));
     }
+    // conversa privada: quem ainda nao entrou aparece apagado; pulsando enquanto esta sendo chamado
+    // (como no Discord). Clicar liga de novo.
+    if (app.isDm) {
+      const here = new Set(members.map((m) => m.uid));
+      for (const u of app.members || []) if (!here.has(u.id)) want.push(ghostTile(u));
+    }
     for (const [key, el] of tiles) if (!want.includes(el)) { el.remove(); tiles.delete(key); focused.delete(key); }
     // so mexe na ordem quando ela muda de verdade: tirar um quadro da pagina fecha a tela cheia dele
     const box = $("tiles"), cur = [...box.children];
@@ -750,6 +760,34 @@
     for (const v of box.querySelectorAll("video")) if (v.paused) v.play().catch(() => {});
     syncFullButtons();
   }
+
+  let ringingUids = [];
+  function ghostTile(u) {
+    const key = "ghost:" + u.id;
+    let el = tiles.get(key);
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "tile ghost";
+      el.addEventListener("click", () => { if (!el.classList.contains("ringing")) socket.emit("call:ring", u.id); });
+      tiles.set(key, el);
+    }
+    const ringing = ringingUids.includes(u.id);
+    el.classList.toggle("ringing", ringing);
+    const old = el.querySelector(".av");
+    if (!old || old.dataset.nick !== u.nick.toLowerCase()) { old?.remove(); el.prepend(avatar(u.nick, true)); }
+    let label = el.querySelector(".label");
+    if (!label) { label = document.createElement("div"); label.className = "label"; el.append(label); }
+    const n = document.createElement("span"); n.className = "n"; n.textContent = u.nick; label.replaceChildren(n);
+    el.title = ringing ? "Chamando…" : "Tocar novamente";
+    el.setAttribute("aria-label", u.nick + " — " + el.title);
+    return el;
+  }
+  // quem esta na chamada ouve "chamando" enquanto alguem esta sendo chamado (igual ao Discord)
+  const syncCalling = () => { if (app.ringTone) app.ringTone.calling(inCall && app.isDm && ringingUids.length > 0); };
+  socket.on("call:ringing", (list) => {
+    ringingUids = Array.isArray(list) ? list : [];
+    renderTiles(); syncCalling();
+  });
 
   function renderSidebar() {
     document.querySelectorAll("ul.vpeople[data-vp]").forEach((ul) => {
@@ -1111,10 +1149,27 @@
   $("vpNoise").addEventListener("click", () => { $("simpleMic").click(); setTimeout(refreshButtons, 50); });
   // conversa privada: ligar e ligar com video pelo topo (como no Discord)
   $("dmCallBtn").addEventListener("click", () => { if (!inCall) join(firstVoice()); else { $("call").classList.remove("min"); refreshButtons(); } });
-  $("dmVideoBtn").addEventListener("click", async () => { if (!inCall) await join(firstVoice()); if (inCall && !camStream) toggleCam(); });
+  $("dmVideoBtn").addEventListener("click", () => joinCall(true));
+  // atender uma chamada (janelinha "Chamada recebida..." do ring.js)
+  async function joinCall(video) {
+    // logo depois de abrir a pagina os canais podem ainda nao ter chegado
+    for (let i = 0; i < 40 && !firstVoice(); i++) await new Promise((r) => setTimeout(r, 150));
+    if (!inCall) await join(firstVoice(), video);
+    if (video && inCall && !camStream) toggleCam();
+  }
+  app.joinCall = joinCall;
+  // veio da janelinha em outra pagina (/s/<conversa>?atender=voz|video): entra na chamada sozinho
+  const answerParam = new URLSearchParams(location.search).get("atender");
   window.addEventListener("beforeunload", () => { if (inCall) socket.emit("call:leave"); });
 
-  app.onJoin = () => { refreshButtons(); renderSidebar(); };
+  app.onJoin = () => {
+    refreshButtons(); renderSidebar();
+    if (answerParam && !app.answering) {
+      app.answering = app.serverId;
+      history.replaceState(null, "", location.pathname);
+      joinCall(answerParam === "video").finally(() => { app.answering = null; });
+    }
+  };
   app.renderVoice = renderSidebar;
   app.isDeaf = () => deaf;
   app.inCall = () => inCall;

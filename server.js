@@ -343,6 +343,56 @@ function sendCall(ctx) {
   if (ctx.watch && ![...ctx.callMembers.values()].some((m) => m.ch === ctx.watch.ch)) { ctx.watch = null; toRoom(ctx, "watch:state", null); }
 }
 
+// ---------- ligar na conversa privada (como no Discord) ----------
+// Quem comeca a chamada numa DM (ou DM em grupo) faz tocar para os outros, em qualquer aba aberta do site.
+// Para de tocar quando a pessoa entra, recusa ("Ignorar"), passa RING_MS ou a chamada acaba.
+const RING_MS = 60000;
+const ringingCtx = new Map(); // id da conversa -> ctx (conversas tocando agora)
+const uidInCall = (ctx, uid) => [...ctx.callMembers.values()].some((m) => m.uid === uid);
+const ringList = (ctx) => (ctx.ring ? [...ctx.ring.targets.keys()] : []);
+const sendRinging = (ctx) => toRoom(ctx, "call:ringing", ringList(ctx));
+function ringPayload(ctx) {
+  const by = ctx.members.find((m) => m.id === ctx.ring.uid) || {};
+  const group = ctx.members.length > 2;
+  return { server: ctx.id, from: ctx.ring.nick, title: group ? ctx.name : ctx.ring.nick, avatar: (group && ctx.icon) || by.avatar || null, video: ctx.ring.video, group };
+}
+function ringUser(ctx, uid) {
+  if (!ctx.ring || uidInCall(ctx, uid) || !ctx.memberIds.has(uid)) return;
+  clearTimeout(ctx.ring.targets.get(uid));
+  ctx.ring.targets.set(uid, setTimeout(() => stopRing(ctx, uid), RING_MS));
+  ringingCtx.set(ctx.id, ctx);
+  toUser(uid, "call:ring", ringPayload(ctx));
+}
+function stopRing(ctx, uid) {
+  if (!ctx.ring) return;
+  for (const u of uid ? [uid] : [...ctx.ring.targets.keys()]) {
+    if (!ctx.ring.targets.has(u)) continue;
+    clearTimeout(ctx.ring.targets.get(u));
+    ctx.ring.targets.delete(u);
+    toUser(u, "call:ringstop", { server: ctx.id });
+  }
+  if (!ctx.ring.targets.size) ringingCtx.delete(ctx.id);
+  sendRinging(ctx);
+}
+// a chamada comecou: mensagem "Fulano iniciou uma chamada." e toca para todo mundo da conversa
+function startDmCall(ctx, uid, nick, video) {
+  const msg = { type: "sys", text: nick + " iniciou uma chamada.", ts: Date.now(), ch: (ctx.channels.find((c) => c.type === "text") || {}).id || "chat", call: { by: nick, uid, start: Date.now(), joined: [uid] } };
+  pushMessage(ctx, msg);
+  ctx.ring = { uid, nick, video: !!video, targets: new Map(), joined: new Set([uid]), msg };
+  for (const m of ctx.members) if (m.id !== uid) ringUser(ctx, m.id);
+  sendRinging(ctx);
+}
+// todo mundo saiu: para de tocar e a mensagem vira "... que durou 5 minutos" (ou "Você perdeu uma chamada")
+function endDmCall(ctx) {
+  if (!ctx.ring || ctx.callMembers.size) return;
+  stopRing(ctx);
+  const m = ctx.ring.msg;
+  m.call = { ...m.call, end: Date.now(), joined: [...ctx.ring.joined] };
+  toRoom(ctx, "message:update", { id: m.id, call: m.call });
+  persist(ctx);
+  ctx.ring = null;
+}
+
 function cleanCallState(s) {
   s = s && typeof s === "object" ? s : {};
   const streamId = (v) => (typeof v === "string" && v ? v.slice(0, 100) : null);
@@ -1020,6 +1070,9 @@ io.on("connection", (socket) => {
   socket.emit("events", ctx.events);
   if (ctx.banner) socket.emit("banner", ctx.banner);
   socket.emit("call:members", [...ctx.callMembers.values()]);
+  if (ctx.dm) socket.emit("call:ringing", ringList(ctx));
+  // alguem esta me ligando agora (abri o site ou troquei de pagina no meio do toque)
+  for (const c of ringingCtx.values()) if (c.ring && c.ring.targets.has(uid)) socket.emit("call:ring", ringPayload(c));
   iceServers().then((list) => socket.emit("ice", list));
   socket.emit("watch:state", watchMsg(ctx));
   sendUsers(ctx);
@@ -1686,6 +1739,23 @@ io.on("connection", (socket) => {
     ctx.callMembers.set(socket.id, member);
     reply({ ok: true, others });
     sendCall(ctx);
+    // conversa privada: quem comeca liga para os outros; quem entra para de tocar
+    if (ctx.dm) {
+      if (!ctx.ring) startDmCall(ctx, uid, member.nick, state && state.video);
+      else { ctx.ring.joined.add(uid); stopRing(ctx, uid); }
+    }
+  });
+
+  // "Tocar novamente": quem esta na chamada liga de novo para alguem da conversa
+  socket.on("call:ring", (who) => {
+    if (!ctx.dm || !ctx.ring || !ctx.callMembers.has(socket.id) || who === uid || ctx.ring.targets.has(who)) return;
+    ringUser(ctx, String(who || ""));
+    sendRinging(ctx);
+  });
+  // "Ignorar": para de tocar so para mim (em todas as minhas abas), de qualquer pagina do site
+  socket.on("call:decline", (serverId) => {
+    const c = ringingCtx.get(String(serverId || ""));
+    if (c && c.ring && c.ring.targets.has(uid)) stopRing(c, uid);
   });
 
   socket.on("call:state", (state) => {
@@ -1734,6 +1804,7 @@ io.on("connection", (socket) => {
   function leaveCall() {
     if (!ctx.callMembers.delete(socket.id)) return;
     sendCall(ctx);
+    if (ctx.dm) endDmCall(ctx);
   }
   socket.on("call:leave", leaveCall);
 

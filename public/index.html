@@ -1954,6 +1954,52 @@ body.dm .srv.homebtn { background: var(--accent); color: #fff; border-radius: 16
 body.dm .srv.homebtn::before { height: 36px; }
 body:not(.dm) .dmonly { display: none; }
 #dmCallBtn.ring { color: #23a55a; animation: callGlow 1.6s ease-out infinite; border-radius: 50%; }
+/* ligar na conversa privada (como no Discord): anel branco que pulsa em volta da foto.
+   Recebendo: 4 pulsos em 5,4 s; chamando: 2 pulsos em 2,5 s e a foto apagada (mesmo ritmo dos toques) */
+@keyframes ringIn { 0% { opacity: 0; transform: scale(1); } 0.7% { opacity: 1; } 25.54% { opacity: 0; transform: scale(1.1); } 25.55% { transform: scale(1); } 25.56% { opacity: 1; } 49.98% { opacity: 0; transform: scale(1.1); } 49.99% { transform: scale(1); } 50% { opacity: 1; } 74.69% { opacity: 0; transform: scale(1.1); } 74.7% { transform: scale(1); } 74.71% { opacity: 1; } to { opacity: 0; transform: scale(1.1); } }
+@keyframes ringOut { 0% { opacity: 0; transform: scale(1); } 11.56% { opacity: 1; } 39.02% { opacity: 0; transform: scale(1.1); } 39.03% { transform: scale(1); } 39.04% { opacity: 1; } 66.48% { opacity: 0; transform: scale(1.1); } to { opacity: 0; transform: scale(1); } }
+.rpav, #call #tiles .tile.ghost { position: relative; }
+.rpav.ringin::after, #call #tiles .tile.ghost.ringing::after {
+  content: ""; position: absolute; top: -3px; left: -3px; box-sizing: content-box; width: 100%; height: 100%; border: 3px solid #fff; border-radius: 50%;
+  pointer-events: none; transform-origin: center; animation: ringIn 5.407s ease-out infinite;
+}
+#call #tiles .tile.ghost.ringing::after { animation: ringOut 2.5s ease-out infinite; }
+#call #tiles .tile.ghost { cursor: pointer; }
+#call #tiles .tile.ghost .av { opacity: 0.3; transition: opacity 0.15s ease; }
+#call #tiles .tile.ghost:not(.ringing):hover .av { opacity: 0.5; }
+#call #tiles:not(.avmode) .tile.ghost { display: grid; place-items: center; }
+#call #tiles:not(.avmode) .tile.ghost.ringing::after { display: none; }
+/* janelinha "Chamada recebida..." (232 px, no meio da tela, da para arrastar) */
+.ringpop {
+  position: fixed; z-index: 1001; box-sizing: border-box; min-width: 232px; max-width: calc(100vw - 16px); padding: 16px;
+  display: flex; flex-direction: column; align-items: center; background: var(--surface); border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 12px 24px 0 rgba(0, 0, 0, 0.24); cursor: grab; touch-action: none; user-select: none;
+  animation: ringPop 0.2s var(--ease);
+}
+.ringpop.dragging { cursor: grabbing; }
+.ringpop.leaving { animation: ringPop 0.15s ease-in reverse forwards; pointer-events: none; }
+@keyframes ringPop { from { opacity: 0; transform: scale(0.7); } }
+.ringpop .rpav { margin: 16px 0; width: 80px; height: 80px; }
+.ringpop .rpav .av.big, #ringBar .av.big { width: 80px; height: 80px; font-size: 28px; }
+.ringpop .rpt { max-width: 100%; margin-bottom: 2px; font-size: 20px; line-height: 24px; font-weight: 600; color: var(--bright); text-align: center; overflow-wrap: break-word; }
+.ringpop .rps { margin-bottom: 24px; font-size: 16px; line-height: 20px; color: var(--fg); text-align: center; }
+.rpacts { display: flex; gap: 8px; }
+button.ib.rpb { width: 40px; height: 40px; min-width: 0; padding: 10px; border-radius: 8px; color: #fff; transition: background-color 0.15s ease-in-out; }
+button.ib.rpb .ic { width: 20px; height: 20px; }
+button.ib.rpb.no { background: #d22d39; }
+button.ib.rpb.no:hover { background: #a9232e; }
+button.ib.rpb.no .ic { stroke-width: 2.4; stroke-linecap: round; }
+button.ib.rpb.yes, button.ib.rpb.yes:hover { background: #3d9e60; }
+/* dentro da propria conversa: a chamada recebida aparece no lugar da call */
+#ringBar { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 16px 16px; background: #000; animation: slideDown 0.2s var(--ease); }
+#rbPeople { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+#rbPeople .rpav { width: 80px; height: 80px; }
+#rbText { color: var(--fg); font-size: 16px; }
+.chat:has(#ringBar:not([hidden])) .chathead { background: #000; border-bottom-color: transparent; }
+/* mensagem de chamada na conversa ("Fulano iniciou uma chamada.") */
+.line.sysl.calll .gut .ic { color: #3d9e60; }
+.line.sysl.calll.ended .gut .ic { color: var(--dim); }
+.line.sysl.calll.missed .gut .ic { color: #f23f43; }
 #dmIntro { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px 16px 24px; margin-bottom: 8px; }
 #dmIntro .dmav80 { width: 80px; height: 80px; font-size: 28px; }
 #dmIntro .big { width: 68px; height: 68px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #fff; }
@@ -2323,6 +2369,11 @@ body:not(.dm) .dmonly { display: none; }
       <div class="tr-fun" id="blEmotes"></div>
       <div class="tablebar" id="blBar"></div>
       <div class="dealerlog" id="blLog" hidden></div>
+    </section>
+    <section id="ringBar" aria-label="Chamada recebida" hidden>
+      <div id="rbPeople"></div>
+      <div id="rbText">Chamada recebida...</div>
+      <div class="rpacts" id="rbActs"></div>
     </section>
     <section id="call" aria-label="Chamada" hidden>
       <div id="callResize" role="separator" aria-orientation="horizontal" aria-label="Arraste para mudar o tamanho da chamada" title="Arraste para mudar o tamanho (dois cliques: volta ao normal)"></div>
@@ -2712,6 +2763,8 @@ body:not(.dm) .dmonly { display: none; }
         <label class="gs-toggle"><span class="gs-ptxt">Desativar todos os sons de notificação</span><input type="checkbox" data-pref="mute"></label>
         <label class="gs-toggle"><span class="gs-ptxt">Menção<small>Quando alguém marca você com @.</small></span><input type="checkbox" data-pref="snd-mention"></label>
         <label class="gs-toggle"><span class="gs-ptxt">Mensagem direta</span><input type="checkbox" data-pref="snd-dm"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Chamada recebida<small>O toque quando alguém liga para você.</small></span><input type="checkbox" data-pref="snd-ring"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Chamando<small>O som enquanto você espera a outra pessoa atender.</small></span><input type="checkbox" data-pref="snd-calling"></label>
       </section>
 
       <section class="us-page" data-page="atalhos" hidden>
@@ -3230,6 +3283,15 @@ window.setIcon = (btn, name, label, extra) => {
   const grouped = (m, prev) => !!prev && prev.type !== "sys" && m.type !== "sys" && !m.reply && prev.nick === m.nick
     && m.ts - prev.ts < 5 * 60000 && dayKey(m.ts) === dayKey(prev.ts);
 
+  // duracao da chamada do jeito do Discord ("alguns segundos", "um minuto", "5 minutos", "uma hora")
+  function callDuration(ms) {
+    const s = Math.round(ms / 1000), min = Math.round(s / 60), h = Math.round(s / 3600);
+    if (s < 45) return "alguns segundos";
+    if (s < 90) return "um minuto";
+    if (min < 45) return min + " minutos";
+    if (min < 90) return "uma hora";
+    return h + " horas";
+  }
   function buildLine(m, prev) {
     const l = document.createElement("div");
     const gut = span("gut", ""), body = span("body", "");
@@ -3248,6 +3310,18 @@ window.setIcon = (btn, name, label, extra) => {
           hi.addEventListener("click", () => { hi.disabled = true; socket.emit("message", { text: "👋 Oi, @" + m.join + "!", ch: curCh }); });
           body.append(hi);
         }
+        return l;
+      }
+      // chamada na conversa privada (como no Discord): "Fulano iniciou uma chamada (que durou 5 minutos)."
+      // ou, para quem nao entrou, "Você perdeu uma chamada de Fulano."
+      if (m.call) {
+        const c = m.call, missed = !!c.end && !(c.joined || []).includes(myUid);
+        l.classList.add("calll"); l.classList.toggle("ended", !!c.end); l.classList.toggle("missed", missed);
+        gut.replaceChildren(icon("uphone"));
+        const w = span("sys", ""), dur = c.end ? " que durou " + callDuration(c.end - c.start) : "";
+        if (missed) w.append("Você perdeu uma chamada de ", whoSpan(c.by), dur + ".");
+        else w.append(whoSpan(c.by), " iniciou uma chamada" + dur + ".");
+        body.append(w, span("time", stampOf(m.ts)));
         return l;
       }
       body.append(span("sys", m.text), span("time", fmtTime(m.ts)));
@@ -4767,7 +4841,8 @@ window.setIcon = (btn, name, label, extra) => {
     if (u.pinned !== undefined) m.pinned = u.pinned;
     if (u.poll !== undefined) m.poll = u.poll;
     if (u.thread !== undefined) m.thread = u.thread || undefined;
-    if (it && (u.text !== undefined || u.pinned !== undefined || u.poll !== undefined || u.thread !== undefined)) {
+    if (u.call !== undefined) m.call = u.call;
+    if (it && (u.text !== undefined || u.pinned !== undefined || u.poll !== undefined || u.thread !== undefined || u.call !== undefined)) {
       if (!editing) rerenderAll(); else pendingRerender = true;
     }
     if (panelMode === "pins") renderPins();
@@ -5133,6 +5208,7 @@ window.setIcon = (btn, name, label, extra) => {
 })();
 </script>
 <script src="/call.js"></script>
+<script src="/ring.js"></script>
 <script src="/poker.js"></script>
 <script src="/truco.js"></script>
 <script src="/blefe.js"></script>

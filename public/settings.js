@@ -12,7 +12,7 @@
   const DEFAULTS = {
     typing: true, compact: false, font: 16, gap: 12, zoom: 100, sat: 100, underline: false, rolecolors: true, reduce: false, anim: true,
     images: true, embeds: true, reactions: true, emoticons: true, stickers: true, spoilers: false,
-    titlebadge: true, mute: false, "snd-mention": true, "snd-dm": true, dev: false, activity: true,
+    titlebadge: true, mute: false, "snd-mention": true, "snd-dm": true, "snd-ring": true, "snd-calling": true, dev: false, activity: true,
   };
   let prefs = {};
   try { prefs = JSON.parse(store.get("chatpedro-prefs") || "{}") || {}; } catch { prefs = {}; }

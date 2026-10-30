@@ -80,6 +80,16 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   Volume de cada pessoa como no Discord: botão direito (ou segurar o dedo) na pessoa na lista do canal de voz ou no
   quadro da call abre `userMenu` ("Volume do usuário" 0–200%, "Silenciar" só para você, "Redefinir volume"); fica em
   `cp-vol-<nick>` e `cp-lmute-<nick>`. Acima de 100% (e no iPhone) o som passa por um GainNode (`boost`). Teste `12-volume-na-call`.
+- `public/ring.js`: ligar na DM e na DM em grupo como no Discord. Quem começa a chamada faz tocar para os outros
+  (servidor: `startDmCall`/`ringUser`/`stopRing`, eventos `call:ring`, `call:ringstop`, `call:ringing`, `call:decline`;
+  toca por até 1 minuto, em qualquer aba do site). Janelinha "Chamada recebida..." (`.ringpop`, no meio da tela,
+  arrastável, Esc = Ignorar; não aparece em "Não perturbe"); dentro da própria conversa aparece `#ringBar` no lugar da call.
+  Quem liga vê quem não entrou apagado (`.tile.ghost`, pulsando com `.ringing`; clicar = "Tocar novamente").
+  Atender de outra página abre `/s/<conversa>?atender=voz|video` e o `call.js` entra sozinho (`app.joinCall`).
+  Anéis e durações iguais aos do Discord (`ringIn` 5,407 s, `ringOut` 2,5 s); os toques são feitos no navegador
+  (WebAudio, `app.ringTone`) com o mesmo ritmo, mas melodia própria. Mensagem `m.call` na conversa ("Fulano iniciou uma
+  chamada que durou 5 minutos." / "Você perdeu uma chamada de Fulano."). Sons em Notificações: `snd-ring`, `snd-calling`.
+  Teste `15-ligar-na-dm`.
 - `public/settings.js`: Configurações de usuário em tela cheia (mesmo layout `gs-*` das do servidor): Minha conta,
   Perfis (com prévia), Conteúdo e social, Dados e privacidade, Dispositivos, Conexões, Aparência, Acessibilidade,
   Voz e vídeo (`#settings`), Bate-papo, Notificações, Atalhos, Idioma, Modo streamer, Avançado (modo
@@ -129,7 +139,8 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
 Mensagens de commit em português. Não escreva nome/versão de modelo de IA em código, commits ou PR.
 
 ## O que ficou de fora do Discord (e por quê)
-GIFs e soundboard (pedido do dono; por isso o painel "Voz conectada" tem 3 botões e não 4); Nitro, impulsos,
+o arquivo de som do toque de chamada (é do Discord, como os ícones: o nosso é feito no código, mesmo ritmo e
+duração, melodia própria); GIFs e soundboard (pedido do dono; por isso o painel "Voz conectada" tem 3 botões e não 4); Nitro, impulsos,
 loja, presentes, missões e super reações (sistema pago); bots com comandos e apps (rodar código de terceiros);
 conexões verificadas (precisa de conta de desenvolvedor em cada site; hoje a pessoa digita o usuário); clipes e
 fundo de vídeo (pesado demais para o plano grátis); temas claros (o dono pediu só o do Discord); atalhos de
