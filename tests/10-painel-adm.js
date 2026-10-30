@@ -31,7 +31,7 @@ const ok = (c, m) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + m);
   await A.click('#saShow .sa-stop'); await A.waitForTimeout(500);
   ok(await V.isHidden('#saShow'), 'parar some para todos');
   await A.setInputFiles('#saFile', { name: 'som.wav', mimeType: 'audio/wav', buffer: wav }); await A.click('#saGo'); await A.waitForTimeout(1500);
-  ok(await V.evaluate(() => { const a = document.querySelector('#saShow audio'); return a && !a.paused; }), 'audio tocando no outro');
+  ok(await V.evaluate(() => { return [...document.querySelectorAll('#saShow audio')].some((a) => !a.paused && a.src.includes('/api/adm/media/')); }), 'audio tocando no outro');
   await V.screenshot({ path: SP + '/adm-audio.png' });
   await A.click('#saGo'); await A.waitForTimeout(500);
   ok(await V.isHidden('#saShow'), 'audio parou');
