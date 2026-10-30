@@ -52,7 +52,7 @@
       return profile;
     },
     fillProfileForm() {
-      $("profEmail").textContent = me ? "Conta: " + me.email : "";
+      $("profEmail").dataset.email = me ? me.email : "";
       $("nickInput").value = profile ? profile.nick : "";
       $("statusTextInput").value = profile && profile.status_text ? profile.status_text : "";
       $("bioInput").value = profile && profile.bio ? profile.bio : "";
@@ -64,6 +64,24 @@
     async openDm(userId) {
       try { const r = await api("/api/dm", { method: "POST", body: { userId } }); goServer(r.server.id); }
       catch (err) { app.setNote(err.message, true); }
+    },
+    // Configuracoes > Minha conta: confere a senha e apaga a conta
+    async deleteAccount(pw) {
+      const { error } = await sb.auth.signInWithPassword({ email: me.email, password: pw || "" });
+      if (error) throw new Error("Senha errada.");
+      await api("/api/me", { method: "DELETE" });
+      await sb.auth.signOut().catch(() => {});
+      store.set("chatpedro-server", ""); location.href = "/";
+    },
+    // Configuracoes > Dispositivos: desconecta a conta dos outros aparelhos
+    async signOutOthers() {
+      const { error } = await sb.auth.signOut({ scope: "others" });
+      if (error) throw new Error(error.message);
+    },
+    // Configuracoes > Dados e privacidade
+    async exportData() {
+      const [meData, friends] = await Promise.all([api("/api/me"), api("/api/friends").catch(() => null)]);
+      return { conta: meData.user, perfil: meData.profile, servidores: meData.servers, amigos: friends, gerado_em: new Date().toISOString() };
     },
     async changePassword(pw) {
       if (!pw || pw.length < 6) throw new Error("A senha precisa ter pelo menos 6 caracteres.");

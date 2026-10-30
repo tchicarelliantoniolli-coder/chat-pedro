@@ -81,10 +81,12 @@
     }
     $("vpWhere").textContent = voiceName(myCh) + " / " + n + (n === 1 ? " pessoa" : " pessoas");
     // microfone e fone do painel do usuario, embaixo da barra
-    setIcon($("upMic"), micOn ? "mic" : "mic-off", micOn ? "Desligar o microfone" : "Ligar o microfone");
+    setIcon($("upMic"), micOn ? "umic" : "umic-off", micOn ? "Silenciar" : "Dessilenciar");
     $("upMic").classList.toggle("off", !micOn);
-    setIcon($("upDeaf"), deaf ? "headphones-off" : "headphones", deaf ? "Voltar a ouvir" : "Parar de ouvir");
+    $("upMic").parentElement.classList.toggle("off", !micOn);
+    setIcon($("upDeaf"), deaf ? "uhead-off" : "uhead", deaf ? "Reativar áudio" : "Desativar áudio");
     $("upDeaf").classList.toggle("off", deaf);
+    $("upDeaf").parentElement.classList.toggle("off", deaf);
   }
 
   // ---------- audio local ----------
@@ -291,7 +293,6 @@
     inCall = false; myCh = null; members = [];
     focused.clear();
     $("call").hidden = true;
-    $("settings").hidden = true;
   }
 
   function leave() {
@@ -433,7 +434,9 @@
   });
 
   // ---------- testar o microfone fora da call ----------
-  async function openSettings() {
+  // abre Configuracoes de usuario > Voz e video (settings.js); avShown roda quando a pagina aparece
+  function openSettings() { if (app.openUserSettings) app.openUserSettings("voz"); else avShown(); }
+  async function avShown() {
     $("settings").hidden = false;
     lastHeard = Date.now();
     if (!inCall && !preview && navigator.mediaDevices) {
@@ -452,6 +455,19 @@
   // fechou a janela (pelo X, clicando fora ou ESC): desliga o teste
   new MutationObserver(() => { if ($("settings").hidden && preview) stopPreview(); }).observe($("settings"), { attributes: true, attributeFilter: ["hidden"] });
   app.openAV = openSettings;
+  app.onAVShown = avShown;
+  // menus das setinhas do microfone e do fone (settings.js)
+  app.audio = {
+    prefs,
+    canPickOutput: () => canPickOutput,
+    micNow: () => { const t = micRaw && micRaw.getAudioTracks()[0]; return t ? t.getSettings().deviceId : prefs.micId; },
+    pick(selId, id) {
+      const sel = $(selId);
+      if (![...sel.options].some((o) => o.value === id)) { const o = document.createElement("option"); o.value = id; o.textContent = id; sel.append(o); }
+      sel.value = id; sel.dispatchEvent(new Event("change"));
+    },
+    setRange(id, v) { const r = $(id); r.value = v; r.dispatchEvent(new Event("input")); },
+  };
   // o navegador pode pausar o audio ate a pessoa clicar em algo: retoma no primeiro clique ou tecla
   for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => { if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); }, true);
 
@@ -911,15 +927,12 @@
   });
   $("upMic").addEventListener("click", toggleMic);
   $("upDeaf").addEventListener("click", toggleDeaf);
-  $("upSet").addEventListener("click", openSettings);
   $("micBtn").addEventListener("click", toggleMic);
   $("deafBtn").addEventListener("click", toggleDeaf);
   $("camBtn").addEventListener("click", toggleCam);
   $("screenBtn").addEventListener("click", toggleScreen);
   $("minBtn").addEventListener("click", () => { $("call").classList.toggle("min"); refreshButtons(); });
   $("setBtn").addEventListener("click", openSettings);
-  $("setClose").addEventListener("click", () => { $("settings").hidden = true; });
-  $("settings").addEventListener("click", (e) => { if (e.target === $("settings")) $("settings").hidden = true; });
   window.addEventListener("beforeunload", () => { if (inCall) socket.emit("call:leave"); });
 
   app.onJoin = () => { refreshButtons(); renderSidebar(); };

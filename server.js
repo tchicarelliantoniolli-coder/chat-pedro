@@ -337,7 +337,10 @@ function sendUsers(ctx, withAvatars) {
   toRoom(ctx, "users", [...new Set(visible.map(([, n]) => n))].sort());
   const profiles = {};
   for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline", text: m.status_text || undefined, bio: m.bio || undefined, id: m.id, banner: m.banner || undefined, deco: m.decoration || undefined, conn: m.connections || undefined };
-  for (const [id, nick] of visible) profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online" };
+  for (const [id, nick] of visible) {
+    const s = ctx.sockets.get(id);
+    profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online", noact: (s && s.data.hideAct) || undefined };
+  }
   if (withAvatars) toRoom(ctx, "avatars", avatarsOf(ctx));
   toRoom(ctx, "profiles", profiles);
   toRoom(ctx, "members", ctx.members.map((m) => ({ id: m.id, nick: m.nick, role: m.role, online: onlineIds.has(m.id) })));
@@ -528,6 +531,27 @@ api.patch("/me", wrap(async (req, res) => {
     sendUsers(ctx, !!(patch.nick || patch.avatar));
   }
   res.json({ profile });
+}));
+
+// Excluir a conta (Configuracoes > Minha conta). Como no Discord, quem e dono de servidor apaga ou passa ele antes.
+// O navegador ja conferiu a senha; o banco apaga perfil, amizades e participacoes junto com a conta.
+api.delete("/me", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  const owned = await db.select("servers", { select: "id", owner_id: "eq." + user.id, dm: "eq.false" });
+  if (owned.length) return fail(res, 400, "Você é dono de " + owned.length + (owned.length === 1 ? " servidor" : " servidores") + ". Apague antes de excluir a conta.");
+  const touched = [];
+  for (const p of contexts.values()) {
+    const ctx = await p.catch(() => null);
+    if (ctx && ctx.members.some((m) => m.id === user.id)) { removeUserFromCtx(ctx, user.id, "Sua conta foi excluída."); touched.push(ctx); }
+  }
+  await db.remove("server_members", { user_id: "eq." + user.id });
+  await db.remove("friendships", { user_id: "eq." + user.id });
+  await db.remove("friendships", { friend_id: "eq." + user.id });
+  await db.remove("profiles", { id: "eq." + user.id });
+  await auth.deleteUser(user.id);
+  profileCache.delete(user.id);
+  for (const ctx of touched) { await loadMembers(ctx).catch(() => {}); sendUsers(ctx, true); }
+  res.json({ ok: true });
 }));
 
 api.post("/servers", wrap(async (req, res) => {
@@ -1185,6 +1209,7 @@ io.on("connection", (socket) => {
   socket.on("profile", (p) => {
     if (!p || typeof p !== "object") return;
     if (STATUSES.includes(p.status)) ctx.statuses.set(socket.id, p.status);
+    if (typeof p.hideAct === "boolean") socket.data.hideAct = p.hideAct; // nao mostrar "jogando poker", "na call"...
     sendUsers(ctx);
   });
 

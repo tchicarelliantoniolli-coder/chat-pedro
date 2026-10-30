@@ -44,6 +44,9 @@ em português simples (a pessoa não é programadora), explique o que mudou no s
   link personalizado, banner, webhooks).
 - `public/home.js`: Início (amigos, DMs, DM em grupo) e Descobrir.
 - `public/emoji.js`: lista de emojis com nomes em português.
+- `public/settings.js`: Configurações de usuário em tela cheia (Minha conta, Perfis, Voz e vídeo, Aparência,
+  Bate-papo, Notificações...), o cartão da conta (clique no próprio nome) e os menus das setinhas do microfone e
+  do fone. Preferências ficam no navegador (`chatpedro-prefs`); no chat use `P("nome")`.
 
 ## Permissões
 Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `members`, `ban`, `server`,
@@ -65,4 +68,5 @@ Mensagens de commit em português. Não escreva nome/versão de modelo de IA em 
 GIFs e soundboard (pedido do dono); Nitro, impulsos, loja, missões e super reações (sistema pago);
 bots com comandos e apps (rodar código de terceiros); conexões verificadas (precisa de conta de
 desenvolvedor em cada site; hoje a pessoa digita o usuário); clipes e fundo de vídeo (pesado demais
-para o plano grátis); pedidos de mensagem de desconhecidos (DM só com amigos ou quem divide servidor).
+para o plano grátis); temas claros (o dono pediu só o do Discord); atalhos de teclado personalizáveis, jogos
+registrados e sobreposição de jogo (o navegador não deixa); Central da Família e outros idiomas; pedidos de mensagem de desconhecidos (DM só com amigos ou quem divide servidor).

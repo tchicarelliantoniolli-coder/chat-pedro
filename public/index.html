@@ -1023,18 +1023,40 @@ header h1.site { font-size: 14px; }
 #voicePanel small { color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #voicePanel .ib { color: var(--fg); }
 #voicePanel .ib:hover { color: var(--err); }
-.profile { margin: 0 8px 8px; padding: 6px; display: flex; align-items: center; gap: 0; background: var(--surface); border-radius: 8px; }
+/* painel do usuario (medidas do Discord: 56px de altura, botoes de 32px, setinha de 16px colada no botao) */
+.profile { margin: 0 8px 8px; padding: 0 8px 0 4px; height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 #voicePanel:not([hidden]) + .profile { border-radius: 0 0 8px 8px; }
 .profile[hidden] { display: none; }
-.profile .me { all: unset; box-sizing: border-box; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 6px; cursor: pointer; }
-.profile .me:hover { background: var(--hover); }
+.profile .me { all: unset; box-sizing: border-box; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s ease; }
+.profile .me:hover, .profile .me[aria-expanded="true"] { background: rgba(151, 151, 159, 0.16); }
 .profile .me .av.big { width: 32px; height: 32px; font-size: 13px; }
-.profile .mt { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.profile .mt { display: flex; flex-direction: column; min-width: 0; line-height: 18px; }
 .profile .mt b { font-size: 14px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.profile .mt small { font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.profile .ib { min-width: 32px; height: 32px; padding: 0 6px; color: var(--dim); }
-.profile .ib:hover { color: var(--fg); }
-.profile .ib.off { color: var(--err); }
+/* embaixo do nome: o status; com o mouse em cima sobe o nome da conta (como no Discord) */
+.profile .msub { display: grid; height: 16px; overflow: hidden; }
+.profile .msub small { grid-area: 1 / 1; font-size: 12px; line-height: 16px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: transform 0.2s var(--ease), opacity 0.2s; }
+.profile .msub #meUser { transform: translateY(100%); opacity: 0; }
+.profile .me:hover #meStatus { transform: translateY(-100%); opacity: 0; }
+.profile .me:hover #meUser { transform: none; opacity: 1; }
+/* como no Discord atual: o painel (e o "Voz conectada") se estica por baixo da barra de servidores */
+#side > .profile, #side > #voicePanel { position: relative; z-index: 2; margin-left: -64px; }
+#rail { padding-bottom: 72px; }
+body:has(#voicePanel:not([hidden])) #rail { padding-bottom: 136px; }
+.ubtns { display: flex; align-items: center; flex: none; }
+.profile .ib { width: 32px; min-width: 0; height: 32px; padding: 0; justify-content: center; border-radius: 8px; color: #b5bac1; transition: background-color 0.2s ease, color 0.2s ease; }
+.profile .ib .ic { width: 20px; height: 20px; }
+.profile .ib:hover { background: rgba(151, 151, 159, 0.2); color: var(--bright); }
+.agrp { display: flex; }
+.agrp > .ib:first-child { border-radius: 8px 0 0 8px; }
+.agrp > .ib.chev { width: 16px; margin-left: 1px; border-radius: 0 8px 8px 0; }
+.agrp > .ib.chev .ic { width: 16px; height: 16px; transition: transform 0.2s var(--ease); }
+.agrp > .ib.chev[aria-expanded="true"] .ic { transform: rotate(180deg); }
+.agrp:hover > .ib { background: rgba(151, 151, 159, 0.08); }
+.agrp:hover > .ib:hover, .agrp > .ib[aria-expanded="true"] { background: rgba(151, 151, 159, 0.2); color: var(--bright); }
+/* mudo / sem audio: icone vermelho com fundo avermelhado */
+.agrp.off > .ib { color: #f23f43; background: rgba(218, 62, 68, 0.12); }
+.agrp.off:hover > .ib { background: rgba(218, 62, 68, 0.18); }
+.agrp.off > .ib:hover, .agrp.off > .ib[aria-expanded="true"] { background: rgba(218, 62, 68, 0.24); color: #f23f43; }
 /* chat com o canto arredondado, como no Discord */
 .chat { position: relative; background: var(--bg); border-top: 1px solid var(--line); border-left: 1px solid var(--line); border-top-left-radius: 8px; }
 .chathead { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); flex: none; color: var(--dim); grid-area: head; }
@@ -1078,16 +1100,16 @@ body.nomembers aside { display: none; }
 /* cartao de perfil */
 #popout { position: fixed; z-index: 55; width: 300px; background: var(--surface); border-radius: 8px; overflow: hidden; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); display: flex; flex-direction: column; padding-bottom: 14px; animation: popIn 0.15s var(--ease); }
 #popout[hidden] { display: none; }
-#popout .banner { height: 64px; }
-#popout .pres.big { margin: -44px 0 0 16px; align-self: flex-start; }
-#popout .pres.big .av.big { width: 80px; height: 80px; font-size: 28px; box-shadow: 0 0 0 6px var(--surface); }
-#popout .pres.big::after { width: 18px; height: 18px; right: 0; bottom: 0; border-width: 4px; border-color: var(--surface); }
-#popout .pname { font-size: 20px; font-weight: 700; color: var(--bright); padding: 10px 16px 0; overflow-wrap: anywhere; }
-#popout .ptext { padding: 4px 16px 0; font-size: 14px; color: var(--fg); }
-#popout .pact { padding: 2px 16px 0; font-size: 13px; color: var(--ok); }
-#popout .pinfo { display: flex; gap: 8px; align-items: center; padding: 10px 16px 0; font-size: 12px; color: var(--dim); }
-#popout .rbadge { background: rgba(88, 101, 242, 0.25); color: #c9cdfb; padding: 1px 8px; border-radius: 4px; font-weight: 600; }
-#popout .cmd.big { margin: 12px 16px 0; }
+:is(#popout, .ucard) .banner, .us-card .banner { height: 64px; border: 0; padding: 0; box-sizing: border-box; }
+:is(#popout, .ucard) .pres.big { margin: -44px 0 0 16px; align-self: flex-start; }
+:is(#popout, .ucard) .pres.big .av.big { width: 80px; height: 80px; font-size: 28px; box-shadow: 0 0 0 6px var(--surface); }
+:is(#popout, .ucard) .pres.big::after { width: 18px; height: 18px; right: 0; bottom: 0; border-width: 4px; border-color: var(--surface); }
+:is(#popout, .ucard) .pname { font-size: 20px; font-weight: 700; color: var(--bright); padding: 10px 16px 0; overflow-wrap: anywhere; }
+:is(#popout, .ucard) .ptext { padding: 4px 16px 0; font-size: 14px; color: var(--fg); }
+:is(#popout, .ucard) .pact { padding: 2px 16px 0; font-size: 13px; color: var(--ok); }
+:is(#popout, .ucard) .pinfo { display: flex; gap: 8px; align-items: center; padding: 10px 16px 0; font-size: 12px; color: var(--dim); }
+:is(#popout, .ucard) .rbadge { background: rgba(88, 101, 242, 0.25); color: #c9cdfb; padding: 1px 8px; border-radius: 4px; font-weight: 600; }
+:is(#popout, .ucard) .cmd.big { margin: 12px 16px 0; }
 /* mensagens: markdown, editar, fixadas */
 .line .txt code { font-family: Consolas, "Andale Mono WT", Monaco, monospace; font-size: 0.85em; background: #28282d; padding: 0.1em 0.3em; border-radius: 4px; }
 .line .txt pre.codeblock, .ptxt pre.codeblock { display: block; margin: 4px 0; padding: 8px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-family: Consolas, "Andale Mono WT", Monaco, monospace; font-size: 14px; white-space: pre-wrap; max-width: 90%; }
@@ -1643,6 +1665,149 @@ body.home #side, body.home .chat, body.home #sidebar, body.disc #side, body.disc
 /* modo streamer */
 body.streamer #profEmail, body.streamer #invLink, body.streamer .gs-vanity input, body.streamer #mfaSecret { filter: blur(6px); }
 body.streamer #profEmail:hover, body.streamer #invLink:focus { filter: none; }
+/* ===== Configuracoes de usuario (mesmo layout das Configuracoes do servidor, como no Discord) ===== */
+.usettings:not([hidden]) { animation: usIn 0.2s var(--ease); }
+.usettings.closing { animation: usOut 0.15s ease-in forwards; }
+@keyframes usIn { from { opacity: 0; transform: scale(1.06); } }
+@keyframes usOut { to { opacity: 0; transform: scale(1.06); } }
+.app { transition: transform 0.2s var(--ease), opacity 0.2s; }
+body.us-open .app { transform: scale(0.94); opacity: 0; }
+.usettings .gs-in { max-width: 740px; }
+.us-search { position: relative; display: block; margin: 0 0 8px; }
+.us-search input { box-sizing: border-box; width: 100%; font: inherit; font-size: 14px; color: var(--fg); background: var(--bg) !important; border: 0; border-radius: 4px; padding: 6px 30px 6px 8px; outline: 0; }
+.us-search .ic { position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 16px; height: 16px; color: var(--dim); pointer-events: none; }
+.us-sep { height: 1px; margin: 8px 10px; background: var(--line); }
+.us-logout { display: flex !important; align-items: center; justify-content: space-between; }
+.us-logout .ic { width: 16px; height: 16px; }
+.us-ver { padding: 8px 10px; color: var(--dim); font-size: 12px; line-height: 16px; }
+.us-page { display: flex; flex-direction: column; gap: 16px; }
+.us-page > .sect, .us-page .sect { display: flex; flex-direction: column; gap: 8px; }
+.us-h { margin: 0; color: var(--bright); font-size: 16px; font-weight: 600; }
+.us-divider { height: 1px; background: var(--line); margin: 8px 0; }
+.us-link { all: unset; cursor: pointer; color: var(--link); font-size: 14px; }
+.us-link:hover { text-decoration: underline; }
+.us-page select, .us-page input[type=text], .us-page input[type=password] { font: inherit; font-size: 15px; color: var(--fg); background: #1e1f22 !important; border: 0; border-radius: 4px; padding: 8px 10px; outline: 0; }
+.us-page .gs-row input[type=text], .us-page .gs-row input[type=password] { flex: 1; min-width: 160px; }
+.us-page textarea { width: 100%; box-sizing: border-box; }
+.us-page .gs-label b { color: var(--fg); font-weight: 500; margin-left: 6px; }
+/* Minha conta: cartao com banner, foto e os dados */
+.us-acct { border-radius: 8px; overflow: hidden; background: var(--panel); }
+.us-acct-banner { height: 100px; }
+.us-acct-top { display: flex; align-items: flex-end; gap: 16px; padding: 0 16px; margin-top: -38px; flex-wrap: wrap; }
+.us-acct-top .pres.big .av.big { width: 80px; height: 80px; font-size: 28px; box-shadow: 0 0 0 7px var(--panel); }
+.us-acct-top .pres.big::after { width: 18px; height: 18px; right: 0; bottom: 0; border-width: 4px; border-color: var(--panel); }
+.us-acct-top b { flex: 1; color: var(--bright); font-size: 20px; font-weight: 700; padding-bottom: 8px; overflow-wrap: anywhere; }
+.us-acct-top .cmd.big { margin-bottom: 8px; }
+.us-acct-box { margin: 16px; padding: 16px; border-radius: 8px; background: var(--box); display: flex; flex-direction: column; gap: 20px; }
+.us-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.us-field > div { min-width: 0; color: var(--bright); overflow-wrap: anywhere; }
+.us-field .gs-label { margin-bottom: 2px; }
+button.cmd.us-btn { background: #4e5058; color: #fff; padding: 6px 16px; border-radius: 4px; }
+button.cmd.us-btn:hover { background: #6d6f78; }
+/* Perfis */
+.us-tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--line); }
+.us-t { all: unset; cursor: pointer; padding: 0 0 12px; color: var(--dim); font-size: 16px; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.us-t:hover { color: var(--fg); }
+.us-t.on { color: var(--bright); border-color: var(--accent); }
+.us-cols { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.us-col { flex: 1 1 320px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.us-col[hidden] { display: none; }
+.us-preview { flex: 0 0 300px; position: sticky; top: 0; }
+.us-card { display: flex; flex-direction: column; width: 300px; padding-bottom: 16px; border-radius: 8px; overflow: hidden; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+.ucard { display: flex; flex-direction: column; }
+.us-card .banner { height: 64px; }
+.us-card .pres.big { margin: -44px 0 0 16px; align-self: flex-start; }
+.us-card .pres.big .av.big { width: 80px; height: 80px; font-size: 28px; box-shadow: 0 0 0 6px var(--surface); }
+.us-card .pres.big::after { width: 18px; height: 18px; right: 0; bottom: 0; border-width: 4px; border-color: var(--surface); }
+.us-card .pname { font-size: 20px; font-weight: 700; color: var(--bright); padding: 10px 16px 0; overflow-wrap: anywhere; }
+.us-card .ptext { padding: 4px 16px 0; font-size: 14px; color: var(--fg); }
+/* Dispositivos, tema, opcoes */
+.us-dev { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.us-dev .ic { width: 32px; height: 32px; color: var(--fg); }
+.us-dev div { display: flex; flex-direction: column; }
+.us-dev b { color: var(--bright); font-size: 14px; font-weight: 600; text-transform: uppercase; }
+.us-dev small { color: var(--dim); font-size: 14px; }
+.us-theme { display: flex; align-items: center; gap: 12px; }
+.us-theme span { width: 60px; height: 60px; border-radius: 50%; background: #1a1a1e; border: 2px solid var(--line); }
+.us-theme span.on { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+.us-theme small { color: var(--dim); font-size: 14px; }
+.us-radio { display: flex; flex-direction: column; gap: 8px; }
+.us-radio label { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; padding: 10px 12px; border-radius: 4px; background: var(--box); color: var(--bright); cursor: pointer; font-weight: 500; }
+.us-radio label:hover { background: rgba(151, 151, 159, 0.16); }
+.us-radio label:has(input:checked) { background: rgba(151, 151, 159, 0.24); }
+.us-radio label small { grid-column: 2; color: var(--dim); font-size: 13px; font-weight: 400; }
+.us-radio input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+.us-range { display: flex; flex-direction: column; gap: 4px; }
+.us-keys { display: flex; flex-direction: column; }
+.us-keys > div { display: flex; align-items: center; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--dim); }
+.us-keys > div span { margin-left: auto; color: var(--bright); }
+.us-bul { margin: 0; padding-left: 20px; color: var(--fg); display: flex; flex-direction: column; gap: 6px; }
+.gsettings label.gs-toggle, .gsettings label.gs-perm { flex-direction: row; }
+.usettings .gs-toggle { padding: 4px 0; }
+.usettings .gs-ptxt small { color: var(--dim); }
+.usettings .gs-ptxt { font-weight: 500; }
+#settings .meter { height: 8px; }
+@media (max-width: 760px) {
+  .usettings .gs-navin { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  .usettings .us-search, .usettings .us-ver, .usettings .us-sep { display: none; }
+  .us-preview { position: static; }
+}
+
+/* menus do painel do usuario: cartao da conta e setinhas do microfone/fone */
+.upop { position: fixed; z-index: 56; min-width: 220px; max-width: min(320px, calc(100vw - 16px)); box-sizing: border-box; padding: 6px 8px; border-radius: 8px; background: #121214; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); animation: popIn 0.15s var(--ease); max-height: calc(100vh - 80px); overflow-y: auto; }
+.upop.ucard { width: 300px; padding: 0 0 8px; background: var(--surface); overflow-x: hidden; }
+.upop.ucard .ucard-in { display: flex; flex-direction: column; padding-bottom: 12px; }
+.ubox { margin: 0 8px; padding: 6px; border-radius: 8px; background: #121214; }
+.uitem { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 6px 8px; border-radius: 4px; color: var(--fg); font-size: 14px; font-weight: 500; }
+.uitem:hover, .uitem.open { background: rgba(151, 151, 159, 0.16); color: var(--bright); }
+.uitem .ul { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.uitem .ul small { color: var(--dim); font-size: 12px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uitem > .ic { width: 16px; height: 16px; flex: none; transition: transform 0.15s var(--ease); }
+.uitem.hassub.open > .ic { transform: rotate(90deg); }
+.uitem.danger { color: var(--err); }
+.usep { height: 1px; margin: 4px 4px; background: var(--line); }
+.ustatus { display: flex; flex-direction: column; padding-left: 8px; animation: slideDown 0.15s var(--ease); }
+.ustatus .ul small { white-space: normal; }
+.sdot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: #23a55a; }
+.sdot.ausente { background: #f0b232; }
+.sdot.ocupado { background: #f23f43; }
+.sdot.invisivel { background: transparent; box-shadow: inset 0 0 0 3px #80848e; }
+.uradio { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 2px var(--dim); }
+.uradio.on { box-shadow: inset 0 0 0 2px var(--accent), inset 0 0 0 5px #121214; background: var(--accent); }
+.uslider { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; }
+.uslider .ul { display: flex; justify-content: space-between; font-size: 14px; font-weight: 500; color: var(--fg); }
+.uslider .ul b { color: var(--dim); font-weight: 500; }
+.uslider input { width: 100%; accent-color: var(--accent); }
+.uhint { display: block; padding: 6px 8px; color: var(--dim); font-size: 12px; }
+.utog { appearance: none; -webkit-appearance: none; flex: none; width: 32px; height: 20px; border-radius: 10px; background: #80848e; position: relative; cursor: pointer; margin: 0; transition: background-color 0.15s; }
+.utog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.15s var(--ease); }
+.utog:checked { background: #23a55a; }
+.utog:checked::after { transform: translateX(12px); }
+
+/* ===== preferencias (Configuracoes > Aparencia, Acessibilidade e Bate-papo) ===== */
+.line .txt { font-size: var(--chat-fs, 16px); }
+.line.msg:not(.cont) { margin-top: var(--group-gap, 12px); }
+body.compact .line.msg { display: block; padding-top: 1px; padding-bottom: 1px; }
+body.compact .line.msg:not(.cont) { margin-top: calc(var(--group-gap, 12px) / 2); }
+body.compact .line.msg .gut { display: none; }
+body.compact .line.msg .head { display: inline-flex; flex-direction: row-reverse; gap: 8px; margin-right: 6px; vertical-align: baseline; }
+body.compact .line.msg .head .time { font-size: 12px; }
+body.compact .line.msg .txt { display: inline; }
+body.compact .line.msg.cont .body { padding-left: 0; }
+body.no-images .line .pic img { display: none; }
+body.no-images .line .pic::after { content: "Foto escondida (Configurações > Bate-papo)"; display: block; padding: 8px 12px; border-radius: 8px; background: var(--box); color: var(--dim); font-size: 14px; }
+body.no-embeds .line .embed, body.no-embeds .line .ytcard { display: none; }
+body.no-reactions .line .reacts { display: none; }
+body.no-stickers .line .stk img { display: none; }
+body.no-stickers .line .stk { height: auto; width: auto; color: var(--dim); font-size: 14px; }
+body.no-stickers .line .stk::after { content: "figurinha escondida"; }
+body.spoilers-open .spoiler { background: rgba(102, 103, 112, 0.2); color: inherit; cursor: text; }
+body.spoilers-open .spoiler:not(.shown) * { color: inherit !important; background: revert !important; }
+body.spoilers-open .pic.spoil img { filter: none; }
+body.spoilers-open .pic.spoil .spoiltag { display: none; }
+body.underline-links a { text-decoration: underline !important; }
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+body.no-anim .pres::before { animation: none !important; }
 @media (max-width: 760px) {
   .hside { display: none; }
   .hbody { padding: 12px; }
@@ -1666,7 +1831,7 @@ body.streamer #profEmail:hover, body.streamer #invLink:focus { filter: none; }
 </head>
 <body>
 <!-- icones do site (desenhados aqui, sem depender de outro site) -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/></symbol><symbol id="i-forum" viewBox="0 0 24 24"><path d="M4 5h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM19 9h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-4-3h-4"/></symbol><symbol id="i-thread" viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8.5h8M8 11.5h5"/></symbol><symbol id="i-stage" viewBox="0 0 24 24"><circle cx="12" cy="11" r="2.5"/><path d="M7.5 15.5a6.5 6.5 0 1 1 9 0M4.8 18.2a10 10 0 1 1 14.4 0M10 21h4"/></symbol><symbol id="i-sticker" viewBox="0 0 24 24"><path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8l7-7V6a3 3 0 0 0-3-3h-4zM14 21v-4a3 3 0 0 1 3-3h4M8.5 10h.01M14.5 10h.01M8.5 14.5c1 1 2.2 1.5 3.5 1.5"/></symbol><symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol><symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 5h9M8.5 3v2M6 5c.8 3.5 3 6 6 7.5M11 5c-.8 3.5-3 6-6.5 7.5M13 21l4-9 4 9M14.5 18h5"/></symbol><symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></symbol><symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11M11 10.5v-6a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7L3 14.5a1.5 1.5 0 0 1 2.4-1.8L8 15"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.2"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 7h12l3.5 10.5-3.5 1.5-3-4h-6l-3 4L2.5 17.5z"/><path d="M8 10v4M6 12h4"/><path fill="currentColor" stroke="none" d="M15 10h2v2h-2zM17 12h2v2h-2z"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><path d="M10 3L8 21M16 3l-2 18M4 8.5h17M3 15.5h17"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4.5-4.5L4 21l-1-1 4.5-4.5L3 11l2-2 5 1 4-4z"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol><symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M12 7v10M7 12h10" stroke="var(--box)" stroke-width="2.4"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></g></symbol><symbol id="i-forward" viewBox="0 0 24 24"><path d="M15 15l5-5-5-5"/><path d="M20 10H9a5 5 0 0 0-5 5v5"/></symbol><symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5"/></symbol><symbol id="i-poll" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol><symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></symbol><symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-9.3-5M6 8c0 7-3 9-3 9h14M13.7 21a2 2 0 0 1-3.4 0M2 2l20 20"/></symbol><symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></symbol><symbol id="i-copy-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-umic" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v5a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5z"/><path stroke-linecap="round" d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17.2v3.8M8.5 21h7"/></symbol><symbol id="i-umic-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2.5a3.5 3.5 0 0 0-3.5 3.5v5a3.5 3.5 0 0 0 7 0V6A3.5 3.5 0 0 0 12 2.5z"/><path stroke-linecap="round" d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17.2v3.8M8.5 21h7"/><path stroke-linecap="round" d="M3.5 3.5l17 17"/></symbol><symbol id="i-uhead" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 3a9 9 0 0 0-9 9v5.5A3.5 3.5 0 0 0 6.5 21H8a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H5v-1a7 7 0 0 1 14 0v1h-3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h1.5a3.5 3.5 0 0 0 3.5-3.5V12a9 9 0 0 0-9-9z"/></symbol><symbol id="i-uhead-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 3a9 9 0 0 0-9 9v5.5A3.5 3.5 0 0 0 6.5 21H8a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H5v-1a7 7 0 0 1 14 0v1h-3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h1.5a3.5 3.5 0 0 0 3.5-3.5V12a9 9 0 0 0-9-9z"/><path stroke-linecap="round" d="M3.5 3.5l17 17"/></symbol><symbol id="i-ugear" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" d="M19.19 10.24 L21.86 10.31 L21.86 13.69 L19.19 13.76 L18.33 15.84 L20.17 17.77 L17.77 20.17 L15.84 18.33 L13.76 19.19 L13.69 21.86 L10.31 21.86 L10.24 19.19 L8.16 18.33 L6.23 20.17 L3.83 17.77 L5.67 15.84 L4.81 13.76 L2.14 13.69 L2.14 10.31 L4.81 10.24 L5.67 8.16 L3.83 6.23 L6.23 3.83 L8.16 5.67 L10.24 4.81 L10.31 2.14 L13.69 2.14 L13.76 4.81 L15.84 5.67 L17.77 3.83 L20.17 6.23 L18.33 8.16Z M12 8.6a3.4 3.4 0 1 0 0 6.8a3.4 3.4 0 1 0 0-6.8z"/></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M15.6 3.6a2 2 0 0 1 2.8 0l2 2a2 2 0 0 1 0 2.8L9 19.8 3.5 21l1.2-5.5z"/></symbol><symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/></symbol><symbol id="i-forum" viewBox="0 0 24 24"><path d="M4 5h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM19 9h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1v3l-4-3h-4"/></symbol><symbol id="i-thread" viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 8.5h8M8 11.5h5"/></symbol><symbol id="i-stage" viewBox="0 0 24 24"><circle cx="12" cy="11" r="2.5"/><path d="M7.5 15.5a6.5 6.5 0 1 1 9 0M4.8 18.2a10 10 0 1 1 14.4 0M10 21h4"/></symbol><symbol id="i-sticker" viewBox="0 0 24 24"><path d="M14 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h8l7-7V6a3 3 0 0 0-3-3h-4zM14 21v-4a3 3 0 0 1 3-3h4M8.5 10h.01M14.5 10h.01M8.5 14.5c1 1 2.2 1.5 3.5 1.5"/></symbol><symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol><symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 5h9M8.5 3v2M6 5c.8 3.5 3 6 6 7.5M11 5c-.8 3.5-3 6-6.5 7.5M13 21l4-9 4 9M14.5 18h5"/></symbol><symbol id="i-user-plus" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/></symbol><symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11M11 10.5v-6a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5a6 6 0 0 1-5-2.7L3 14.5a1.5 1.5 0 0 1 2.4-1.8L8 15"/></symbol><symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.2"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol><symbol id="i-spade" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 2C9 6 4 9 4 13.5a4 4 0 0 0 7 2.6L10 21h4l-1-4.9a4 4 0 0 0 7-2.6C20 9 15 6 12 2z"/></symbol><symbol id="i-club" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="12" cy="7" r="3.6"/><circle cx="7" cy="13.5" r="3.6"/><circle cx="17" cy="13.5" r="3.6"/><path d="M11 12h2l1 9h-4z"/></g></symbol><symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/></symbol><symbol id="i-headphones-off" viewBox="0 0 24 24"><path d="M4 18v-6a8 8 0 0 1 16 0v6"/><path d="M3 14h4v7H3zM17 14h4v7h-4z"/><path d="M2 2l20 20"/></symbol><symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><circle cx="17.5" cy="8.5" r="2.5"/><path d="M17 14a5 5 0 0 1 5 5v2"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="7"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol><symbol id="i-gamepad" viewBox="0 0 24 24"><path d="M6 7h12l3.5 10.5-3.5 1.5-3-4h-6l-3 4L2.5 17.5z"/><path d="M8 10v4M6 12h4"/><path fill="currentColor" stroke="none" d="M15 10h2v2h-2zM17 12h2v2h-2z"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol><symbol id="i-hash" viewBox="0 0 24 24"><path d="M10 3L8 21M16 3l-2 18M4 8.5h17M3 15.5h17"/></symbol><symbol id="i-pin" viewBox="0 0 24 24"><path d="M15 3l6 6-3 1-4 4 1 5-2 2-4.5-4.5L4 21l-1-1 4.5-4.5L3 11l2-2 5 1 4-4z"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol><symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor" stroke="none"/><path d="M12 7v10M7 12h10" stroke="var(--box)" stroke-width="2.4"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol><symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></g></symbol><symbol id="i-forward" viewBox="0 0 24 24"><path d="M15 15l5-5-5-5"/><path d="M20 10H9a5 5 0 0 0-5 5v5"/></symbol><symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></symbol><symbol id="i-file" viewBox="0 0 24 24"><path d="M6 2h8l5 5v15H6z"/><path d="M14 2v5h5"/></symbol><symbol id="i-poll" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol><symbol id="i-at" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></symbol><symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-9.3-5M6 8c0 7-3 9-3 9h14M13.7 21a2 2 0 0 1-3.4 0M2 2l20 20"/></symbol><symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></symbol><symbol id="i-copy-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol><symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 15L4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 5 5v5"/></symbol><symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5s1.5 2 4 2 4-2 4-2M9 9h1M14 9h1"/></symbol><symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M6 6l1 15h10l1-15M10 11v6M14 11v6"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></symbol><symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8M2 2l20 20"/></symbol><symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4"/></symbol><symbol id="i-video-off" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12"/><path d="M15 10l7-4v12l-7-4M2 2l20 20"/></symbol><symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14"/><path d="M8 21h8M12 17v4"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M7 12V6a1.5 1.5 0 0 1 3 0v5M10 11V4a1.5 1.5 0 0 1 3 0v7M13 11V6a1.5 1.5 0 0 1 3 0v6M16 12V9a1.5 1.5 0 0 1 3 0v5a8 8 0 0 1-8 8h-.5A7 7 0 0 1 4.6 18.5L2.5 15a1.5 1.5 0 0 1 2.6-1.5L7 16"/></symbol><symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14"/><path fill="currentColor" stroke="none" d="M10 9l5 3-5 3z"/></symbol><symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol><symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol><symbol id="i-phone-off" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M2 15.5c5-5.5 15-5.5 20 0l-2.5 3-4.2-1.3V14c-2.2-.7-4.4-.7-6.6 0v3.2L4.5 18.5z"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol><symbol id="i-maximize" viewBox="0 0 24 24"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></symbol><symbol id="i-minimize" viewBox="0 0 24 24"><path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6"/></symbol><symbol id="i-send" viewBox="0 0 24 24"><path d="M3 3l18 9-18 9 3-9z"/><path d="M6 12h7"/></symbol><symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13"/><path d="M16 8V3H3v13h5"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="i-log-out" viewBox="0 0 24 24"><path d="M9 21H4V3h5M16 17l5-5-5-5M21 12H9"/></symbol><symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol><symbol id="i-volume-off" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></symbol><symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol><symbol id="i-message" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol><symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol></svg>
 <header>
   <button type="button" class="ib" id="railBtn" title="Seus servidores" aria-label="Seus servidores" aria-controls="rail"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
   <div class="title">
@@ -1726,10 +1891,12 @@ body.streamer #profEmail:hover, body.streamer #invLink:focus { filter: none; }
       <button type="button" class="ib" id="vpLeave" title="Desconectar da call" aria-label="Desconectar da call"><svg class="ic" aria-hidden="true"><use href="#i-phone-off"/></svg></button>
     </div>
     <div class="profile" id="profile" hidden>
-      <button type="button" class="me" id="profileBtn" title="Meu perfil"><span class="pres" id="meAv"></span><span class="mt"><b id="meNick"></b><small id="meStatus">online</small></span></button>
-      <button type="button" class="ib" id="upMic" title="Microfone" aria-label="Microfone"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg></button>
-      <button type="button" class="ib" id="upDeaf" title="Fone" aria-label="Fone"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg></button>
-      <button type="button" class="ib" id="upSet" title="Configurações de áudio e vídeo" aria-label="Configurações de áudio e vídeo"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+      <button type="button" class="me" id="profileBtn" aria-haspopup="dialog" aria-label="Minha conta"><span class="pres" id="meAv"></span><span class="mt"><b id="meNick"></b><span class="msub"><small id="meStatus">online</small><small id="meUser"></small></span></span></button>
+      <div class="ubtns">
+        <div class="agrp"><button type="button" class="ib" id="upMic" title="Silenciar" aria-label="Silenciar"><svg class="ic" aria-hidden="true"><use href="#i-umic"/></svg></button><button type="button" class="ib chev" id="upMicMenu" title="Opções de entrada" aria-label="Opções de entrada" aria-haspopup="menu"><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button></div>
+        <div class="agrp"><button type="button" class="ib" id="upDeaf" title="Desativar áudio" aria-label="Desativar áudio"><svg class="ic" aria-hidden="true"><use href="#i-uhead"/></svg></button><button type="button" class="ib chev" id="upDeafMenu" title="Opções de saída" aria-label="Opções de saída" aria-haspopup="menu"><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button></div>
+        <button type="button" class="ib" id="upSet" title="Configurações de usuário" aria-label="Configurações de usuário"><svg class="ic" aria-hidden="true"><use href="#i-ugear"/></svg></button>
+      </div>
       <input type="file" id="avatarFile" accept="image/*" hidden>
     </div>
   </nav>
@@ -1935,68 +2102,238 @@ body.streamer #profEmail:hover, body.streamer #invLink:focus { filter: none; }
   </div>
 </div>
 
-<div class="modal" id="profileModal" hidden>
-  <div class="box" role="dialog" aria-labelledby="profTitle">
-    <div class="row"><h3 id="profTitle">MEU PERFIL</h3><button type="button" class="ib" id="profClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-    <div class="sect"><b>Conta</b><span id="profEmail" class="lbl2"></span>
-      <form class="opts" id="nickForm"><label class="inline">Apelido <input type="text" id="nickInput" maxlength="20"></label><button type="submit" class="cmd">Salvar</button></form>
-      <form class="opts" id="statusTextForm"><label class="inline">Status <input type="text" id="statusTextInput" maxlength="60" placeholder="ex.: jogando truco"></label><button type="submit" class="cmd">Salvar</button></form>
-      <form class="sect" id="bioForm"><label>Sobre mim <textarea id="bioInput" maxlength="190" rows="2" placeholder="Conte um pouco sobre você"></textarea></label><div class="opts"><button type="submit" class="cmd">Salvar "Sobre mim"</button></div></form>
-      <details class="pwbox"><summary class="cmd">Trocar senha</summary>
-        <form class="opts" id="pwForm"><input type="password" id="pwInput" minlength="6" maxlength="72" placeholder="senha nova" autocomplete="new-password" aria-label="Senha nova"><button type="submit" class="cmd">Salvar senha</button></form>
-      </details>
-    </div>
-    <div class="sect"><b>Áudio e vídeo</b><div class="opts"><button type="button" class="cmd withicon" id="avBtn"><svg class="ic" aria-hidden="true"><use href="#i-headphones"/></svg> Microfone, saída de som e câmera</button></div></div>
-    <div class="sect"><b>Foto</b><div class="opts"><button type="button" class="cmd" id="avatarBtn">Trocar foto de perfil</button></div></div>
-    <div class="sect"><b>Cor do nome</b><div class="swatches" id="colorPick"></div></div>
-    <div class="sect"><b>Cor do banner do perfil</b><div class="opts"><input type="color" id="bannerColor" value="#5865f2" aria-label="Cor do banner"><button type="button" class="cmd" id="bannerSave">Salvar banner</button><button type="button" class="cmd" id="bannerReset">Usar a cor do nome</button></div></div>
-    <div class="sect"><b>Decoração do avatar</b><div class="decos" id="decoPick"></div></div>
-    <div class="sect"><b>Conexões</b><span class="lbl2">Mostre suas contas de jogos e redes no seu perfil.</span><div id="connList" class="connlist"></div>
-      <div class="opts"><select id="connType" aria-label="Tipo de conta"></select><input type="text" id="connName" maxlength="60" placeholder="seu usuário" aria-label="Usuário"><button type="button" class="cmd" id="connAdd">Adicionar</button></div></div>
-    <div class="sect"><b>Verificação em 2 etapas</b><span class="lbl2" id="mfaState">Proteja a conta com um código do celular além da senha.</span>
-      <div class="opts"><button type="button" class="cmd withicon" id="mfaOn"><svg class="ic" aria-hidden="true"><use href="#i-shield-check"/></svg> Ativar</button><button type="button" class="cmd danger" id="mfaOff" hidden>Desativar</button></div>
-      <div id="mfaSetup" hidden><img id="mfaQr" alt="QR code para o app autenticador" width="180" height="180"><span class="lbl2">Ou digite a chave: <code id="mfaSecret"></code></span>
-        <form class="opts" id="mfaVerify"><input type="text" id="mfaVerifyCode" inputmode="numeric" maxlength="6" placeholder="código de 6 números" aria-label="Código"><button type="submit" class="cmd big">Confirmar</button></form></div>
-    </div>
-    <div class="sect"><b>Modo streamer</b><label class="check"><input type="checkbox" id="streamerMode"> <span>Esconde seu e-mail, links de convite e o texto das notificações (bom para transmitir a tela).</span></label></div>
-    <div class="sect"><b>Status</b><div class="opts" id="statusPick"></div><span style="color: var(--dim)">Ocupado: sem sons nem notificações, só as menções com @.</span></div>
-    <div class="sect"><b>Notificações</b><div class="opts"><button type="button" class="cmd" id="notifBtn">Ativar notificações</button></div><span style="color: var(--dim)" id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</span></div>
-    <p class="err" id="profMsg"></p>
-    <div class="row"><span></span><button type="button" class="cmd danger" id="logoutBtn">Sair da conta</button></div>
-  </div>
-</div>
+<!-- Configuracoes de usuario (tela cheia, como no Discord). As paginas ficam aqui; settings.js troca entre elas -->
+<div class="modal gsettings usettings" id="userSettings" hidden>
+  <div class="gs-wrap" role="dialog" aria-label="Configurações de usuário">
+    <nav class="gs-nav"><div class="gs-navin" id="usTabs">
+      <label class="us-search"><input type="search" id="usSearch" placeholder="Pesquisar" aria-label="Pesquisar nas configurações"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></label>
+      <div class="gs-h">CONFIGURAÇÕES DE USUÁRIO</div>
+      <button type="button" class="gs-tab" data-page="conta">Minha conta</button>
+      <button type="button" class="gs-tab" data-page="perfis">Perfis</button>
+      <button type="button" class="gs-tab" data-page="social">Conteúdo e social</button>
+      <button type="button" class="gs-tab" data-page="dados">Dados e privacidade</button>
+      <button type="button" class="gs-tab" data-page="dispositivos">Dispositivos</button>
+      <button type="button" class="gs-tab" data-page="conexoes">Conexões</button>
+      <div class="gs-h">CONFIG. DO APLICATIVO</div>
+      <button type="button" class="gs-tab" data-page="aparencia">Aparência</button>
+      <button type="button" class="gs-tab" data-page="acessibilidade">Acessibilidade</button>
+      <button type="button" class="gs-tab" data-page="voz">Voz e vídeo</button>
+      <button type="button" class="gs-tab" data-page="chat">Bate-papo</button>
+      <button type="button" class="gs-tab" data-page="notificacoes">Notificações</button>
+      <button type="button" class="gs-tab" data-page="atalhos">Atalhos do teclado</button>
+      <button type="button" class="gs-tab" data-page="idioma">Idioma</button>
+      <button type="button" class="gs-tab" data-page="streamer">Modo streamer</button>
+      <button type="button" class="gs-tab" data-page="avancado">Avançado</button>
+      <div class="gs-h">CONFIG. DE ATIVIDADE</div>
+      <button type="button" class="gs-tab" data-page="atividade">Privacidade nas atividades</button>
+      <div class="us-sep"></div>
+      <button type="button" class="gs-tab us-logout" id="logoutBtn">Sair<svg class="ic" aria-hidden="true"><use href="#i-log-out"/></svg></button>
+      <div class="us-sep"></div>
+      <small class="us-ver">Chat Pedro (web)<br><span id="usAgent"></span></small>
+    </div></nav>
+    <main class="gs-main" id="usMain"><div class="gs-in">
 
-<div class="modal" id="settings" hidden>
-  <div class="box setbox" role="dialog" aria-labelledby="setTitle">
-    <div class="row"><h3 id="setTitle">AUDIO E VIDEO</h3><button type="button" class="ib" id="setClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-    <section class="sect"><b>Entrada: microfone</b>
-      <select id="micSelect" aria-label="Microfone"></select>
-      <label><span>Volume do microfone: <b id="micGainVal">100%</b></span>
-        <input type="range" id="micGain" min="0" max="200" step="5" value="100">
-      </label>
-      <div class="meter"><i id="micMeter"></i><b id="sensMark" hidden></b></div>
-      <label><span>Sensibilidade de entrada: <b id="sensVal">automática</b></span>
-        <input type="range" id="sensRange" min="0" max="25" step="1" value="0">
-        <small class="lbl2">Em "automática" o som sempre passa. Arraste para a direita e o microfone só abre quando você fala mais alto que a marca (corta barulho de fundo).</small>
-      </label>
-      <span class="hint" id="micHint">Fale e veja a barra se mexer.</span>
-      <label class="check"><input type="checkbox" id="simpleMic"> Microfone sem filtros (desliga cancelamento de eco e redução de ruído; ajuda em alguns fones)</label>
-      <div class="opts"><button type="button" class="cmd withicon" id="micDiag"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> Fazer diagnóstico</button></div>
-      <pre class="diag" id="diagOut" hidden></pre>
-    </section>
-    <section class="sect"><b>Saída: fone ou caixa de som</b>
-      <select id="outSelect" aria-label="Saída de áudio"></select>
-      <span class="hint" id="outHint" hidden>Seu navegador não deixa escolher a saída aqui. No Chrome ou no Edge do computador dá; no celular, o som sai onde o aparelho mandar.</span>
-      <label><span>Volume da call: <b id="masterVal">100%</b></span>
-        <input type="range" id="master" min="0" max="100" step="5" value="100">
-      </label>
-      <div class="opts"><button type="button" class="cmd withicon" id="outTest"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Testar som</button></div>
-    </section>
-    <section class="sect"><b>Câmera</b>
-      <select id="camSelect" aria-label="Câmera"></select>
-    </section>
-    <label class="check"><input type="checkbox" id="pttCheck"> Apertar para falar: o microfone só liga enquanto você segura ESPAÇO (fora do campo de texto) ou o botão da mãozinha na barra da call</label>
-    <span class="hint">O volume de cada pessoa muda no VOL em cima do quadro dela.</span>
+      <section class="us-page" data-page="conta" hidden>
+        <h2 class="gs-title">Minha conta</h2>
+        <div class="us-acct">
+          <div class="us-acct-banner" id="usBanner"></div>
+          <div class="us-acct-top"><span class="pres big" id="usAv"></span><b id="usNick"></b><button type="button" class="cmd big" data-go="perfis">Editar perfil de usuário</button></div>
+          <div class="us-acct-box">
+            <div class="us-field"><div><span class="gs-label">APELIDO</span><span id="usNickVal"></span></div><button type="button" class="cmd us-btn" id="usNickEdit">Editar</button></div>
+            <form class="gs-row" id="nickForm" hidden><input type="text" id="nickInput" maxlength="20" aria-label="Apelido"><button type="submit" class="cmd big">Salvar</button></form>
+            <div class="us-field"><div><span class="gs-label">E-MAIL</span><span id="profEmail"></span> <button type="button" class="us-link" id="usEmailShow">Mostrar</button></div></div>
+          </div>
+        </div>
+        <div class="us-divider"></div>
+        <h3 class="us-h">Senha e autenticação</h3>
+        <div class="gs-row"><button type="button" class="cmd big" id="usPwBtn">Mudar senha</button></div>
+        <form class="gs-row" id="pwForm" hidden><input type="password" id="pwInput" minlength="6" maxlength="72" placeholder="senha nova" autocomplete="new-password" aria-label="Senha nova"><button type="submit" class="cmd big">Salvar senha</button></form>
+        <div class="sect"><span class="gs-label">VERIFICAÇÃO EM 2 ETAPAS</span><span class="gs-sub" id="mfaState">Proteja a conta com um código do celular além da senha.</span>
+          <div class="gs-row"><button type="button" class="cmd big withicon" id="mfaOn"><svg class="ic" aria-hidden="true"><use href="#i-shield-check"/></svg> Ativar app de autenticação</button><button type="button" class="cmd danger" id="mfaOff" hidden>Remover app de autenticação</button></div>
+          <div id="mfaSetup" hidden><img id="mfaQr" alt="QR code para o app autenticador" width="180" height="180"><span class="gs-sub">Ou digite a chave: <code id="mfaSecret"></code></span>
+            <form class="gs-row" id="mfaVerify"><input type="text" id="mfaVerifyCode" inputmode="numeric" maxlength="6" placeholder="código de 6 números" aria-label="Código"><button type="submit" class="cmd big">Confirmar</button></form></div>
+        </div>
+        <div class="us-divider"></div>
+        <h3 class="us-h">Remoção de conta</h3>
+        <p class="gs-sub">Excluir a conta apaga seu perfil, suas amizades e tira você de todos os servidores. Não dá para desfazer. Se você é dono de algum servidor, apague ele antes.</p>
+        <div class="gs-row"><button type="button" class="cmd danger-big" id="usDelBtn">Excluir conta</button></div>
+        <form class="gs-row" id="usDelForm" hidden><input type="password" id="usDelPw" placeholder="sua senha para confirmar" autocomplete="current-password" aria-label="Senha"><button type="submit" class="cmd danger-big">Excluir para sempre</button></form>
+      </section>
+
+      <section class="us-page" data-page="perfis" hidden>
+        <h2 class="gs-title">Perfis</h2>
+        <div class="us-tabs"><button type="button" class="us-t on" data-sub="main">Perfil principal</button><button type="button" class="us-t" data-sub="srv" id="usSrvTab">Perfis do servidor</button></div>
+        <div class="us-cols">
+          <div class="us-col" data-sub="main">
+            <div class="sect"><span class="gs-label">AVATAR</span><div class="gs-row"><button type="button" class="cmd big" id="avatarBtn">Trocar avatar</button></div></div>
+            <div class="sect"><span class="gs-label">DECORAÇÃO DO AVATAR</span><div class="decos" id="decoPick"></div></div>
+            <div class="sect"><span class="gs-label">COR DO NOME</span><div class="swatches" id="colorPick"></div></div>
+            <div class="sect"><span class="gs-label">BANNER DO PERFIL</span><div class="gs-row"><input type="color" id="bannerColor" value="#5865f2" aria-label="Cor do banner"><button type="button" class="cmd big" id="bannerSave">Salvar banner</button><button type="button" class="cmd" id="bannerReset">Usar a cor do nome</button></div></div>
+            <form class="sect" id="statusTextForm"><label class="gs-label" for="statusTextInput">STATUS PERSONALIZADO</label><div class="gs-row"><input type="text" id="statusTextInput" maxlength="60" placeholder="ex.: jogando truco"><button type="submit" class="cmd big">Salvar</button></div></form>
+            <form class="sect" id="bioForm"><label class="gs-label" for="bioInput">SOBRE MIM</label><textarea id="bioInput" maxlength="190" rows="3" placeholder="Conte um pouco sobre você"></textarea><div class="gs-row"><button type="submit" class="cmd big">Salvar "Sobre mim"</button></div></form>
+          </div>
+          <div class="us-col" data-sub="srv" hidden>
+            <p class="gs-sub">Use um apelido diferente em cada servidor. Ele aparece no lugar do seu nome só naquele servidor.</p>
+            <div class="sect"><span class="gs-label">SERVIDOR</span><b id="usSrvName"></b></div>
+            <form class="sect" id="usSrvNickForm"><label class="gs-label" for="usSrvNick">APELIDO NO SERVIDOR</label><div class="gs-row"><input type="text" id="usSrvNick" maxlength="32"><button type="submit" class="cmd big">Salvar</button><button type="button" class="cmd" id="usSrvNickReset">Voltar ao normal</button></div></form>
+          </div>
+          <div class="us-preview"><span class="gs-label">PRÉVIA</span><div class="us-card" id="usCard"></div></div>
+        </div>
+      </section>
+
+      <section class="us-page" data-page="social" hidden>
+        <h2 class="gs-title">Conteúdo e social</h2>
+        <div class="sect"><span class="gs-label">USUÁRIOS BLOQUEADOS</span><p class="gs-sub">As mensagens de quem você bloqueou ficam escondidas para você.</p><div class="gs-list" id="usBlocked"></div></div>
+        <div class="us-divider"></div>
+        <div class="sect"><span class="gs-label">MENSAGENS DIRETAS</span><p class="gs-sub">No Chat Pedro só dá para mandar mensagem direta para amigos ou para quem está em algum servidor com você.</p></div>
+      </section>
+
+      <section class="us-page" data-page="dados" hidden>
+        <h2 class="gs-title">Dados e privacidade</h2>
+        <div class="sect"><span class="gs-label">PEDIR TODOS OS MEUS DADOS</span><p class="gs-sub">Baixa um arquivo com o seu perfil, seus servidores e suas amizades.</p><div class="gs-row"><button type="button" class="cmd big" id="usExport">Baixar meus dados</button></div></div>
+        <div class="us-divider"></div>
+        <label class="gs-toggle"><span class="gs-ptxt">Mostrar que estou digitando<small>Os outros veem "está digitando..." quando você escreve.</small></span><input type="checkbox" data-pref="typing"></label>
+      </section>
+
+      <section class="us-page" data-page="dispositivos" hidden>
+        <h2 class="gs-title">Dispositivos</h2>
+        <p class="gs-sub">Aqui ficam os aparelhos em que você está com a conta aberta.</p>
+        <span class="gs-label">DISPOSITIVO ATUAL</span>
+        <div class="us-dev"><svg class="ic" aria-hidden="true"><use href="#i-monitor"/></svg><div><b id="usDevName"></b><small id="usDevInfo"></small></div></div>
+        <div class="us-divider"></div>
+        <span class="gs-label">SAIR DE TODOS OS DISPOSITIVOS CONHECIDOS</span>
+        <p class="gs-sub">Você vai sair da conta em todos os outros aparelhos. Este continua conectado.</p>
+        <div class="gs-row"><button type="button" class="cmd danger-big" id="usOthersOut">Sair de todos os outros dispositivos</button></div>
+      </section>
+
+      <section class="us-page" data-page="conexoes" hidden>
+        <h2 class="gs-title">Conexões</h2>
+        <p class="gs-sub">Mostre suas contas de jogos e redes no seu perfil.</p>
+        <div id="connList" class="connlist"></div>
+        <div class="gs-row"><select id="connType" aria-label="Tipo de conta"></select><input type="text" id="connName" maxlength="60" placeholder="seu usuário" aria-label="Usuário"><button type="button" class="cmd big" id="connAdd">Adicionar</button></div>
+      </section>
+
+      <section class="us-page" data-page="aparencia" hidden>
+        <h2 class="gs-title">Aparência</h2>
+        <span class="gs-label">TEMA</span>
+        <div class="us-theme"><span class="on" title="Escuro"></span><small>Escuro (o tema do Discord)</small></div>
+        <div class="us-divider"></div>
+        <span class="gs-label">EXIBIÇÃO DAS MENSAGENS</span>
+        <div class="us-radio" data-pref="compact"><label><input type="radio" name="usDisp" value=""> Confortável<small>Moderno, bonito e agradável aos olhos.</small></label><label><input type="radio" name="usDisp" value="on"> Compacto<small>Cabe mais mensagens na tela de uma só vez.</small></label></div>
+        <div class="us-divider"></div>
+        <label class="us-range"><span class="gs-label">ESCALA DA FONTE DO BATE-PAPO <b data-out="font"></b></span><input type="range" data-pref="font" min="12" max="24" step="1"></label>
+        <label class="us-range"><span class="gs-label">ESPAÇO ENTRE GRUPOS DE MENSAGENS <b data-out="gap"></b></span><input type="range" data-pref="gap" min="0" max="24" step="4"></label>
+        <label class="us-range"><span class="gs-label">NÍVEL DE ZOOM <b data-out="zoom"></b></span><input type="range" data-pref="zoom" min="50" max="200" step="10"></label>
+      </section>
+
+      <section class="us-page" data-page="acessibilidade" hidden>
+        <h2 class="gs-title">Acessibilidade</h2>
+        <label class="us-range"><span class="gs-label">SATURAÇÃO <b data-out="sat"></b></span><input type="range" data-pref="sat" min="0" max="100" step="10"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Sempre sublinhar links</span><input type="checkbox" data-pref="underline"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Mostrar cor dos cargos nos nomes<small>Os nomes aparecem na cor do cargo mais alto.</small></span><input type="checkbox" data-pref="rolecolors"></label>
+        <div class="us-divider"></div>
+        <span class="gs-label">MOVIMENTO REDUZIDO</span>
+        <label class="gs-toggle"><span class="gs-ptxt">Ativar movimento reduzido<small>Diminui as animações e os efeitos de movimento.</small></span><input type="checkbox" data-pref="reduce"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Tocar figurinhas e decorações animadas</span><input type="checkbox" data-pref="anim"></label>
+      </section>
+
+      <section class="us-page" id="settings" data-page="voz" hidden>
+        <h2 class="gs-title" id="setTitle">Voz e vídeo</h2>
+        <h3 class="us-h">Configurações de voz</h3>
+        <section class="sect"><span class="gs-label">DISPOSITIVO DE ENTRADA</span>
+          <select id="micSelect" aria-label="Microfone"></select>
+          <label><span class="gs-label">VOLUME DE ENTRADA <b id="micGainVal">100%</b></span>
+            <input type="range" id="micGain" min="0" max="200" step="5" value="100">
+          </label>
+          <div class="meter"><i id="micMeter"></i><b id="sensMark" hidden></b></div>
+          <label><span class="gs-label">SENSIBILIDADE DE ENTRADA <b id="sensVal">automática</b></span>
+            <input type="range" id="sensRange" min="0" max="25" step="1" value="0">
+            <small class="gs-sub">Em "automática" o som sempre passa. Arraste para a direita e o microfone só abre quando você fala mais alto que a marca (corta barulho de fundo).</small>
+          </label>
+          <span class="hint" id="micHint">Fale e veja a barra se mexer.</span>
+          <div class="gs-row"><button type="button" class="cmd big withicon" id="micDiag"><svg class="ic" aria-hidden="true"><use href="#i-mic"/></svg> Vamos verificar</button></div>
+          <pre class="diag" id="diagOut" hidden></pre>
+        </section>
+        <section class="sect"><span class="gs-label">DISPOSITIVO DE SAÍDA</span>
+          <select id="outSelect" aria-label="Saída de áudio"></select>
+          <span class="hint" id="outHint" hidden>Seu navegador não deixa escolher a saída aqui. No Chrome ou no Edge do computador dá; no celular, o som sai onde o aparelho mandar.</span>
+          <label><span class="gs-label">VOLUME DE SAÍDA <b id="masterVal">100%</b></span>
+            <input type="range" id="master" min="0" max="100" step="5" value="100">
+          </label>
+          <div class="gs-row"><button type="button" class="cmd big withicon" id="outTest"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Testar som</button></div>
+        </section>
+        <div class="us-divider"></div>
+        <span class="gs-label">MODO DE ENTRADA</span>
+        <label class="gs-toggle"><span class="gs-ptxt">Apertar para falar<small>O microfone só liga enquanto você segura ESPAÇO (fora do campo de texto) ou o botão da mãozinha na barra da call.</small></span><input type="checkbox" id="pttCheck"></label>
+        <div class="us-divider"></div>
+        <h3 class="us-h">Processamento de voz</h3>
+        <label class="gs-toggle"><span class="gs-ptxt">Microfone sem filtros<small>Desliga o cancelamento de eco, a redução de ruído e o ganho automático (ajuda em alguns fones).</small></span><input type="checkbox" id="simpleMic"></label>
+        <div class="us-divider"></div>
+        <h3 class="us-h">Configurações de vídeo</h3>
+        <section class="sect"><span class="gs-label">CÂMERA</span>
+          <select id="camSelect" aria-label="Câmera"></select>
+        </section>
+        <span class="gs-sub">O volume de cada pessoa muda no VOL em cima do quadro dela, na call.</span>
+      </section>
+
+      <section class="us-page" data-page="chat" hidden>
+        <h2 class="gs-title">Bate-papo</h2>
+        <span class="gs-label">EXIBIR IMAGENS, VÍDEOS E EMOJIS</span>
+        <label class="gs-toggle"><span class="gs-ptxt">Mostrar fotos enviadas no chat</span><input type="checkbox" data-pref="images"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Mostrar prévia dos links<small>Título, descrição e imagem dos sites e vídeos do YouTube.</small></span><input type="checkbox" data-pref="embeds"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Mostrar reações de emoji nas mensagens</span><input type="checkbox" data-pref="reactions"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Converter emoticons automaticamente<small>Por exemplo, :) vira 🙂 quando você envia.</small></span><input type="checkbox" data-pref="emoticons"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Mostrar figurinhas</span><input type="checkbox" data-pref="stickers"></label>
+        <div class="us-divider"></div>
+        <span class="gs-label">MOSTRAR CONTEÚDO COM SPOILER</span>
+        <div class="us-radio" data-pref="spoilers"><label><input type="radio" name="usSpoil" value=""> Ao clicar</label><label><input type="radio" name="usSpoil" value="on"> Sempre</label></div>
+      </section>
+
+      <section class="us-page" data-page="notificacoes" hidden>
+        <h2 class="gs-title">Notificações</h2>
+        <label class="gs-toggle"><span class="gs-ptxt">Ativar notificações na área de trabalho<small id="notifHint">Avisa quando chega mensagem com a aba fechada ou em segundo plano.</small></span><input type="checkbox" id="notifToggle"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Mostrar mensagens não lidas no título da aba<small>Aparece "(3)" antes do nome do servidor.</small></span><input type="checkbox" data-pref="titlebadge"></label>
+        <div class="us-divider"></div>
+        <h3 class="us-h">Sons</h3>
+        <label class="gs-toggle"><span class="gs-ptxt">Desativar todos os sons de notificação</span><input type="checkbox" data-pref="mute"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Menção<small>Quando alguém marca você com @.</small></span><input type="checkbox" data-pref="snd-mention"></label>
+        <label class="gs-toggle"><span class="gs-ptxt">Mensagem direta</span><input type="checkbox" data-pref="snd-dm"></label>
+      </section>
+
+      <section class="us-page" data-page="atalhos" hidden>
+        <h2 class="gs-title">Atalhos do teclado</h2>
+        <p class="gs-sub">Atalhos que funcionam no Chat Pedro.</p>
+        <div class="us-keys" id="usKeys"></div>
+      </section>
+
+      <section class="us-page" data-page="idioma" hidden>
+        <h2 class="gs-title">Idioma</h2>
+        <span class="gs-label">SELECIONE UM IDIOMA</span>
+        <div class="us-radio"><label><input type="radio" checked disabled> Português do Brasil</label></div>
+      </section>
+
+      <section class="us-page" data-page="streamer" hidden>
+        <h2 class="gs-title">Modo streamer</h2>
+        <label class="gs-toggle"><span class="gs-ptxt">Ativar modo streamer<small>Bom para transmitir a tela sem mostrar coisas pessoais.</small></span><input type="checkbox" id="streamerMode"></label>
+        <div class="us-divider"></div>
+        <span class="gs-label">OPÇÕES</span>
+        <ul class="us-bul"><li>Esconde seu e-mail e a chave das 2 etapas.</li><li>Esconde os links de convite.</li><li>Esconde o texto das notificações ("Nova mensagem").</li></ul>
+      </section>
+
+      <section class="us-page" data-page="avancado" hidden>
+        <h2 class="gs-title">Avançado</h2>
+        <label class="gs-toggle"><span class="gs-ptxt">Modo desenvolvedor<small>Coloca "Copiar ID" no menu do botão direito de mensagens, pessoas, canais e servidores.</small></span><input type="checkbox" data-pref="dev"></label>
+      </section>
+
+      <section class="us-page" data-page="atividade" hidden>
+        <h2 class="gs-title">Privacidade nas atividades</h2>
+        <label class="gs-toggle"><span class="gs-ptxt">Compartilhar minha atividade<small>Mostra para os outros quando você está jogando poker, truco ou numa call.</small></span><input type="checkbox" data-pref="activity"></label>
+      </section>
+
+      <p class="err" id="profMsg" aria-live="polite"></p>
+    </div>
+    <button type="button" class="gs-x" id="usClose" title="Fechar (Esc)" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg><span>ESC</span></button>
+    </main>
   </div>
 </div>
 
@@ -2259,7 +2596,9 @@ window.setIcon = (btn, name, label, extra) => {
   const dispName = (n) => { const id = idOfNick(n); return (id && guild.nicks[id]) || n; };
   const rolesOf = (id) => (guild.memberRoles[id] || []).map((r) => guild.roles.find((x) => x.id === r)).filter(Boolean).sort((a, b) => guild.roles.indexOf(a) - guild.roles.indexOf(b));
   // cor do nome: a do cargo mais alto com cor; senao a que a pessoa escolheu
-  const colorOf = (n) => { const id = idOfNick(n); const r = id && rolesOf(id).find((x) => x.color); return r ? r.color : (profiles[keyOf(n)] || {}).color || ""; };
+  // preferencias das Configuracoes de usuario (settings.js); antes de carregar vale o padrao
+  const P = (k) => (window.ChatPedroPrefs ? window.ChatPedroPrefs.get(k) : true);
+  const colorOf = (n) => { const id = idOfNick(n); const r = id && P("rolecolors") && rolesOf(id).find((x) => x.color); return r ? r.color : (profiles[keyOf(n)] || {}).color || ""; };
   const customEmoji = (id) => guild.emojis.find((e) => e.id === id);
   // emoji (normal ou do servidor) como elemento
   function emojiEl(e) {
@@ -2795,6 +3134,7 @@ window.setIcon = (btn, name, label, extra) => {
       items.push(["Renomear tópico", "edit", () => openThreadModal({ rename: c })]);
       items.push(["Apagar tópico", "trash", () => socket.emit("channel:delete", c.id), true]);
     } else if (can("channels") && !isDm) items.push(["Editar canal", "settings", () => openChanModal(c)]);
+    if (P("dev")) items.push(["Copiar ID do canal", "copy", () => copyText(String(c.id), "ID copiado.")]);
     showMenu(items, e.clientX, e.clientY);
   }
   // janela de criar ou editar canal
@@ -3081,6 +3421,7 @@ window.setIcon = (btn, name, label, extra) => {
       ["-"],
       ["Copiar texto", "copy", () => copyText(plainOf(m), "Texto copiado.")],
       ["Copiar link da mensagem", "copy-link", () => copyText(msgLink(m), "Link da mensagem copiado.")],
+      P("dev") ? ["Copiar ID da mensagem", "copy", () => copyText(String(m.id), "ID copiado.")] : null,
       canDelete(m) ? ["Apagar mensagem", "trash", (e) => (e.shiftKey ? socket.emit("delete", m.id) : askDelete(m)), true] : null,
     ], x, y);
   }
@@ -3525,10 +3866,10 @@ window.setIcon = (btn, name, label, extra) => {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { hiddenUnread = 0; setTitle(); } });
   function alertFor(m) {
     if (!nick || !m.nick || m.nick === nick || m.type === "sys") return;
-    if (document.hidden) { hiddenUnread++; setTitle(); }
+    if (document.hidden && P("titlebadge")) { hiddenUnread++; setTitle(); }
     const mentioned = pingsMe(m);
     if (myStatus === "ocupado" && !mentioned) return;
-    if (mentioned) ding([880, 1320, 1760]);
+    if (mentioned && P("snd-mention") && !P("mute")) ding([880, 1320, 1760]);
     if (notifOn && document.hidden && "Notification" in window && Notification.permission === "granted") {
       const body = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text;
       try { new Notification(mentioned ? m.nick + " mencionou você" : m.nick, { body: document.body.classList.contains("streamer") ? "Nova mensagem" : String(body || "").slice(0, 140), tag: "chatpedro", icon: avatars[keyOf(m.nick)] || undefined }); } catch {}
@@ -3557,7 +3898,7 @@ window.setIcon = (btn, name, label, extra) => {
   let lastTypingSent = 0;
   input.addEventListener("input", () => {
     const v = input.value.trim();
-    if (nick && v && !v.startsWith("/") && Date.now() - lastTypingSent > 1500) { lastTypingSent = Date.now(); socket.emit("typing", curCh); }
+    if (nick && v && !v.startsWith("/") && P("typing") && Date.now() - lastTypingSent > 1500) { lastTypingSent = Date.now(); socket.emit("typing", curCh); }
     mentionSuggest();
   });
 
@@ -3618,6 +3959,7 @@ window.setIcon = (btn, name, label, extra) => {
   const roleOfNick = (n) => (members.find((x) => keyOf(x.nick) === keyOf(n)) || {}).role || "member";
   function activityOf(u) {
     const k = u.toLowerCase(), app = window.ChatPedro;
+    if ((profiles[keyOf(u)] || {}).noact) return ""; // a pessoa escolheu nao mostrar
     if (app.trucoNicks.has(k)) return "Jogando truco";
     if (app.pokerNicks.has(k)) return "Jogando poker";
     if (app.callNicks.has(u)) return "Na call";
@@ -3678,7 +4020,8 @@ window.setIcon = (btn, name, label, extra) => {
     const pres = $("meAv");
     pres.className = "pres" + (st === "ausente" || st === "ocupado" ? " " + st : "");
     pres.replaceChildren(avatar(nick, true));
-    $("meNick").textContent = nick;
+    $("meNick").textContent = dispName(nick);
+    $("meUser").textContent = nick;
     if (myStatus === "invisivel") pres.className = "pres invisivel";
     $("meStatus").textContent = p.text || (myStatus === "invisivel" ? "Invisível" : st === "ausente" ? "Ausente" : st === "ocupado" ? "Não perturbe" : "Online");
   }
@@ -3763,6 +4106,11 @@ window.setIcon = (btn, name, label, extra) => {
       });
       row.append(nb);
     }
+    if (P("dev") && p.id) {
+      const ci = document.createElement("button"); ci.type = "button"; ci.className = "cmd"; ci.textContent = "Copiar ID de usuário";
+      ci.addEventListener("click", () => { pop.hidden = true; copyText(p.id, "ID copiado."); });
+      row.append(ci);
+    }
     if (row.children.length) parts.push(row);
     pop.replaceChildren(...parts);
     pop.hidden = false;
@@ -3817,6 +4165,12 @@ window.setIcon = (btn, name, label, extra) => {
 
   const localSys = (text) => addLine({ type: "sys", text, ts: Date.now() });
 
+  // :) vira 🙂 (Configuracoes > Bate-papo); so palavras soltas e fora de blocos de codigo
+  const EMOTICONS = { ":)": "🙂", ":-)": "🙂", ":(": "🙁", ":-(": "🙁", ":D": "😄", ";)": "😉", ":P": "😛", ":p": "😛", "<3": "❤️", ":o": "😮", ":O": "😮", ":'(": "😢", "xD": "😆", "XD": "😆", ":|": "😐" };
+  function emoticons(text) {
+    if (text.includes("`")) return text;
+    return text.replace(/(^|\s)(:-?\)|:-?\(|:D|;\)|:[Pp]|<3|:[oO]|:'\(|[xX]D|:\|)(?=\s|$)/g, (all, sp, t) => sp + (EMOTICONS[t] || t));
+  }
   function submit() {
     let text = input.value.trim();
     if (!text) return;
@@ -3829,6 +4183,7 @@ window.setIcon = (btn, name, label, extra) => {
     if (text === "/ajuda") { localSys(HELP); return; }
     if (text.startsWith("/")) { const out = runSlash(text); $("slashBox").hidden = true; if (out === null) return; text = out; }
     text = shortcodes(text);
+    if (P("emoticons")) text = emoticons(text);
     // aparece na hora (meio apagada) e confirma quando o servidor devolver
     const mine = { type: "msg", nick, uid: myUid, text, ts: Date.now(), pending: true, ch: curCh };
     if (replyTo) mine.reply = { id: replyTo.id, nick: replyTo.nick, text: replyTo.type === "img" ? "foto" : replyTo.type === "audio" ? "áudio" : replyTo.text };
@@ -4052,7 +4407,7 @@ window.setIcon = (btn, name, label, extra) => {
   function openViewer(src) { viewer.querySelector("img").src = src; viewer.hidden = false; }
   viewer.addEventListener("click", () => { viewer.hidden = true; });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { viewer.hidden = true; $("popout").hidden = true; for (const id of ["settings", "admModal", "profileModal", "srvModal"]) $(id).hidden = true; document.body.classList.remove("drawer", "railopen"); }
+    if (e.key === "Escape") { viewer.hidden = true; $("popout").hidden = true; for (const id of ["admModal", "srvModal"]) $(id).hidden = true; document.body.classList.remove("drawer", "railopen"); }
   });
 
   // ---------- moderacao: dono e ADMs do servidor ----------
@@ -4121,7 +4476,7 @@ window.setIcon = (btn, name, label, extra) => {
   const STATUS = { online: "Online", ausente: "Ausente", ocupado: "Não perturbe", invisivel: "Invisível" };
   let myColor = ""; // vem da conta (boot.js)
   let myStatus = store.get("chatpedro-status") || "online";
-  function sendProfile() { if (nick) socket.emit("profile", { status: myStatus }); }
+  function sendProfile() { if (nick) socket.emit("profile", { status: myStatus, hideAct: !P("activity") }); }
   function renderProfile() {
     $("colorPick").replaceChildren(...NAME_COLORS.map((c) => {
       const b = document.createElement("button"); b.type = "button"; b.style.background = c;
@@ -4131,39 +4486,29 @@ window.setIcon = (btn, name, label, extra) => {
       });
       return b;
     }));
-    const opts = (box, map, cur, fn) => $(box).replaceChildren(...Object.entries(map).map(([k, label]) => {
-      const b = document.createElement("button"); b.type = "button"; b.className = "cmd"; b.textContent = label;
-      b.setAttribute("aria-pressed", String(k === cur));
-      b.addEventListener("click", () => { fn(k); renderProfile(); });
-      return b;
-    }));
-    opts("statusPick", STATUS, myStatus, (k) => { myStatus = k; store.set("chatpedro-status", k); sendProfile(); });
     const supported = "Notification" in window;
-    $("notifBtn").hidden = !supported;
-    $("notifBtn").textContent = notifOn ? "Desativar notificações" : "Ativar notificações";
+    $("notifToggle").checked = notifOn && supported;
+    $("notifToggle").disabled = !supported;
     if (!supported) $("notifHint").textContent = "Seu navegador não suporta notificações.";
     else if (Notification.permission === "denied") $("notifHint").textContent = "As notificações estão bloqueadas no navegador: libere no cadeado ao lado do endereço.";
   }
-  $("notifBtn").addEventListener("click", async () => {
-    if (notifOn) { notifOn = false; store.set("chatpedro-notif", "off"); return renderProfile(); }
+  $("notifToggle").addEventListener("change", async () => {
+    if (!$("notifToggle").checked) { notifOn = false; store.set("chatpedro-notif", "off"); return renderProfile(); }
     let perm = Notification.permission;
     if (perm === "default") { try { perm = await Notification.requestPermission(); } catch { perm = "denied"; } }
     notifOn = perm === "granted";
     store.set("chatpedro-notif", notifOn ? "on" : "off");
     renderProfile();
   });
-  $("profileBtn").addEventListener("click", () => { $("profMsg").textContent = ""; renderProfile(); if (window.ChatPedroAuth) window.ChatPedroAuth.fillProfileForm(); $("profileModal").hidden = false; });
-  $("profClose").addEventListener("click", () => { $("profileModal").hidden = true; });
+  function setStatus(k) { if (!STATUS[k]) return; myStatus = k; store.set("chatpedro-status", k); sendProfile(); renderMe(); }
   $("bioForm").addEventListener("submit", (e) => {
     e.preventDefault();
     window.ChatPedroAuth.updateProfile({ bio: $("bioInput").value }).then(() => setNote("\"Sobre mim\" salvo.")).catch((err) => { $("profMsg").textContent = err.message; });
   });
   $("pwForm").addEventListener("submit", (e) => {
     e.preventDefault();
-    window.ChatPedroAuth.changePassword($("pwInput").value).then(() => { $("pwInput").value = ""; setNote("Senha trocada."); }).catch((err) => { $("profMsg").textContent = err.message; });
+    window.ChatPedroAuth.changePassword($("pwInput").value).then(() => { $("pwInput").value = ""; $("pwForm").hidden = true; setNote("Senha trocada."); }).catch((err) => { $("profMsg").textContent = err.message; });
   });
-  $("avBtn").addEventListener("click", () => { $("profileModal").hidden = true; window.ChatPedro.openAV(); });
-  $("profileModal").addEventListener("click", (e) => { if (e.target === $("profileModal")) $("profileModal").hidden = true; });
 
   // ---------- mensagem de audio ----------
   let rec = null;
@@ -4206,7 +4551,12 @@ window.setIcon = (btn, name, label, extra) => {
   $("recCancel").addEventListener("click", () => { if (rec) { rec.send = false; rec.mr.stop(); } });
 
   window.ChatPedro = {
-    socket, avatar, setNote, store, renderPeople, openMod, showMenu, icon, dispName,
+    socket, avatar, setNote, store, renderPeople, openMod, showMenu, icon, dispName, copyText, renderProfile, setStatus, STATUS, rerenderAll, sendProfile,
+    get myStatus() { return myStatus; },
+    get profiles() { return profiles; },
+    get blocked() { return blocked(); },
+    toggleBlock: (n) => toggleBlock(n),
+    keyOf: (n) => keyOf(n),
     can: (p) => can(p),
     get guild() { return guild; },
     get members() { return members; },
@@ -4225,7 +4575,7 @@ window.setIcon = (btn, name, label, extra) => {
     // mensagem direta chegando enquanto voce esta em outro servidor
     dmAlert(p) {
       if (myStatus === "ocupado") return;
-      ding([880, 1320]);
+      if (P("snd-dm") && !P("mute")) ding([880, 1320]);
       if (notifOn && document.hidden && "Notification" in window && Notification.permission === "granted") {
         try { new Notification(p.nick || "Mensagem direta", { body: p.text || "mandou uma mensagem", tag: "chatpedro-dm" }); } catch {}
       }
@@ -4255,6 +4605,7 @@ window.setIcon = (btn, name, label, extra) => {
 <script src="/truco.js"></script>
 <script src="/boot.js"></script>
 <script src="/guild.js"></script>
+<script src="/settings.js"></script>
 <script src="/home.js"></script>
 </body>
 </html>

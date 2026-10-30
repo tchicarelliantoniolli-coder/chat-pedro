@@ -11,7 +11,7 @@ const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
   await P.screenshot({ path: SP + '/n-empty.png' });
   await P.click('#srvBtn'); await P.click('#invMake'); await P.waitForTimeout(300); const link = await P.inputValue('#invLink'); await P.click('#srvClose');
   const L = await mk(1440, 820); await signup(L, 'l@t.com', 'Lucas'); await L.goto(link); await L.waitForTimeout(800); await L.click('#invAccept'); await L.waitForTimeout(1300);
-  await L.click('#profileBtn'); await L.fill('#statusTextInput', 'jogando truco'); await L.click('#statusTextForm button'); await L.waitForTimeout(500); await L.click('#profClose');
+  await L.click('#upSet'); await L.click('#usTabs [data-page=perfis]'); await L.fill('#statusTextInput', 'jogando truco'); await L.click('#statusTextForm button'); await L.waitForTimeout(500); await L.click('#usClose'); await L.waitForTimeout(300);
   await send(P, 'bora jogar **hoje**? tem `truco` e ||surpresa||');
   await send(P, 'link: https://example.com/teste');
   await send(L, '> isso aqui\nfechou @Pedro');

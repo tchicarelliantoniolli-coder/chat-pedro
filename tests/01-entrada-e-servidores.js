@@ -27,7 +27,7 @@ const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
   ok(await L.locator('.pic img.ok').count() === 1, 'foto do historico carrega sob demanda');
   ok(await L.locator('.rx.mine').count() === 1, 'minha reacao continua minha depois de recarregar');
   // trocar apelido: reacao segue
-  await L.click('#profileBtn'); await L.fill('#nickInput', 'Lukinhas'); await L.click('#nickForm button'); await L.waitForTimeout(800); await L.click('#profClose');
+  await L.click('#upSet'); await L.click('#usNickEdit'); await L.fill('#nickInput', 'Lukinhas'); await L.click('#nickForm button'); await L.waitForTimeout(800); await L.click('#usClose'); await L.waitForTimeout(300);
   ok(await L.locator('.rx.mine').count() === 1, 'reacao continua minha depois de trocar o apelido');
   ok(await P.locator('#people', { hasText: 'Lukinhas' }).count() === 1, 'outros veem o apelido novo');
   // titulo com nao lidas

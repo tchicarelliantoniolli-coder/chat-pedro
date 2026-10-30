@@ -8,14 +8,14 @@ const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
   const P = await mk(); await signup(P, 'a@t.com', 'Pedro');
   await P.fill('#createName', 'Galera'); await P.click('#createForm button[type=submit]'); await P.waitForTimeout(1200);
   await P.click('#srvBtn'); await P.click('#invMake'); await P.waitForTimeout(300); const link = await P.inputValue('#invLink'); await P.click('#srvClose');
-  // fora da call: perfil > audio e video
-  await P.click('#profileBtn'); await P.click('#avBtn'); await P.waitForTimeout(1500);
+  // fora da call: Configuracoes de usuario > Voz e video
+  await P.click('#upSet'); await P.click('#usTabs [data-page=voz]'); await P.waitForTimeout(1500);
   const w = await P.evaluate(() => document.getElementById('micMeter').style.width);
   ok(parseFloat(w) > 0, 'teste do microfone fora da call mexe a barra (' + w + ')');
   ok(await P.locator('#outSelect option').count() > 0 || await P.isVisible('#outHint'), 'lista de saida de audio (' + await P.locator('#outSelect option').count() + ' opcoes)');
   await P.click('#outTest'); await P.waitForTimeout(300);
   await P.screenshot({ path: SP + '/av-settings.png' });
-  await P.click('#setClose'); await P.waitForTimeout(300);
+  await P.click('#usClose'); await P.waitForTimeout(250); await P.waitForTimeout(300);
   ok(await P.evaluate(() => true), 'fechou');
   // na call: o outro recebe audio
   const L = await mk(); await signup(L, 'l@t.com', 'Lucas'); await L.goto(link); await L.waitForTimeout(800); await L.click('#invAccept'); await L.waitForTimeout(1200);
@@ -36,12 +36,12 @@ const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
   });
   let rx = await measure();
   ok(typeof rx === 'number' && rx > 1, 'microfone direto (100%): Lucas ouve (nivel ' + rx + ')');
-  await P.click('#setBtn'); await P.evaluate(() => { const r = document.getElementById('micGain'); r.value = 150; r.dispatchEvent(new Event('input')); }); await P.click('#setClose'); await P.waitForTimeout(800);
+  await P.click('#setBtn'); await P.evaluate(() => { const r = document.getElementById('micGain'); r.value = 150; r.dispatchEvent(new Event('input')); }); await P.click('#usClose'); await P.waitForTimeout(250); await P.waitForTimeout(800);
   rx = await measure();
   ok(typeof rx === 'number' && rx > 1, 'microfone com volume 150%: Lucas ouve (nivel ' + rx + ')');
   await P.click('#micBtn'); await P.waitForTimeout(800); rx = await measure();
   ok(rx < 1, 'mutado: Lucas nao ouve (nivel ' + rx + ')');
-  await P.click('#micBtn'); await P.click('#setBtn'); await P.evaluate(() => { const r = document.getElementById('micGain'); r.value = 100; r.dispatchEvent(new Event('input')); }); await P.click('#setClose'); await P.waitForTimeout(800);
+  await P.click('#micBtn'); await P.click('#setBtn'); await P.evaluate(() => { const r = document.getElementById('micGain'); r.value = 100; r.dispatchEvent(new Event('input')); }); await P.click('#usClose'); await P.waitForTimeout(250); await P.waitForTimeout(800);
   rx = await measure();
   ok(rx > 1, 'de volta a 100% e desmutado: Lucas ouve (nivel ' + rx + ')');
   console.log('erros:', errs); await b.close();
