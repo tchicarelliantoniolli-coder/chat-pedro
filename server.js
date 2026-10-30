@@ -1724,7 +1724,22 @@ const admOk = (req) => { const t = req.get("x-adm") || ""; const v = admTokens.g
 const admGuard = (req, res, next) => (admOk(req) ? next() : res.status(401).json({ error: "Entre de novo com a senha." }));
 // canal proprio (sem login): chega ate em quem esta na tela de entrada ou fora de servidor
 const admNs = io.of("/adm");
-admNs.on("connection", (s) => { if (admShow) s.emit("adm:show", admShowMsg()); });
+// Versao do site: muda quando os arquivos mudam (nao quando o Render so acorda). O navegador compara e recarrega.
+const SITE_VERSION = (() => {
+  const h = crypto.createHash("sha1");
+  const walk = (dir) => {
+    for (const f of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = path.join(dir, f.name);
+      if (f.isDirectory()) walk(full); else { h.update(f.name); h.update(fs.readFileSync(full)); }
+    }
+  };
+  try {
+    walk(path.join(__dirname, "public"));
+    for (const f of ["server.js", "db.js", "storage.js", "poker.js", "truco.js"]) h.update(fs.readFileSync(path.join(__dirname, f)));
+  } catch (e) { console.error("Versao do site:", e.message); h.update(String(Date.now())); }
+  return h.digest("hex").slice(0, 12);
+})();
+admNs.on("connection", (s) => { s.emit("site:version", SITE_VERSION); if (admShow) s.emit("adm:show", admShowMsg()); });
 const admShowMsg = () => (admShow && admMedia ? { ...admShow, url: "/api/adm/media/" + admMedia.id, mime: admMedia.mime, now: Date.now() } : null);
 
 api.post("/adm/login", (req, res) => {

@@ -144,3 +144,28 @@
     } catch {}
   });
 })();
+
+// Site atualizado: quando sai uma versao nova (o Render reinicia o servidor), cada navegador recarrega
+// sozinho. O que estava escrito na caixa de mensagem volta depois de recarregar.
+(() => {
+  const socket = window.io("/adm");
+  let version = null, reloading = false;
+  try {
+    const draft = sessionStorage.getItem("cp-draft");
+    if (draft) {
+      sessionStorage.removeItem("cp-draft");
+      const put = () => { const i = document.getElementById("input"); if (i && !i.value) { i.value = draft; i.dispatchEvent(new Event("input", { bubbles: true })); } };
+      setTimeout(put, 1500);
+    }
+  } catch {}
+  socket.on("site:version", (v) => {
+    if (!version) { version = v; return; }
+    if (v === version || reloading) return;
+    reloading = true;
+    const app = window.ChatPedro;
+    if (app && app.setNote) app.setNote("O Chat Pedro foi atualizado. Recarregando…");
+    try { const i = document.getElementById("input"); if (i && i.value.trim()) sessionStorage.setItem("cp-draft", i.value); } catch {}
+    // cada um espera um pouquinho diferente para o servidor nao receber todo mundo no mesmo segundo
+    setTimeout(() => location.reload(), 1000 + Math.random() * 2000);
+  });
+})();
