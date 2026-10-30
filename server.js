@@ -21,11 +21,17 @@ const MAX_AUDIO = 1.5 * 1024 * 1024; // audio de ate ~1 minuto
 const MAX_MEDIA_KEPT = 40; // fotos e audios mais antigos que isso saem do historico
 const IMAGE_RE = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/=]+$/;
 const AUDIO_RE = /^data:audio\/(webm|ogg|mp4|mpeg|aac)(;codecs=[A-Za-z0-9.,=-]+)?;base64,[A-Za-z0-9+/=]+$/;
+const MAX_FILE = 2.8 * 1024 * 1024; // arquivo qualquer de ate ~2 MB (em base64)
+const FILE_RE = /^data:[\w.+-]+\/[\w.+-]+(;[\w=.+-]+)*;base64,[A-Za-z0-9+/=]+$/;
+// qualquer emoji (inclusive com tom de pele, bandeiras e combinacoes)
+const EMOJI_RE = /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\u200d|\ufe0f|\u20e3)+$/u;
+const MAX_CHANNELS = 30;
+const SLOW_STEPS = [0, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
 const MAX_SERVER_ICON = 120 * 1024; // foto do servidor ja vem pequena (96x96) do navegador
 const MAX_AVATAR = 60 * 1024; // foto de perfil ja vem pequena (48x48) do navegador
 const REACTIONS = ["\u{1F602}", "\u{1F525}", "\u{1F480}", "\u{1F44D}", "\u2764\uFE0F", "\u{1F62E}"];
 const NAME_COLORS = ["#33ff66", "#b6ffc8", "#ffd84d", "#ffb000", "#ff7a59", "#ff5fa2", "#c792ff", "#5fd7ff", "#7aa2ff", "#e6e6e6"];
-const STATUSES = ["online", "ausente", "ocupado"];
+const STATUSES = ["online", "ausente", "ocupado", "invisivel"];
 const INVITE_HOURS = [1, 24, 168, 0]; // 0 = nunca vence
 
 // Servidores para a call atravessar redes chatas (4G, escola, empresa). O TURN e opcional e vem do Render.
@@ -56,7 +62,12 @@ app.use("/vendor/socket.io", vendor(path.join(__dirname, "node_modules", "socket
 app.get(["/s/:id", "/convite/:code"], (req, res) => res.sendFile(INDEX));
 
 const keyOf = (nick) => String(nick || "").toLowerCase();
-const isMedia = (m) => m.type === "img" || m.type === "audio";
+const isMedia = (m) => m.type === "img" || m.type === "audio" || m.type === "file";
+const chOf = (m) => m.ch || "chat"; // mensagens antigas (de antes dos canais) ficam no #chat
+const DEFAULT_CHANNELS = () => [
+  { id: "chat", name: "chat", type: "text", topic: "", slow: 0 },
+  { id: "call", name: "Call", type: "voice" },
+];
 const minutesLeft = (until) => Math.max(1, Math.ceil((until - Date.now()) / 60000));
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -71,7 +82,7 @@ const profileCache = new Map(); // id da conta -> { id, nick, avatar, color }
 async function getProfiles(ids) {
   const missing = [...new Set(ids)].filter((id) => !profileCache.has(id));
   if (missing.length) {
-    const rows = await db.select("profiles", { select: "id,nick,avatar,color,status_text", id: db.inList(missing) });
+    const rows = await db.select("profiles", { select: "id,nick,avatar,color,status_text,bio", id: db.inList(missing) });
     for (const r of rows) profileCache.set(r.id, r);
   }
   return ids.map((id) => profileCache.get(id)).filter(Boolean);
@@ -121,10 +132,11 @@ function getCtx(serverId) {
 }
 
 async function buildCtx(serverId) {
-  const [srv] = await db.select("servers", { select: "id,name,owner_id,icon", id: "eq." + serverId });
+  const [srv] = await db.select("servers", { select: "id,name,owner_id,icon,dm", id: "eq." + serverId });
   if (!srv) throw new Error("servidor não existe");
   const ctx = {
-    id: serverId, name: srv.name, icon: srv.icon || null, ownerId: srv.owner_id, room: "srv:" + serverId,
+    id: serverId, name: srv.name, icon: srv.icon || null, ownerId: srv.owner_id, room: "srv:" + serverId, dm: !!srv.dm,
+    channels: DEFAULT_CHANNELS(), automod: { words: [] }, audit: [], events: [],
     history: [], nextId: 1, storage: createStorage(serverId),
     sockets: new Map(),     // socket.id -> socket (so deste servidor)
     online: new Map(),      // socket.id -> apelido
@@ -143,6 +155,15 @@ async function buildCtx(serverId) {
       ctx.nextId = Math.max(saved.nextId, ...ctx.history.map((m) => m.id + 1), 1);
     } catch (e) {
       console.error("Não deu para carregar o chat do servidor " + serverId + ":", e.message);
+    }
+    try {
+      const meta = await ctx.storage.loadMeta();
+      if (Array.isArray(meta.channels) && meta.channels.some((c) => c.type === "text")) ctx.channels = meta.channels;
+      if (meta.automod && Array.isArray(meta.automod.words)) ctx.automod = meta.automod;
+      if (Array.isArray(meta.audit)) ctx.audit = meta.audit;
+      if (Array.isArray(meta.events)) ctx.events = meta.events;
+    } catch (e) {
+      console.error("Não deu para carregar os canais do servidor " + serverId + ":", e.message);
     }
   }
   // os jogos enxergam so quem esta neste servidor
@@ -176,25 +197,45 @@ function dropMessages(ctx, list) {
 
 function pushMessage(ctx, msg) {
   msg.id = ctx.nextId++;
+  msg.ch = msg.ch || "chat";
   ctx.history.push(msg);
   if (ctx.storage && isMedia(msg)) ctx.storage.saveMedia(msg.id, msg.src);
   const old = [];
-  if (ctx.history.length > MAX_HISTORY) old.push(ctx.history[0]);
+  // cada canal guarda as ultimas MAX_HISTORY mensagens
+  const inCh = ctx.history.filter((m) => chOf(m) === msg.ch);
+  if (inCh.length > MAX_HISTORY) old.push(inCh[0]);
   const media = ctx.history.filter(isMedia);
   if (media.length > MAX_MEDIA_KEPT) old.push(media[0]);
   dropMessages(ctx, old);
   toRoom(ctx, "message", msg);
   persist(ctx);
+  // mensagem direta: avisa a outra pessoa mesmo se ela estiver em outro servidor
+  if (ctx.dm && msg.uid) for (const m of ctx.members) if (m.id !== msg.uid) toUser(m.id, "dm:ping", { server: ctx.id, nick: msg.nick, text: msg.type === "text" ? String(msg.text || "").slice(0, 120) : "" }, ctx);
+}
+// manda um evento para todas as abas abertas de uma conta (em qualquer servidor, menos o skip)
+function toUser(uid, event, data, skip) {
+  for (const s of io.sockets.sockets.values()) if (s.data.user && s.data.user.id === uid && s.data.ctx !== skip) s.emit(event, data);
 }
 // Historico sem o conteudo das fotos e audios (que sao pesados): o navegador pede cada um quando precisa
-const historyFor = (ctx) => ctx.history.map((m) => (isMedia(m) ? { ...m, src: undefined, lazy: true } : m));
-const sys = (ctx, text) => pushMessage(ctx, { type: "sys", text, ts: Date.now() });
+const historyFor = (ctx, ch) => ctx.history.filter((m) => chOf(m) === ch).map((m) => (isMedia(m) ? { ...m, src: undefined, lazy: true } : m));
+const sys = (ctx, text, ch) => pushMessage(ctx, { type: "sys", text, ts: Date.now(), ch: ch || (ctx.channels.find((c) => c.type === "text") || {}).id || "chat" });
+const textChannel = (ctx, id) => ctx.channels.find((c) => c.id === id && c.type === "text");
+const voiceChannel = (ctx, id) => ctx.channels.find((c) => c.id === id && c.type === "voice");
+const saveMeta = (ctx, name) => ctx.storage && !ctx.dead && ctx.storage.saveMeta(name, ctx[name]);
+const sendChannels = (ctx) => toRoom(ctx, "channels", ctx.channels);
+// registro de moderacao (o que o dono e os ADMs fizeram)
+function audit(ctx, by, action, target) {
+  ctx.audit.unshift({ ts: Date.now(), by, action, target: target || "" });
+  ctx.audit = ctx.audit.slice(0, 100);
+  saveMeta(ctx, "audit");
+}
 
 const watchMsg = (ctx) => ctx.watch && { ...ctx.watch, now: Date.now() }; // "now" deixa cada um corrigir o proprio relogio
 
 function sendCall(ctx) {
   toRoom(ctx, "call:members", [...ctx.callMembers.values()]);
-  if (!ctx.callMembers.size && ctx.watch) { ctx.watch = null; toRoom(ctx, "watch:state", null); }
+  // o video junto acaba quando o canal de voz dele fica vazio
+  if (ctx.watch && ![...ctx.callMembers.values()].some((m) => m.ch === ctx.watch.ch)) { ctx.watch = null; toRoom(ctx, "watch:state", null); }
 }
 
 function cleanCallState(s) {
@@ -211,11 +252,13 @@ function avatarsOf(ctx) {
 }
 // Quem esta online, cores, status e a lista de membros (online e offline)
 function sendUsers(ctx, withAvatars) {
-  const onlineIds = new Set([...ctx.sockets.values()].map((s) => s.data.user.id));
-  toRoom(ctx, "users", [...new Set(ctx.online.values())].sort());
+  // quem esta invisivel aparece como offline para os outros
+  const visible = [...ctx.online].filter(([id]) => ctx.statuses.get(id) !== "invisivel");
+  const onlineIds = new Set([...ctx.sockets.values()].filter((s) => ctx.statuses.get(s.id) !== "invisivel").map((s) => s.data.user.id));
+  toRoom(ctx, "users", [...new Set(visible.map(([, n]) => n))].sort());
   const profiles = {};
-  for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline", text: m.status_text || undefined };
-  for (const [id, nick] of ctx.online) profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online" };
+  for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline", text: m.status_text || undefined, bio: m.bio || undefined, id: m.id };
+  for (const [id, nick] of visible) profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online" };
   if (withAvatars) toRoom(ctx, "avatars", avatarsOf(ctx));
   toRoom(ctx, "profiles", profiles);
   toRoom(ctx, "members", ctx.members.map((m) => ({ id: m.id, nick: m.nick, role: m.role, online: onlineIds.has(m.id) })));
@@ -231,7 +274,7 @@ function blockedUntil(map, key) {
 function quoteOf(ctx, id) {
   const m = ctx.history.find((x) => x.id === Number(id));
   if (!m || m.type === "sys") return null;
-  const text = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.text.slice(0, 90);
+  const text = m.type === "img" ? "foto" : m.type === "audio" ? "áudio" : m.type === "file" ? "arquivo " + (m.name || "") : m.type === "poll" ? "enquete: " + m.poll.q : m.text.slice(0, 90);
   return { id: m.id, nick: m.nick, text };
 }
 
@@ -307,8 +350,18 @@ api.get("/me", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const profile = await getProfile(user.id);
   if (!profile) return fail(res, 404, "Conta sem perfil. Crie a conta de novo.");
-  const rows = await db.select("server_members", { select: "role,server:servers(id,name,owner_id,icon)", user_id: "eq." + user.id, order: "joined_at.asc" });
-  res.json({ user: { id: user.id, email: user.email }, profile, servers: rows.filter((r) => r.server).map((r) => ({ id: r.server.id, name: r.server.name, icon: r.server.icon || null, role: r.role })) });
+  const rows = await db.select("server_members", { select: "role,server:servers(id,name,owner_id,icon,dm)", user_id: "eq." + user.id, order: "joined_at.asc" });
+  const list = rows.filter((r) => r.server).map((r) => ({ id: r.server.id, name: r.server.name, icon: r.server.icon || null, role: r.role, dm: !!r.server.dm }));
+  // conversas privadas: mostram a outra pessoa (nome e foto)
+  const dms = list.filter((x) => x.dm);
+  if (dms.length) {
+    const mem = await db.select("server_members", { select: "server_id,user_id", server_id: db.inList(dms.map((d) => d.id)) });
+    const other = new Map(mem.filter((m) => m.user_id !== user.id).map((m) => [m.server_id, m.user_id]));
+    const profs = await getProfiles([...new Set(other.values())]);
+    const byId = new Map(profs.map((p) => [p.id, p]));
+    for (const d of dms) { const o = byId.get(other.get(d.id)); d.name = o ? o.nick : "Conversa"; d.icon = o ? o.avatar || null : null; d.peer = o ? o.id : null; }
+  }
+  res.json({ user: { id: user.id, email: user.email }, profile, servers: list });
 }));
 
 // Muda apelido, cor ou foto (vale em todos os servidores)
@@ -324,6 +377,10 @@ api.patch("/me", wrap(async (req, res) => {
       if (await nickTaken(nick, user.id)) return fail(res, 409, "Esse apelido já tem dono.");
       patch.nick = nick;
     }
+  }
+  if (req.body.bio !== undefined) {
+    const t = String(req.body.bio || "").replace(/\r/g, "").trim().slice(0, 190);
+    patch.bio = t || null;
   }
   if (req.body.status_text !== undefined) {
     const t = String(req.body.status_text || "").replace(/\s+/g, " ").trim().slice(0, 60);
@@ -376,7 +433,7 @@ api.post("/servers", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   const name = String(req.body.name || "").replace(/\s+/g, " ").trim().slice(0, MAX_SERVER_NAME);
   if (!name) return fail(res, 400, "Dê um nome para o servidor.");
-  const owned = await db.select("servers", { select: "id", owner_id: "eq." + user.id });
+  const owned = await db.select("servers", { select: "id", owner_id: "eq." + user.id, dm: "eq.false" });
   if (owned.length >= MAX_SERVERS_OWNED) return fail(res, 400, "Você já é dono de " + MAX_SERVERS_OWNED + " servidores.");
   const [srv] = await db.insert("servers", [{ name, owner_id: user.id }]);
   await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "owner" }], false);
@@ -446,9 +503,49 @@ api.post("/servers/:id/leave", wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Mensagem direta: conversa privada entre duas pessoas que estao em algum servidor juntas.
+// Por baixo e um "servidor" de 2 pessoas (dm = true), entao tem chat, call, fotos e tudo mais.
+api.post("/dm", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  const other = String(req.body.userId || "");
+  if (!UUID_RE.test(other) || other === user.id) return fail(res, 400, "Pessoa inválida.");
+  const mine = await db.select("server_members", { select: "server_id,server:servers(dm)", user_id: "eq." + user.id });
+  const theirs = await db.select("server_members", { select: "server_id,server:servers(dm)", user_id: "eq." + other });
+  const theirSet = new Set(theirs.map((m) => m.server_id));
+  const shared = mine.filter((m) => theirSet.has(m.server_id));
+  const existing = shared.find((m) => m.server && m.server.dm);
+  if (existing) return res.json({ server: { id: existing.server_id } });
+  if (!shared.some((m) => m.server && !m.server.dm)) return fail(res, 403, "Você só pode mandar mensagem para quem está em um servidor com você.");
+  const [srv] = await db.insert("servers", [{ name: "DM", owner_id: user.id, dm: true }]);
+  await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "member" }, { server_id: srv.id, user_id: other, role: "member" }], false);
+  toUser(other, "dm:new", { server: srv.id });
+  res.json({ server: { id: srv.id } });
+}));
+
+// Convites do servidor: a moderacao ve a lista e pode cancelar
+api.get("/servers/:id/invites", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  if (!(await requireRole(req, res, user, ["owner", "admin"]))) return;
+  const rows = await db.select("server_invites", { select: "code,expires_at,uses,created_by", server_id: "eq." + req.params.id, order: "created_at.desc" });
+  const live = rows.filter((r) => !r.expires_at || Date.parse(r.expires_at) > Date.now());
+  const profs = await getProfiles([...new Set(live.map((r) => r.created_by).filter(Boolean))]);
+  const nick = new Map(profs.map((p) => [p.id, p.nick]));
+  res.json({ invites: live.map((r) => ({ code: r.code, expires_at: r.expires_at, uses: r.uses, by: nick.get(r.created_by) || "?" })) });
+}));
+api.delete("/servers/:id/invites/:code", wrap(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  if (!(await requireRole(req, res, user, ["owner", "admin"]))) return;
+  if (!/^[A-Za-z0-9_-]{6,20}$/.test(req.params.code)) return fail(res, 400, "Convite inválido.");
+  await db.remove("server_invites", { code: "eq." + req.params.code, server_id: "eq." + req.params.id });
+  if (contexts.has(req.params.id)) { const ctx = await contexts.get(req.params.id).catch(() => null); if (ctx) audit(ctx, (await getProfile(user.id) || {}).nick || "?", "cancelou o convite", req.params.code); }
+  res.json({ ok: true });
+}));
+
 api.post("/servers/:id/invites", wrap(async (req, res) => {
   const user = await requireUser(req, res); if (!user) return;
   if (!(await requireRole(req, res, user, ["owner", "admin", "member"]))) return;
+  const [isDm] = await db.select("servers", { select: "dm", id: "eq." + req.params.id });
+  if (isDm && isDm.dm) return fail(res, 400, "Conversa privada não tem convite.");
   const hours = INVITE_HOURS.includes(Number(req.body.hours)) ? Number(req.body.hours) : 24;
   const code = crypto.randomBytes(6).toString("base64url");
   await db.insert("server_invites", [{ code, server_id: req.params.id, created_by: user.id, expires_at: hours ? new Date(Date.now() + hours * 3600000).toISOString() : null }], false);
@@ -514,7 +611,7 @@ io.use(async (socket, next) => {
 });
 
 function meOf(ctx, s) {
-  return { uid: s.data.user.id, nick: s.data.nick, role: s.data.role, server: { id: ctx.id, name: ctx.name, icon: ctx.icon } };
+  return { uid: s.data.user.id, nick: s.data.nick, role: s.data.role, server: { id: ctx.id, name: ctx.name, icon: ctx.icon, dm: ctx.dm } };
 }
 
 io.on("connection", (socket) => {
@@ -527,7 +624,8 @@ io.on("connection", (socket) => {
 
   socket.emit("me", meOf(ctx, socket));
   socket.emit("avatars", avatarsOf(ctx));
-  socket.emit("history", historyFor(ctx));
+  socket.emit("channels", ctx.channels);
+  socket.emit("events", ctx.events);
   socket.emit("call:members", [...ctx.callMembers.values()]);
   socket.emit("ice", ICE_SERVERS);
   socket.emit("watch:state", watchMsg(ctx));
@@ -574,14 +672,31 @@ io.on("connection", (socket) => {
     return null;
   }
 
-  // Confere se pode mandar algo no chat (silenciado, flood)
-  function canPost(text) {
+  // AutoMod: palavras bloqueadas pela moderacao (quem modera nao e bloqueado)
+  const blockedWord = (text) => {
+    if (isMod() || !ctx.automod.words.length) return null;
+    const low = " " + text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") + " ";
+    return ctx.automod.words.find((w) => low.includes(w)) || null;
+  };
+  // modo lento: tempo minimo entre mensagens de cada pessoa no canal
+  const lastPost = new Map(); // canal -> horario
+  // Confere se pode mandar algo no chat (canal, silenciado, modo lento, AutoMod, flood)
+  function canPost(text, ch) {
+    const c = textChannel(ctx, ch);
+    if (!c) { notice("Esse canal não existe mais."); return null; }
     const muted = blockedUntil(ctx.mutes, uid);
     if (muted) { notice("Você está silenciado " + (ctx.floodMuted.has(uid) ? "por flood" : "pela moderação") + " por mais " + minutesLeft(muted) + " min."); return null; }
+    if (c.slow && !isMod()) {
+      const wait = (lastPost.get(ch) || 0) + c.slow * 1000 - Date.now();
+      if (wait > 0) { notice("Modo lento: espere " + Math.ceil(wait / 1000) + " s para mandar outra mensagem em #" + c.name + "."); return null; }
+    }
+    if (blockedWord(text)) { notice("Sua mensagem foi bloqueada pelo AutoMod deste servidor."); return null; }
     const err = floodCheck(text);
     if (err) { notice(err); return null; }
+    lastPost.set(ch, Date.now());
     return nickNow();
   }
+  const chIn = (v) => (typeof v === "string" ? v : "chat");
 
   // ack(false) avisa o navegador para tirar da tela a mensagem que ele ja mostrou
   socket.on("message", (msg, ack) => {
@@ -589,11 +704,68 @@ io.on("connection", (socket) => {
     const raw = typeof msg === "string" ? msg : msg && msg.text;
     const text = String(raw || "").replace(/\r/g, "").trim().slice(0, MAX_TEXT);
     if (!text) return done(false);
-    const nick = canPost(text);
+    const ch = chIn(msg && msg.ch);
+    const nick = canPost(text, ch);
     if (!nick) return done(false);
     const reply = msg && typeof msg === "object" && msg.replyTo ? quoteOf(ctx, msg.replyTo) : null;
-    pushMessage(ctx, { type: "msg", nick, uid, text, ts: Date.now(), reply: reply || undefined });
+    pushMessage(ctx, { type: "msg", nick, uid, text, ts: Date.now(), ch, reply: reply || undefined, tts: msg && msg.tts ? true : undefined });
     done(true);
+  });
+
+  // historico de um canal (quando a pessoa abre o canal)
+  socket.on("channel:open", (ch, reply) => {
+    if (typeof reply !== "function") return;
+    reply(textChannel(ctx, ch) ? historyFor(ctx, ch) : null);
+  });
+
+  // arquivo qualquer (pdf, zip, txt...) de ate ~2 MB
+  socket.on("file", (f, replyTo, ch) => {
+    if (!f || typeof f.data !== "string" || f.data.length > MAX_FILE || !FILE_RE.test(f.data)) return notice("Arquivo grande demais (máximo 2 MB) ou inválido.");
+    ch = chIn(ch);
+    const nick = canPost("[arquivo " + Date.now() + "]", ch);
+    if (!nick) return;
+    const name = String(f.name || "arquivo").replace(/[\\/\n\r]/g, "_").slice(0, 120);
+    pushMessage(ctx, { type: "file", nick, uid, name, size: Number(f.size) || 0, src: f.data, ts: Date.now(), ch, reply: quoteOf(ctx, replyTo) || undefined });
+  });
+
+  // enquete: pergunta com ate 10 opcoes; cada pessoa vota (em uma ou varias, se a enquete deixar)
+  socket.on("poll:create", (p) => {
+    if (!p) return;
+    const q = String(p.q || "").trim().slice(0, 300);
+    const options = (Array.isArray(p.options) ? p.options : []).map((o) => String(o || "").trim().slice(0, 55)).filter(Boolean).slice(0, 10);
+    if (!q || options.length < 2) return notice("A enquete precisa de uma pergunta e pelo menos 2 opções.");
+    const ch = chIn(p.ch);
+    const nick = canPost(q, ch);
+    if (!nick) return;
+    const hours = [1, 4, 8, 24, 72, 168].includes(Number(p.hours)) ? Number(p.hours) : 24;
+    pushMessage(ctx, { type: "poll", nick, uid, ts: Date.now(), ch, poll: { q, multi: !!p.multi, ends: Date.now() + hours * 3600000, options: options.map((t) => ({ t, votes: [] })) } });
+  });
+  socket.on("poll:vote", (v) => {
+    if (!v) return;
+    const m = ctx.history.find((x) => x.id === Number(v.id));
+    if (!m || m.type !== "poll" || Date.now() > m.poll.ends) return;
+    const o = m.poll.options[Number(v.idx)];
+    if (!o) return;
+    const nick = nickNow();
+    const had = o.votes.includes(nick);
+    if (!m.poll.multi) for (const x of m.poll.options) x.votes = x.votes.filter((n) => n !== nick);
+    else o.votes = o.votes.filter((n) => n !== nick);
+    if (!had) o.votes.push(nick);
+    toRoom(ctx, "message:update", { id: m.id, poll: m.poll });
+    persist(ctx);
+  });
+
+  // encaminhar uma mensagem para outro canal do servidor
+  socket.on("forward", (f) => {
+    if (!f) return;
+    const m = ctx.history.find((x) => x.id === Number(f.id));
+    if (!m || !["msg", "img", "file"].includes(m.type)) return;
+    const ch = chIn(f.to);
+    const nick = canPost(m.text || "[encaminhada " + Date.now() + "]", ch);
+    if (!nick) return;
+    const fwd = { nick: m.nick, ch: chOf(m) };
+    if (m.type === "msg") pushMessage(ctx, { type: "msg", nick, uid, text: m.text, ts: Date.now(), ch, fwd });
+    else pushMessage(ctx, { type: m.type, nick, uid, src: m.src, name: m.name, size: m.size, ts: Date.now(), ch, fwd });
   });
 
   // fotos e audios do historico chegam sob demanda (quando aparecem na tela)
@@ -603,24 +775,26 @@ io.on("connection", (socket) => {
     reply(m && isMedia(m) ? m.src || null : null);
   });
 
-  socket.on("image", (data, replyTo) => {
+  socket.on("image", (data, replyTo, ch, spoiler) => {
     if (typeof data !== "string" || data.length > MAX_IMAGE || !IMAGE_RE.test(data)) return;
-    const nick = canPost("[foto " + Date.now() + "]");
+    ch = chIn(ch);
+    const nick = canPost("[foto " + Date.now() + "]", ch);
     if (!nick) return;
-    pushMessage(ctx, { type: "img", nick, uid, src: data, ts: Date.now(), reply: quoteOf(ctx, replyTo) || undefined });
+    pushMessage(ctx, { type: "img", nick, uid, src: data, ts: Date.now(), ch, spoiler: spoiler ? true : undefined, reply: quoteOf(ctx, replyTo) || undefined });
   });
 
-  socket.on("audio", (data, replyTo) => {
+  socket.on("audio", (data, replyTo, ch) => {
     if (typeof data !== "string" || data.length > MAX_AUDIO || !AUDIO_RE.test(data)) return notice("Áudio muito grande ou inválido (máximo 1 minuto).");
-    const nick = canPost("[áudio " + Date.now() + "]");
+    ch = chIn(ch);
+    const nick = canPost("[áudio " + Date.now() + "]", ch);
     if (!nick) return;
-    pushMessage(ctx, { type: "audio", nick, uid, src: data, ts: Date.now(), reply: quoteOf(ctx, replyTo) || undefined });
+    pushMessage(ctx, { type: "audio", nick, uid, src: data, ts: Date.now(), ch, reply: quoteOf(ctx, replyTo) || undefined });
   });
 
   // Reacao: clicar de novo tira a sua
   socket.on("react", (msg) => {
     const nick = nickNow();
-    if (!msg || !REACTIONS.includes(msg.emoji)) return;
+    if (!msg || typeof msg.emoji !== "string" || msg.emoji.length > 16 || !EMOJI_RE.test(msg.emoji)) return;
     if (blockedUntil(ctx.mutes, uid)) return notice("Você está silenciado.");
     const m = ctx.history.find((x) => x.id === Number(msg.id));
     if (!m || m.type === "sys") return;
@@ -650,6 +824,7 @@ io.on("connection", (socket) => {
     const text = String(msg.text || "").replace(/\r/g, "").trim().slice(0, MAX_TEXT);
     if (!text || text === m.text) return;
     if (text.split("\n").length > MAX_LINES) return notice("Mensagem com linhas demais (máximo " + MAX_LINES + ").");
+    if (blockedWord(text)) return notice("Sua edição foi bloqueada pelo AutoMod deste servidor.");
     m.text = text; m.edited = Date.now();
     toRoom(ctx, "message:update", { id: m.id, text: m.text, edited: m.edited });
     persist(ctx);
@@ -662,7 +837,7 @@ io.on("connection", (socket) => {
     if (blockedUntil(ctx.mutes, uid)) return notice("Você está silenciado.");
     m.pinned = !m.pinned;
     toRoom(ctx, "message:update", { id: m.id, pinned: m.pinned });
-    if (m.pinned) sys(ctx, nickNow() + " fixou uma mensagem neste canal.");
+    if (m.pinned) sys(ctx, nickNow() + " fixou uma mensagem neste canal.", chOf(m));
     persist(ctx);
   });
 
@@ -671,17 +846,18 @@ io.on("connection", (socket) => {
     const m = ctx.history.find((x) => x.id === Number(id));
     if (!m) return;
     if (!isMod() && m.uid !== uid) return;
+    if (m.uid !== uid) audit(ctx, nickNow(), "apagou uma mensagem de", m.nick || "sistema");
     dropMessages(ctx, [m]);
     toRoom(ctx, "message:delete", m.id);
     persist(ctx);
   });
 
   let lastTyping = 0;
-  socket.on("typing", () => {
+  socket.on("typing", (ch) => {
     const now = Date.now();
     if (now - lastTyping < 1500) return;
     lastTyping = now;
-    socket.to(ctx.room).emit("typing", nickNow());
+    socket.to(ctx.room).emit("typing", { nick: nickNow(), ch: chIn(ch) });
   });
 
   socket.on("profile", (p) => {
@@ -695,11 +871,93 @@ io.on("connection", (socket) => {
   // ADM nao mexe no dono nem em outro ADM; o dono mexe em todo mundo
   const canTouch = (t) => t && t.id !== uid && t.role !== "owner" && (socket.data.role === "owner" || t.role === "member");
 
-  socket.on("admin:clear", () => {
+  socket.on("admin:clear", (ch) => {
     if (!isMod()) return;
-    dropMessages(ctx, [...ctx.history]);
-    toRoom(ctx, "history", []);
-    sys(ctx, nickNow() + " limpou o chat");
+    ch = chIn(ch);
+    const c = textChannel(ctx, ch);
+    if (!c) return;
+    dropMessages(ctx, ctx.history.filter((m) => chOf(m) === ch));
+    toRoom(ctx, "channel:cleared", ch);
+    sys(ctx, nickNow() + " limpou o canal", ch);
+    audit(ctx, nickNow(), "limpou o canal", "#" + c.name);
+  });
+
+  // ---------- canais (dono e ADMs criam, editam e apagam) ----------
+  const cleanName = (n, type) => {
+    const t = String(n || "").trim().slice(0, 32);
+    return type === "text" ? t.toLowerCase().replace(/\s+/g, "-").replace(/[^\p{L}\p{N}_-]/gu, "") : t.replace(/\s+/g, " ");
+  };
+  socket.on("channel:create", (c) => {
+    if (!isMod() || ctx.dm || !c) return;
+    const type = c.type === "voice" ? "voice" : "text";
+    const name = cleanName(c.name, type);
+    if (!name) return notice("Dê um nome para o canal.");
+    if (ctx.channels.length >= MAX_CHANNELS) return notice("Máximo de " + MAX_CHANNELS + " canais.");
+    const ch = { id: crypto.randomBytes(5).toString("hex"), name, type };
+    if (type === "text") { ch.topic = String(c.topic || "").trim().slice(0, 300); ch.slow = SLOW_STEPS.includes(Number(c.slow)) ? Number(c.slow) : 0; }
+    ctx.channels.push(ch);
+    saveMeta(ctx, "channels"); sendChannels(ctx);
+    audit(ctx, nickNow(), "criou o canal", (type === "text" ? "#" : "") + name);
+  });
+  socket.on("channel:update", (c) => {
+    if (!isMod() || !c) return;
+    const ch = ctx.channels.find((x) => x.id === c.id);
+    if (!ch) return;
+    if (c.name !== undefined) { const n = cleanName(c.name, ch.type); if (n) ch.name = n; }
+    if (ch.type === "text") {
+      if (c.topic !== undefined) ch.topic = String(c.topic || "").trim().slice(0, 300);
+      if (c.slow !== undefined) ch.slow = SLOW_STEPS.includes(Number(c.slow)) ? Number(c.slow) : 0;
+    }
+    if (Number.isInteger(c.pos)) { const i = ctx.channels.indexOf(ch); ctx.channels.splice(i, 1); ctx.channels.splice(Math.max(0, Math.min(ctx.channels.length, c.pos)), 0, ch); }
+    saveMeta(ctx, "channels"); sendChannels(ctx);
+    audit(ctx, nickNow(), "editou o canal", (ch.type === "text" ? "#" : "") + ch.name);
+  });
+  socket.on("channel:delete", (id) => {
+    if (!isMod() || ctx.dm) return;
+    const ch = ctx.channels.find((x) => x.id === id);
+    if (!ch) return;
+    if (ch.type === "text" && ctx.channels.filter((x) => x.type === "text").length <= 1) return notice("O servidor precisa de pelo menos um canal de texto.");
+    if (ch.type === "voice" && [...ctx.callMembers.values()].some((m) => m.ch === ch.id)) return notice("Tem gente nesse canal de voz. Espere todo mundo sair.");
+    ctx.channels = ctx.channels.filter((x) => x !== ch);
+    if (ch.type === "text") { dropMessages(ctx, ctx.history.filter((m) => chOf(m) === ch.id)); persist(ctx); }
+    saveMeta(ctx, "channels"); sendChannels(ctx);
+    audit(ctx, nickNow(), "apagou o canal", (ch.type === "text" ? "#" : "") + ch.name);
+  });
+
+  // ---------- AutoMod e registro de moderacao ----------
+  socket.on("automod:get", (reply) => { if (isMod() && typeof reply === "function") reply(ctx.automod); });
+  socket.on("automod:set", (a) => {
+    if (!isMod() || !a || !Array.isArray(a.words)) return;
+    ctx.automod.words = [...new Set(a.words.map((w) => String(w || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().slice(0, 40)).filter(Boolean))].slice(0, 200);
+    saveMeta(ctx, "automod");
+    audit(ctx, nickNow(), "mudou as palavras bloqueadas do AutoMod", ctx.automod.words.length + " palavras");
+  });
+  socket.on("admin:audit", (reply) => { if (isMod() && typeof reply === "function") reply(ctx.audit); });
+
+  // ---------- eventos do servidor ----------
+  socket.on("event:create", (e) => {
+    if (!e || ctx.dm) return;
+    const title = String(e.title || "").trim().slice(0, 100);
+    const when = Date.parse(e.when);
+    if (!title || !when || when < Date.now() - 3600000) return notice("Dê um nome e uma data futura para o evento.");
+    if (ctx.events.length >= 50) ctx.events.shift();
+    ctx.events.push({ id: crypto.randomBytes(5).toString("hex"), title, desc: String(e.desc || "").trim().slice(0, 500), when, by: nickNow(), going: [nickNow()] });
+    ctx.events.sort((a, b) => a.when - b.when);
+    saveMeta(ctx, "events"); toRoom(ctx, "events", ctx.events);
+    sys(ctx, nickNow() + " criou o evento \"" + title + "\"");
+  });
+  socket.on("event:going", (id) => {
+    const ev = ctx.events.find((x) => x.id === id);
+    if (!ev) return;
+    const n = nickNow();
+    ev.going = ev.going.includes(n) ? ev.going.filter((x) => x !== n) : [...ev.going, n];
+    saveMeta(ctx, "events"); toRoom(ctx, "events", ctx.events);
+  });
+  socket.on("event:delete", (id) => {
+    const ev = ctx.events.find((x) => x.id === id);
+    if (!ev || (!isMod() && ev.by !== nickNow())) return;
+    ctx.events = ctx.events.filter((x) => x !== ev);
+    saveMeta(ctx, "events"); toRoom(ctx, "events", ctx.events);
   });
 
   socket.on("admin:mute", (msg) => {
@@ -708,8 +966,8 @@ io.on("connection", (socket) => {
     if (!canTouch(t)) return notice("Você não pode silenciar essa pessoa.");
     const min = Math.min(24 * 60, Math.max(0, Number(msg.minutes) || 0));
     ctx.floodMuted.delete(t.id);
-    if (min) { ctx.mutes.set(t.id, Date.now() + min * 60000); sys(ctx, t.nick + " foi silenciado por " + min + " min"); }
-    else if (ctx.mutes.delete(t.id)) sys(ctx, t.nick + " pode falar de novo");
+    if (min) { ctx.mutes.set(t.id, Date.now() + min * 60000); sys(ctx, t.nick + " foi silenciado por " + min + " min"); audit(ctx, nickNow(), "silenciou por " + min + " min", t.nick); }
+    else if (ctx.mutes.delete(t.id)) { sys(ctx, t.nick + " pode falar de novo"); audit(ctx, nickNow(), "liberou", t.nick); }
     sendModeration(ctx);
   });
 
@@ -721,6 +979,7 @@ io.on("connection", (socket) => {
     await db.remove("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id });
     removeUserFromCtx(ctx, t.id, "Você foi expulso do servidor " + ctx.name + ". Só volta com um convite novo.");
     sys(ctx, t.nick + " foi expulso do servidor");
+    audit(ctx, nickNow(), "expulsou", t.nick);
     await loadMembers(ctx); sendUsers(ctx, true);
   }));
 
@@ -734,6 +993,7 @@ io.on("connection", (socket) => {
     await db.remove("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id });
     removeUserFromCtx(ctx, t.id, "Você foi banido do servidor " + ctx.name + (min ? " por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : " para sempre") + ".");
     sys(ctx, t.nick + " foi banido " + (min ? "por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : "para sempre"));
+    audit(ctx, nickNow(), "baniu " + (min ? "por " + (min >= 1440 ? min / 1440 + " dia(s)" : min + " min") : "para sempre"), t.nick);
     await loadMembers(ctx); sendUsers(ctx, true);
     sendBans();
   }));
@@ -751,6 +1011,7 @@ io.on("connection", (socket) => {
   socket.on("admin:unban", wrapAsync(async (id) => {
     if (!isMod() || !UUID_RE.test(String(id))) return;
     await db.remove("server_bans", { server_id: "eq." + ctx.id, user_id: "eq." + id });
+    audit(ctx, nickNow(), "desbaniu", ((await getProfile(id)) || {}).nick || "?");
     sendBans();
   }));
 
@@ -762,6 +1023,7 @@ io.on("connection", (socket) => {
     await db.update("server_members", { server_id: "eq." + ctx.id, user_id: "eq." + t.id }, { role: msg.role });
     for (const s of ctx.sockets.values()) if (s.data.user.id === t.id) { s.data.role = msg.role; s.emit("me", meOf(ctx, s)); }
     sys(ctx, t.nick + (msg.role === "admin" ? " agora é ADM do servidor" : " não é mais ADM"));
+    audit(ctx, nickNow(), msg.role === "admin" ? "deu ADM para" : "tirou o ADM de", t.nick);
     await loadMembers(ctx); sendUsers(ctx);
     ctx.poker.broadcast(); ctx.truco.broadcast();
     sendModeration(ctx);
@@ -774,8 +1036,10 @@ io.on("connection", (socket) => {
   // ---------- call ----------
   socket.on("call:join", (state, reply) => {
     if (typeof reply !== "function") return;
-    const others = [...ctx.callMembers.keys()].filter((id) => id !== socket.id);
-    ctx.callMembers.set(socket.id, { id: socket.id, nick: nickNow(), ...cleanCallState(state) });
+    const ch = state && voiceChannel(ctx, state.ch) ? state.ch : (ctx.channels.find((c) => c.type === "voice") || {}).id;
+    if (!ch) return reply({ ok: false });
+    const others = [...ctx.callMembers.values()].filter((m) => m.id !== socket.id && m.ch === ch).map((m) => m.id);
+    ctx.callMembers.set(socket.id, { id: socket.id, nick: nickNow(), ...cleanCallState(state), ch });
     reply({ ok: true, others });
     sendCall(ctx);
   });
@@ -789,6 +1053,7 @@ io.on("connection", (socket) => {
 
   socket.on("call:signal", (msg) => {
     if (!msg || !ctx.callMembers.has(socket.id) || !ctx.callMembers.has(msg.to)) return;
+    if (ctx.callMembers.get(socket.id).ch !== ctx.callMembers.get(msg.to).ch) return; // so dentro do mesmo canal de voz
     if (JSON.stringify(msg).length > 100 * 1024) return;
     io.to(msg.to).emit("call:signal", { from: socket.id, description: msg.description, candidate: msg.candidate });
   });
@@ -799,13 +1064,13 @@ io.on("connection", (socket) => {
     const m = String(url || "").match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/))([A-Za-z0-9_-]{11})/) || String(url || "").match(/^([A-Za-z0-9_-]{11})$/);
     if (!member) return;
     if (!m) return notice("Esse link não parece ser do YouTube.");
-    ctx.watch = { id: m[1], playing: true, pos: 0, at: Date.now(), by: member.nick };
+    ctx.watch = { id: m[1], playing: true, pos: 0, at: Date.now(), by: member.nick, ch: member.ch };
     toRoom(ctx, "watch:state", watchMsg(ctx));
   });
 
   socket.on("watch:control", (msg) => {
     const member = ctx.callMembers.get(socket.id);
-    if (!member || !ctx.watch || !msg) return;
+    if (!member || !ctx.watch || !msg || member.ch !== ctx.watch.ch) return;
     const pos = Math.max(0, Number(msg.pos) || 0);
     if (msg.action === "play") Object.assign(ctx.watch, { playing: true, pos, at: Date.now() });
     else if (msg.action === "pause") Object.assign(ctx.watch, { playing: false, pos, at: Date.now() });

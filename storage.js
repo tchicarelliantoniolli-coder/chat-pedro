@@ -49,6 +49,18 @@ function createStorage(serverId) {
       }, 1500);
     },
 
+    // dados do servidor que nao sao mensagens: canais, AutoMod, registro de moderacao e eventos
+    async loadMeta() {
+      const names = ["channels", "automod", "audit", "events"];
+      const got = await getMany(names.map((n) => p + n));
+      const out = {};
+      for (const n of names) { try { out[n] = got[p + n] ? JSON.parse(got[p + n]) : null; } catch { out[n] = null; } }
+      return out;
+    },
+    saveMeta(name, value) {
+      queue(() => db.upsert(TABLE, [{ key: p + name, value: JSON.stringify(value), expires_at: null }], "key"), "salvar " + name);
+    },
+
     saveMedia(id, src) {
       const expires = new Date(Date.now() + MEDIA_TTL_DAYS * 86400000).toISOString();
       queue(() => db.upsert(TABLE, [{ key: p + "media:" + id, value: src, expires_at: expires }], "key"), "salvar a midia");

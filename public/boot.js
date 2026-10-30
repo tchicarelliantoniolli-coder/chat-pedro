@@ -33,7 +33,8 @@
     handshake: () => ({ token: session && session.access_token, server: current }),
     onMe(m) {
       const srv = currentServer();
-      if (srv) { srv.name = m.server.name; srv.icon = m.server.icon || null; srv.role = m.role; }
+      if (srv && !srv.dm) { srv.name = m.server.name; srv.icon = m.server.icon || null; }
+      if (srv) srv.role = m.role;
       renderRail();
       renderServerMenu();
     },
@@ -47,6 +48,19 @@
       $("profEmail").textContent = me ? "Conta: " + me.email : "";
       $("nickInput").value = profile ? profile.nick : "";
       $("statusTextInput").value = profile && profile.status_text ? profile.status_text : "";
+      $("bioInput").value = profile && profile.bio ? profile.bio : "";
+    },
+    // conversa privada: o nome mostrado e o da outra pessoa
+    peerName: () => { const srv = currentServer(); return srv && srv.dm ? srv.name : null; },
+    serverList: () => servers.slice(),
+    async openDm(userId) {
+      try { const r = await api("/api/dm", { method: "POST", body: { userId } }); goServer(r.server.id); }
+      catch (err) { app.setNote(err.message, true); }
+    },
+    async changePassword(pw) {
+      if (!pw || pw.length < 6) throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if (error) throw new Error(error.message);
     },
   };
 
@@ -200,16 +214,22 @@
   $("invSkip").addEventListener("click", () => { location.href = "/"; });
 
   // ---------- barra de servidores ----------
+  // barra da esquerda: primeiro as conversas privadas (fotos redondas), depois os servidores
   function renderRail() {
-    $("railList").replaceChildren(...servers.map((s) => {
+    const btn = (s) => {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "srv" + (s.id === current ? " on" : "");
+      b.type = "button"; b.className = "srv" + (s.id === current ? " on" : "") + (s.dm ? " dmsrv" : "");
       paintIcon(b, s);
-      b.title = s.name;
-      b.setAttribute("aria-label", "Servidor " + s.name);
+      const n = dmUnread.get(s.id);
+      if (n) { const d = document.createElement("span"); d.className = "srvbadge"; d.textContent = n > 99 ? "99+" : String(n); b.append(d); }
+      b.title = s.dm ? "Conversa com " + s.name : s.name;
+      b.setAttribute("aria-label", b.title);
       b.addEventListener("click", () => { if (s.id !== current) goServer(s.id); else document.body.classList.remove("railopen"); });
       return b;
-    }));
+    };
+    const dms = servers.filter((s) => s.dm), srvs = servers.filter((s) => !s.dm);
+    const sep = document.createElement("span"); sep.className = "railsep";
+    $("railList").replaceChildren(...dms.map(btn), ...(dms.length && srvs.length ? [sep] : []), ...srvs.map(btn));
   }
   $("railAdd").addEventListener("click", () => { document.body.classList.remove("railopen"); gmsg(""); showHome(!!current); });
   $("railBtn").addEventListener("click", (e) => { e.stopPropagation(); document.body.classList.toggle("railopen"); });
@@ -231,9 +251,29 @@
     $("srvIconDel").hidden = !srv.icon;
     $("srvRenameBox").hidden = !mod;
     $("srvMod").hidden = !mod;
-    $("srvLeave").hidden = srv.role === "owner";
-    $("srvDelete").hidden = srv.role !== "owner";
+    $("srvLeave").hidden = srv.role === "owner" && !srv.dm;
+    $("srvDelete").hidden = srv.role !== "owner" || !!srv.dm;
+    $("srvNewChan").hidden = $("srvInvites").hidden = !mod || !!srv.dm;
+    if (srv.dm) { $("invSect").hidden = true; $("srvRenameBox").hidden = true; $("srvMod").hidden = true; $("srvRole").textContent = "conversa privada"; $("srvLeave").querySelector("span").textContent = "Fechar conversa"; }
+    else $("invSect").hidden = false;
   }
+  $("srvNewChan").addEventListener("click", () => { $("srvModal").hidden = true; document.querySelector('.catadd[data-add="text"]').click(); });
+  // convites ativos: ver e cancelar
+  $("srvInvites").addEventListener("click", async () => {
+    const box = $("invListBox");
+    if (!box.hidden) { box.hidden = true; return; }
+    box.hidden = false; box.textContent = "carregando...";
+    try {
+      const r = await api("/api/servers/" + current + "/invites");
+      box.replaceChildren(...(r.invites.length ? r.invites.map((iv) => {
+        const row = document.createElement("div"); row.className = "invrow2";
+        const t = document.createElement("span"); t.textContent = iv.code + " · por " + iv.by + " · " + iv.uses + (iv.uses === 1 ? " uso" : " usos") + " · " + (iv.expires_at ? "vence " + new Date(iv.expires_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "não vence");
+        const del = document.createElement("button"); del.type = "button"; del.className = "cmd danger"; del.textContent = "Cancelar";
+        del.addEventListener("click", async () => { try { await api("/api/servers/" + current + "/invites/" + iv.code, { method: "DELETE" }); row.remove(); } catch (err) { $("srvMsg").textContent = err.message; } });
+        row.append(t, del); return row;
+      }) : [Object.assign(document.createElement("span"), { className: "lbl2", textContent: "Nenhum convite ativo." })]));
+    } catch (err) { box.textContent = err.message; }
+  });
   $("srvBtn").addEventListener("click", () => {
     const srv = currentServer();
     if (!srv) return;
@@ -345,6 +385,18 @@
     app.setNote("Não deu para conectar. Tentando de novo...", true);
     // erro do proprio servidor: tenta de novo; queda de rede o socket.io ja tenta sozinho
     if (!socket.active) setTimeout(() => socket.connect(), 3000);
+  });
+  // mensagens diretas que chegam enquanto voce esta em outro servidor: bolinha vermelha na barra
+  const dmUnread = new Map(); // id da conversa -> quantas
+  async function refreshServers() {
+    try { const r = await api("/api/me"); servers = r.servers; renderRail(); } catch {}
+  }
+  socket.on("dm:new", () => refreshServers());
+  socket.on("dm:ping", async (p) => {
+    if (!p || p.server === current) return;
+    dmUnread.set(p.server, (dmUnread.get(p.server) || 0) + 1);
+    if (!servers.some((x) => x.id === p.server)) await refreshServers(); else renderRail();
+    app.dmAlert(p);
   });
   socket.on("server:removed", (reason) => {
     socket.disconnect();

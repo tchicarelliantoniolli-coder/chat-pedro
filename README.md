@@ -1,6 +1,6 @@
 # Chat Pedro
 
-Chat retrô estilo terminal. Cada pessoa entra só digitando um apelido.
+Chat para os amigos no estilo do Discord: servidores, canais de texto e voz, mensagens diretas, call, poker e truco.
 
 ## Rodar no seu computador (opcional)
 
@@ -71,12 +71,17 @@ Compre um dominio (ex.: no Registro.br para `.com.br`). No Render, em **Settings
 
 - No plano grátis o servidor dorme depois de uns 15 minutos sem ninguém. Quem entrar primeiro espera uns 30–60 segundos.
 - O visual segue o Discord: servidores na esquerda, canais (texto, voz e atividades), chat no meio e membros na direita.
-- **Canal de voz "Call"**: clique para entrar. Quem está na call aparece embaixo dele; o painel "Voz conectada" tem o botão de desconectar. No celular, use o botão "Call" do topo.
-- **Painel do usuário** (embaixo da barra de canais): seu perfil, microfone, fone e configurações de áudio e vídeo.
-- **Mensagens**: responder, reagir (uma reação por pessoa), editar (ou seta para cima com o campo vazio), fixar e apagar. Fotos (botão, colar ou arrastar) e áudio de até 1 minuto.
-- **Formatação**: `**negrito**`, `*itálico*`, `__sublinhado__`, `~~riscado~~`, `` `código` ``, blocos com três crases, `||spoiler||`, `> citação` e links clicáveis. `@nome` menciona alguém.
-- **Busca** no topo do chat (use `de: nome` para filtrar) e **mensagens fixadas** no alfinete.
-- **Membros** agrupados em Dono, ADM, Online e Offline, com status personalizado. Clique num nome para ver o cartão de perfil.
+- **Canais**: o dono e os ADMs criam canais de texto e de voz (o "+" ao lado de cada categoria), com nome, tópico e modo lento. A engrenagem do canal edita ou apaga. Canal com mensagem nova fica em branco; menção mostra o contador vermelho. Botão direito no canal: marcar como lido, silenciar, copiar link.
+- **Canais de voz**: clique para entrar. Quem está na call aparece embaixo do canal; o painel "Voz conectada" tem o botão de desconectar. No celular, use o botão "Call" do topo.
+- **Mensagens diretas**: no cartão de perfil de alguém, "Mandar mensagem". A conversa aparece redonda no topo da barra da esquerda, com bolinha vermelha quando chega mensagem nova. Tem call também.
+- **Painel do usuário** (embaixo da barra de canais): perfil, "Sobre mim", status (Online, Ausente, Não perturbe, Invisível), troca de senha, microfone, fone e áudio e vídeo.
+- **Mensagens**: responder, reagir com qualquer emoji (uma reação por pessoa), editar (ou seta para cima), fixar, apagar (Shift pula a confirmação), encaminhar para outro canal, salvar, marcar como não lida, falar em voz alta (TTS), copiar texto e link. Botão direito na mensagem abre o menu completo.
+- **Botão "+"** na caixa de texto: foto, foto com spoiler, arquivo (até 2 MB) e enquete (até 10 respostas, com prazo). Áudio de até 1 minuto no microfone.
+- **Formatação**: `**negrito**`, `*itálico*`, `__sublinhado__`, `~~riscado~~`, `` `código` ``, blocos com três crases, `||spoiler||`, `> citação`, `# título`, `-# texto pequeno`, listas, `[texto](link)`, `#canal`, `@nome`, `@everyone`/`@here` (moderação) e `:emoji:`. Links do YouTube viram cartão.
+- **Comandos** (digite `/`): `/me`, `/shrug`, `/tableflip`, `/unflip`, `/spoiler`, `/tts`, `/nick`, `/perfil`, `/limpar`, `/atalhos`, `/ajuda`.
+- **Atalhos**: Ctrl+K troca de canal ou servidor rápido, Alt+↑/↓ muda de canal, Ctrl+E abre os emojis, Ctrl+Shift+M liga/desliga o microfone, Ctrl+Shift+D o fone, Esc marca como lido e Ctrl+/ mostra todos.
+- **Caixa de entrada** (ícone no topo): suas menções e as mensagens salvas. **Busca** (use `de: nome`) e **fixadas** no alfinete.
+- **Eventos**: crie eventos com data e hora; quem quiser marca "Tenho interesse".
+- **Membros** agrupados em Dono, ADM, Online e Offline, com status e "Sobre mim". Dá para bloquear alguém (as mensagens dele ficam escondidas para você).
 - **Atividades**: Poker (Texas Hold'em, até 9) e Truco Paulista (mesa de 4 ou 6).
-- **Moderação**: nome do servidor (no topo da barra de canais) > Moderar membros (dono e ADMs). O anti-flood silencia por 2 min quem insistir.
-- Comandos: `/nick NOVO`, `/perfil`, `/limpar`, `/ajuda`.
+- **Moderação** (nome do servidor > Moderar membros): silenciar, expulsar, banir, AutoMod com palavras bloqueadas, registro de moderação e limpar o canal. Convites ativos podem ser vistos e cancelados. O anti-flood silencia por 2 min quem insistir.

@@ -9,7 +9,11 @@
   const iceConfig = () => ({ iceServers: app.ice && app.ice.length ? app.ice : ICE_DEFAULT });
   const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
-  let members = [];        // quem esta na chamada (vem do servidor)
+  let members = [];        // quem esta no MEU canal de voz
+  let allMembers = [];     // todo mundo em qualquer canal de voz do servidor
+  let myCh = null;         // canal de voz em que estou
+  const voiceName = (ch) => { const el = document.querySelector('.chan.voice[data-voice="' + ch + '"] .vn'); return el ? el.textContent : "Call"; };
+  const firstVoice = () => { const el = document.querySelector(".chan.voice[data-voice]"); return el ? el.dataset.voice : null; };
   let inCall = false;
   const peers = new Map(); // socket.id -> { pc, polite, makingOffer, ignoreOffer, streams, audio, senders }
   const focused = new Set();
@@ -57,13 +61,17 @@
     const label = inCall ? "Você está na call com " + n + (n === 1 ? " pessoa" : " pessoas") + ". Clique para ver" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call";
     cb.title = label; cb.setAttribute("aria-label", label);
     cb.hidden = !app.nick;
-    // canal de voz na barra da esquerda (como no Discord) e o painel "Voz conectada"
-    const vc = $("voiceChan");
-    vc.classList.toggle("in", inCall);
-    $("voiceHint").textContent = inCall ? "você está aqui" : n ? n + (n === 1 ? " pessoa" : " pessoas") + " · entrar" : "entrar";
-    vc.title = inCall ? "Mostrar a call" : "Entrar na call";
+    // canais de voz na barra da esquerda (como no Discord) e o painel "Voz conectada"
+    document.querySelectorAll(".chan.voice[data-voice]").forEach((vc) => {
+      const here = inCall && vc.dataset.voice === myCh;
+      const cnt = allMembers.filter((m) => m.ch === vc.dataset.voice).length;
+      vc.classList.toggle("in", here);
+      const vj = vc.querySelector(".vj");
+      if (vj) vj.textContent = here ? "você está aqui" : cnt ? cnt + (cnt === 1 ? " pessoa" : " pessoas") + " · entrar" : "entrar";
+      vc.title = here ? "Mostrar a call" : "Entrar em " + vc.querySelector(".vn").textContent;
+    });
     $("voicePanel").hidden = !inCall;
-    $("vpWhere").textContent = "Call / " + n + (n === 1 ? " pessoa" : " pessoas");
+    $("vpWhere").textContent = voiceName(myCh) + " / " + n + (n === 1 ? " pessoa" : " pessoas");
     // microfone e fone do painel do usuario, embaixo da barra
     setIcon($("upMic"), micOn ? "mic" : "mic-off", micOn ? "Desligar o microfone" : "Ligar o microfone");
     $("upMic").classList.toggle("off", !micOn);
@@ -231,8 +239,10 @@
   const sendState = () => { if (inCall) socket.emit("call:state", myState()); };
 
   let joining = false;
-  async function join() {
+  async function join(ch) {
     if (inCall || joining || !app.nick) return;
+    myCh = ch || firstVoice();
+    if (!myCh) return;
     joining = true;
     try { await doJoin(); } finally { joining = false; }
   }
@@ -244,7 +254,7 @@
     try { await startMic(); }
     catch { micOn = false; micBlocked = true; setNote("Sem acesso ao microfone. Você entrou mudo; libere o microfone no navegador (no cadeado ao lado do endereço) para falar.", true); }
     applyMic();
-    await new Promise((done) => socket.timeout(10000).emit("call:join", myState(), (err, res) => {
+    await new Promise((done) => socket.timeout(10000).emit("call:join", { ...myState(), ch: myCh }, (err, res) => {
       done();
       if (err) res = null; // o servidor nao respondeu
       if (!res || !res.ok) { setNote("ERRO: não deu para entrar na chamada.", true); cleanup(); return; }
@@ -269,7 +279,7 @@
     micRaw = camStream = screenStream = null;
     if (ctx) ctx.close().catch(() => {});
     ctx = micSource = micGain = micDest = micAnalyser = null;
-    inCall = false;
+    inCall = false; myCh = null; members = [];
     focused.clear();
     $("call").hidden = true;
     $("settings").hidden = true;
@@ -564,9 +574,9 @@
   }
 
   function renderSidebar() {
-    const ul = $("callPeople");
+    document.querySelectorAll("ul.vpeople[data-vp]").forEach((ul) => {
     ul.replaceChildren();
-    for (const m of members) {
+    for (const m of allMembers.filter((x) => x.ch === ul.dataset.vp)) {
       const li = document.createElement("li");
       li.dataset.member = m.id;
       const name = document.createElement("span"); name.className = "name"; name.textContent = m.nick;
@@ -582,12 +592,15 @@
       li.append(avatar(m.nick), name, t);
       ul.append(li);
     }
-    app.callNicks = new Set(members.map((m) => m.nick));
+    });
+    refreshButtons();
+    app.callNicks = new Set(allMembers.map((m) => m.nick));
     app.renderPeople();
   }
 
   socket.on("call:members", (list) => {
-    members = Array.isArray(list) ? list : [];
+    allMembers = Array.isArray(list) ? list : [];
+    members = inCall && myCh ? allMembers.filter((m) => m.ch === myCh) : [];
     if (inCall) {
       const ids = new Set(members.map((m) => m.id));
       for (const id of [...peers.keys()]) if (!ids.has(id)) closePeer(id);
@@ -620,7 +633,7 @@
     if (micAnalyser && micLive() && level(micAnalyser) * (prefs.micGain / 100) > 0.04) speaking.add(socket.id);
     for (const [id, p] of peers) if (p.analyser && level(p.analyser) > 0.04) speaking.add(id);
     document.querySelectorAll("#tiles .tile").forEach((el) => el.classList.toggle("speaking", !el.classList.contains("screen") && speaking.has(el.dataset.member)));
-    document.querySelectorAll("#callPeople li").forEach((li) => li.classList.toggle("speaking", speaking.has(li.dataset.member)));
+    document.querySelectorAll(".vpeople li").forEach((li) => li.classList.toggle("speaking", speaking.has(li.dataset.member)));
   }, 120);
 
   // ---------- apertar para falar ----------
@@ -753,7 +766,7 @@
   });
   async function syncWatch() {
     const box = $("watch");
-    if (!inCall || !watchState) { box.hidden = true; if (player) { try { player.destroy(); } catch {} player = null; playerVid = null; $("ytBox").replaceChildren(Object.assign(document.createElement("div"), { id: "ytPlayer" })); } return; }
+    if (!inCall || !watchState || (watchState.ch && watchState.ch !== myCh)) { box.hidden = true; if (player) { try { player.destroy(); } catch {} player = null; playerVid = null; $("ytBox").replaceChildren(Object.assign(document.createElement("div"), { id: "ytPlayer" })); } return; }
     box.hidden = false;
     $("watchInfo").textContent = (watchState.playing ? "assistindo junto" : "pausado") + " | colocado por " + watchState.by;
     setIcon($("watchToggle"), watchState.playing ? "pause" : "play", watchState.playing ? "Pausar" : "Tocar");
@@ -807,16 +820,21 @@
   $("watchStop").addEventListener("click", () => socket.emit("watch:stop"));
 
   $("callBtn").addEventListener("click", () => {
-    if (!inCall) return join();
+    if (!inCall) return join(firstVoice());
     $("call").classList.toggle("min", false);
     $("call").scrollIntoView({ block: "nearest" });
   });
   $("leaveBtn").addEventListener("click", leave);
   $("vpLeave").addEventListener("click", leave);
-  $("voiceChan").addEventListener("click", () => {
+  // clicar num canal de voz: entra; se ja esta em outro, muda para este; se e o seu, mostra a call
+  document.addEventListener("click", async (e) => {
+    const vc = e.target.closest(".chan.voice[data-voice]");
+    if (!vc || e.target.closest(".cgear")) return;
     document.body.classList.remove("railopen");
-    if (!inCall) return join();
-    $("call").classList.toggle("min", false); refreshButtons();
+    const ch = vc.dataset.voice;
+    if (inCall && myCh === ch) { $("call").classList.toggle("min", false); refreshButtons(); return; }
+    if (inCall) leave();
+    join(ch);
   });
   $("upMic").addEventListener("click", toggleMic);
   $("upDeaf").addEventListener("click", toggleDeaf);
@@ -832,6 +850,8 @@
   window.addEventListener("beforeunload", () => { if (inCall) socket.emit("call:leave"); });
 
   app.onJoin = () => { refreshButtons(); renderSidebar(); };
+  app.renderVoice = renderSidebar;
+  app.isDeaf = () => deaf;
   refreshButtons();
   renderSidebar();
 })();
