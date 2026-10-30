@@ -118,12 +118,48 @@
   }
   for (const ev of ["pointerdown", "touchend", "click", "keydown"]) addEventListener(ev, unlock, { capture: true, passive: true });
 
+  // Aviso fora da aba: com a aba minimizada ou em outra aba, a pagina nao consegue se desenhar por
+  // cima de nada. Entao aparece uma notificacao do sistema com a foto (fica ate a pessoa clicar ou o
+  // adm parar) e o titulo da aba pisca. A permissao e pedida uma vez, no primeiro clique no site.
+  const NTAG = "chatpedro-adm";
+  const canNotify = "Notification" in window;
+  const swReg = "serviceWorker" in navigator ? navigator.serviceWorker.register("/sw.js").catch(() => null) : Promise.resolve(null);
+  function askNotify() {
+    if (!canNotify || Notification.permission !== "default") return;
+    try { if (localStorage.getItem("cp-adm-ask")) return; localStorage.setItem("cp-adm-ask", "1"); } catch {}
+    try { Notification.requestPermission().catch(() => {}); } catch {}
+  }
+  for (const ev of ["pointerdown", "keydown"]) addEventListener(ev, askNotify, { capture: true, passive: true, once: true });
+  let notified = null, current = null, blink = null;
+  const baseTitle = () => document.title.replace(/^\u{1F4E2} .*? \| /u, "");
+  async function notify() {
+    if (!current || notified === shownId || !document.hidden) return;
+    notified = shownId;
+    const s = current, url = new URL(s.url, location.href).href;
+    const title = s.kind === "img" ? "O adm mostrou uma foto" : s.kind === "video" ? "O adm está mostrando um vídeo" : "O adm está tocando um áudio";
+    const opts = { body: "Clique para abrir o Chat Pedro", tag: NTAG, renotify: true, requireInteraction: true, ...(s.kind === "img" ? { image: url, icon: url } : {}) };
+    if (canNotify && Notification.permission === "granted") {
+      const reg = await swReg;
+      try { if (reg) await reg.showNotification(title, opts); else { const n = new Notification(title, opts); n.onclick = () => { focus(); n.close(); }; } } catch {}
+    }
+    clearInterval(blink);
+    const t0 = baseTitle(); let on = false;
+    blink = setInterval(() => { on = !on; document.title = on ? "\u{1F4E2} " + title + " | " + t0 : t0; }, 1000);
+  }
+  async function unnotify() {
+    clearInterval(blink); blink = null; document.title = baseTitle(); notified = null;
+    const reg = await swReg;
+    if (reg) try { (await reg.getNotifications({ tag: NTAG })).forEach((n) => n.close()); } catch {}
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden) notify(); else if (blink) unnotify(); });
+
   let shownId = null;
   function close() {
     for (const el of [video, audio]) { el.pause(); el.hidden = true; el.muted = false; }
     busy = null;
     show.querySelectorAll("img, .sa-label, .sa-stop").forEach((el) => el.remove());
-    show.hidden = true; $("saTap").hidden = true; shownId = null;
+    show.hidden = true; $("saTap").hidden = true; shownId = null; current = null;
+    unnotify();
   }
   socket.on("adm:show", (s) => {
     if (!s) { close(); showing = false; refresh(); return; }
@@ -154,6 +190,7 @@
       show.append(b);
     }
     show.hidden = false;
+    current = s; notify();
   });
   $("saTap").addEventListener("click", () => {
     if (busy) { busy.muted = false; busy.play().catch(() => {}); }

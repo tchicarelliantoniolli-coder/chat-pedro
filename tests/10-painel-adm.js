@@ -22,8 +22,25 @@ const ok = (c, m) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + m);
   ok(await V.evaluate(() => window.beeps) === 1, 'som chegou para o outro');
   await A.setInputFiles('#saFile', FX + '/blue.png'); await A.waitForTimeout(200);
   await A.screenshot({ path: SP + '/adm-panel.png' });
+  // um terceiro com a aba "escondida" (minimizada ou em outra aba) recebe a notificacao com a foto
+  const H = await mk();
+  // o Chromium sem tela recusa notificacoes: aqui a permissao e as notificacoes sao de mentira
+  await H.addInitScript(() => {
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' });
+    const list = window.__notes = [];
+    ServiceWorkerRegistration.prototype.showNotification = async function (title, o) { const n = { title, image: o.image, tag: o.tag, close() { list.splice(list.indexOf(n), 1); } }; list.push(n); };
+    ServiceWorkerRegistration.prototype.getNotifications = async function (f) { return list.filter((n) => !f || n.tag === f.tag); };
+  });
+  await H.goto(URL); await H.waitForTimeout(1200);
+  await H.evaluate(() => { Object.defineProperty(document, 'hidden', { get: () => true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await A.click('#saGo'); await A.waitForTimeout(1200);
   ok(await V.isVisible('#saShow img'), 'foto em tela cheia para o outro');
+  const hn = await H.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); const n = r ? await r.getNotifications({ tag: 'chatpedro-adm' }) : []; return n.map((x) => x.title + '|' + (x.image || '')); });
+  ok(hn.length === 1 && hn[0].includes('foto') && hn[0].includes('/api/adm/media/'), 'aba escondida recebe notificacao com a foto ' + JSON.stringify(hn));
+  ok((await H.title()).includes('adm') || (await H.waitForTimeout(1100), (await H.title()).includes('adm')), 'titulo da aba pisca');
+  await H.evaluate(() => { Object.defineProperty(document, 'hidden', { get: () => false, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  await H.waitForTimeout(300);
+  ok(await H.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return (await r.getNotifications({ tag: 'chatpedro-adm' })).length === 0 && !document.title.includes('adm'); }), 'voltar para a aba tira o aviso');
   await V.screenshot({ path: SP + '/adm-foto.png' });
   await A.screenshot({ path: SP + '/adm-foto-admin.png' });
   const late = await mk(); await late.goto(URL); await late.waitForTimeout(1500);
