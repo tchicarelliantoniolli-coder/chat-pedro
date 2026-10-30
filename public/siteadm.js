@@ -83,11 +83,46 @@
   });
 
   // ---------- o que todo mundo ve ----------
+  // iPhone e iPad so deixam tocar som depois que a pessoa toca na pagina. Por isso os players sao
+  // sempre os mesmos e sao "destravados" no primeiro toque em qualquer lugar do site (tocando um
+  // silencio); depois disso o som do adm toca sozinho, sem pedir nada.
+  const wavUrl = (tones, secs) => {
+    const rate = 22050, n = Math.round(rate * secs), b = new DataView(new ArrayBuffer(44 + n * 2));
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) b.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, "RIFF"); b.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt "); b.setUint32(16, 16, true); b.setUint16(20, 1, true);
+    b.setUint16(22, 1, true); b.setUint32(24, rate, true); b.setUint32(28, rate * 2, true); b.setUint16(32, 2, true); b.setUint16(34, 16, true);
+    str(36, "data"); b.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) {
+      const t = i / rate; let v = 0;
+      for (const [f, at] of tones) { const d = t - at; if (d >= 0 && d < 0.45) v += Math.sin(2 * Math.PI * f * d) * Math.min(1, d / 0.02) * Math.exp(-d * 9); }
+      b.setInt16(44 + i * 2, Math.max(-1, Math.min(1, v * 0.5)) * 32767, true);
+    }
+    return URL.createObjectURL(new Blob([b], { type: "audio/wav" }));
+  };
+  const SILENCE = wavUrl([], 0.1);
+  const BEEP = wavUrl([[880, 0], [1320, 0.18]], 0.7); // som de aviso: dois toques
+  const mkPlayer = (tag) => { const el = document.createElement(tag); el.playsInline = true; el.setAttribute("playsinline", ""); el.preload = "auto"; el.hidden = true; show.prepend(el); return el; };
   const show = $("saShow");
+  const video = mkPlayer("video"), audio = mkPlayer("audio"), beep = mkPlayer("audio");
+  beep.src = BEEP;
+  let unlocked = false, busy = null; // busy: o player que esta mostrando algo do adm agora
+  function unlock() {
+    if (unlocked) return;
+    unlocked = true;
+    for (const el of [video, audio, beep]) {
+      if (el === busy) continue;
+      const keep = el.src && el !== beep ? el.src : null;
+      el.src = SILENCE; el.muted = false;
+      el.play().then(() => { if (el === busy) return; el.pause(); el.src = keep || (el === beep ? BEEP : SILENCE); }).catch(() => { unlocked = false; });
+    }
+  }
+  for (const ev of ["pointerdown", "touchend", "click", "keydown"]) addEventListener(ev, unlock, { capture: true, passive: true });
+
   let shownId = null;
   function close() {
-    for (const el of show.querySelectorAll("video, audio")) { el.pause(); el.removeAttribute("src"); el.load(); }
-    show.querySelectorAll("img, video, audio, .sa-label, .sa-stop").forEach((el) => el.remove());
+    for (const el of [video, audio]) { el.pause(); el.hidden = true; el.muted = false; }
+    busy = null;
+    show.querySelectorAll("img, .sa-label, .sa-stop").forEach((el) => el.remove());
     show.hidden = true; $("saTap").hidden = true; shownId = null;
   }
   socket.on("adm:show", (s) => {
@@ -99,15 +134,16 @@
     show.className = s.kind === "audio" ? "audio" : "";
     if (s.kind === "img") { const i = new Image(); i.src = s.url; i.alt = ""; show.prepend(i); }
     else {
-      const el = document.createElement(s.kind === "video" ? "video" : "audio");
-      el.src = s.url; el.playsInline = true; el.autoplay = true;
+      const el = busy = s.kind === "video" ? video : audio;
+      el.src = s.url; el.hidden = s.kind !== "video"; el.muted = false;
       // quem abriu o site depois que comecou entra no mesmo ponto
       const late = Math.max(0, (s.now - s.at) / 1000);
       el.addEventListener("loadedmetadata", () => { if (late > 1 && late < el.duration) el.currentTime = late; }, { once: true });
-      show.prepend(el);
       if (s.kind === "audio") { const l = document.createElement("span"); l.className = "sa-label"; l.textContent = "Tocando um áudio do adm"; show.append(l); }
-      // o navegador pode bloquear som sem um clique antes: toca mudo e pede um toque
+      // so quem ainda nao tocou na pagina cai aqui: o video vai mudo e aparece o "Toque para ouvir"
+      const me = shownId;
       el.play().catch(() => {
+        if (shownId !== me) return; // ja trocou ou parou
         if (s.kind === "video") { el.muted = true; el.play().catch(() => {}); }
         $("saTap").hidden = false;
       });
@@ -120,29 +156,12 @@
     show.hidden = false;
   });
   $("saTap").addEventListener("click", () => {
-    const el = show.querySelector("video, audio");
-    if (el) { el.muted = false; el.play().catch(() => {}); }
+    if (busy) { busy.muted = false; busy.play().catch(() => {}); }
     $("saTap").hidden = true;
   });
   $("saShowClose").addEventListener("click", close);
 
-  // som de aviso: dois toques, feito no proprio navegador (sem baixar nada)
-  socket.on("adm:beep", () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      ctx.resume().catch(() => {});
-      [[880, 0], [1320, 0.18]].forEach(([f, t]) => {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = "sine"; o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
-        g.gain.exponentialRampToValueAtTime(0.4, ctx.currentTime + t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.45);
-        o.connect(g).connect(ctx.destination);
-        o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.5);
-      });
-      setTimeout(() => ctx.close().catch(() => {}), 1200);
-    } catch {}
-  });
+  socket.on("adm:beep", () => { beep.currentTime = 0; beep.muted = false; beep.play().catch(() => {}); });
 })();
 
 // Site atualizado: quando sai uma versao nova (o Render reinicia o servidor), cada navegador recarrega
