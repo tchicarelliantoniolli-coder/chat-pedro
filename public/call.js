@@ -963,6 +963,33 @@
   $("camBtn").addEventListener("click", toggleCam);
   $("screenBtn").addEventListener("click", toggleScreen);
   $("minBtn").addEventListener("click", () => { $("call").classList.toggle("min"); refreshButtons(); });
+
+  // Arrastar a borda de baixo muda a altura da call; fica guardado no navegador
+  const callEl = $("call");
+  // no minimo cabe uma fileira de fotos e a barra de botoes
+  const minH = () => ((callEl.querySelector(".ctray") || {}).offsetHeight || 64) + 104;
+  const maxH = () => Math.max(minH(), (callEl.parentElement ? callEl.parentElement.clientHeight : innerHeight) - 160);
+  const setCallH = (h) => {
+    if (!h) { callEl.style.height = ""; callEl.classList.remove("sized"); return; }
+    callEl.style.height = Math.round(Math.min(maxH(), Math.max(minH(), h))) + "px";
+    callEl.classList.add("sized");
+  };
+  setCallH(Number(store.get("cp-callh")) || 0);
+  $("callResize").addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startY = e.clientY, startH = callEl.getBoundingClientRect().height;
+    callEl.classList.add("resizing"); document.body.classList.add("call-resizing");
+    const move = (ev) => setCallH(startH + ev.clientY - startY);
+    const up = () => {
+      removeEventListener("pointermove", move); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+      callEl.classList.remove("resizing"); document.body.classList.remove("call-resizing");
+      store.set("cp-callh", parseInt(callEl.style.height) || "");
+    };
+    addEventListener("pointermove", move); addEventListener("pointerup", up); addEventListener("pointercancel", up);
+  });
+  $("callResize").addEventListener("dblclick", () => { setCallH(0); store.set("cp-callh", ""); });
+  addEventListener("resize", () => { if (callEl.classList.contains("sized")) setCallH(parseInt(callEl.style.height)); });
   // "..." da call: configuracoes, esconder os videos e apertar para falar
   $("moreBtn").addEventListener("click", (e) => {
     e.stopPropagation();
