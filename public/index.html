@@ -3505,7 +3505,7 @@ window.setIcon = (btn, name, label, extra) => {
   function renderTyping() {
     const now = Date.now();
     for (const [n, t] of typers) if (now - t > 3500) typers.delete(n);
-    const names = [...typers.keys()];
+    const names = [...typers.keys()].map(dispName); // apelido do servidor, se tiver
     const box = $("typing");
     if (!names.length) { box.replaceChildren(); delete box.dataset.t; return; }
     const text = names.length === 1 ? names[0] + " está digitando" : names.length === 2 ? names[0] + " e " + names[1] + " estão digitando" : "várias pessoas estão digitando";
