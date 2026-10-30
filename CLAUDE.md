@@ -76,6 +76,10 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   link personalizado, banner, webhooks).
 - `public/home.js`: Início (amigos, DMs, DM em grupo), Descobrir e a lista de conversas da DM.
 - `public/emoji.js`: lista de emojis com nomes em português.
+- `public/siteadm.js`: botão "adm" no canto de cima à direita. Com a senha (`ADMIN_PASSWORD`, só no Render) toca um
+  som para todo mundo e mostra foto/vídeo/áudio na tela de todos com o site aberto (até parar). Usa o canal
+  Socket.io `/adm` (sem login, chega até na tela de entrada); API em `/api/adm/*`; o arquivo fica no disco temporário.
+  Teste `10-painel-adm` (a senha de teste está no `run.sh`).
 - Painel do usuário (embaixo à esquerda): se estica por baixo da barra de servidores como no Discord atual;
   microfone e fone com setinha (`.agrp`), vermelho quando mudo (`.off`); mostra "Em uma chamada" na call.
 

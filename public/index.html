@@ -1946,6 +1946,37 @@ body:not(.dm) .dmonly { display: none; }
 /* linha que separa a barra de servidores da barra de canais (como no Discord) */
 #side, .hside { border-top: 1px solid var(--line); border-left: 1px solid var(--line); border-top-left-radius: 8px; box-sizing: border-box; }
 .chat, .hmain { border-top-left-radius: 0; }
+
+/* Painel adm do site e a tela cheia que aparece para todo mundo */
+#saBtn { margin-left: auto; height: 22px; padding: 0 8px; border: 0; border-radius: 4px; background: var(--int-hover); color: var(--dim); font-family: inherit; font-size: 11px; font-weight: 600; line-height: 22px; text-transform: lowercase; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
+#saBtn:hover { background: var(--int-selected); color: var(--bright); }
+#saModal .box { gap: 12px; }
+#saModal .sa-err { color: var(--err); font-size: 13px; min-height: 1em; }
+#saModal .sa-err.ok { color: var(--dim); }
+#saPanel:not([hidden]) { display: flex; flex-direction: column; align-items: stretch; gap: 12px; }
+#saPanel #saBeep, .sa-file .cmd { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 8px; background: var(--int-selected); color: var(--bright); font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s ease; }
+#saPanel #saBeep:hover, .sa-file .cmd:hover { background: rgba(151, 151, 159, 0.3); }
+#saPanel .sa-file { position: relative; }
+#saPanel #saGo { height: 38px; padding: 0 16px; border-radius: 8px; border: 0; background: var(--accent); color: #fff; font-weight: 600; text-align: center; }
+#saPanel #saGo:disabled { opacity: 0.5; }
+#saPanel #saGo.stop { background: var(--err); }
+.sa-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.sa-file:focus-within .cmd { outline: 2px solid var(--accent); }
+.sa-prev:empty { display: none; }
+.sa-prev { display: flex; align-items: center; gap: 10px; color: var(--bright); font-size: 14px; word-break: break-all; }
+.sa-prev img, .sa-prev video { width: 96px; height: 54px; object-fit: cover; border-radius: 4px; background: #000; flex: 0 0 auto; }
+#saShow { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; place-items: center; animation: fadeIn 0.2s ease; }
+#saShow[hidden] { display: none; }
+#saShow.audio { inset: auto 16px 16px auto; width: auto; height: auto; padding: 10px 44px 10px 14px; border-radius: 8px; background: var(--panel); color: var(--bright); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24); }
+#saShow img, #saShow video { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: contain; }
+#saShow.audio audio { display: none; }
+#saShowClose { position: absolute; top: 12px; right: 12px; z-index: 3; background: rgba(0, 0, 0, 0.5); color: #fff; border-radius: 50%; }
+#saShow.audio #saShowClose { top: 50%; right: 6px; translate: 0 -50%; background: none; color: var(--dim); }
+#saShow .sa-stop { position: absolute; top: 12px; left: 50%; translate: -50% 0; z-index: 3; height: 32px; padding: 0 14px; border-radius: 8px; background: var(--err); color: #fff; font-size: 14px; font-weight: 600; line-height: 32px; }
+#saShow .sa-stop:hover { background: #a12828; }
+#saShow.audio { display: flex; align-items: center; gap: 10px; }
+#saShow.audio .sa-stop, #saShow.audio .sa-tap { position: static; translate: none; }
+#saShow .sa-tap { position: absolute; bottom: 32px; left: 50%; translate: -50% 0; padding: 10px 18px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; z-index: 3; }
 </style>
 </head>
 <body>
@@ -1959,6 +1990,7 @@ body:not(.dm) .dmonly { display: none; }
   </div>
   <div class="topsrv" aria-hidden="true"><span class="srvicon" id="topIcon"></span><b id="topName"></b></div>
   <button type="button" class="callpill" id="callBtn" hidden></button>
+  <button type="button" id="saBtn" title="Painel do administrador">adm</button>
 </header>
 
 <div class="app">
@@ -2169,6 +2201,27 @@ body:not(.dm) .dmonly { display: none; }
     <div class="row"><button type="button" class="cmd danger" id="modClear">Limpar este canal</button></div>
   </div>
 </div>
+
+<div class="modal" id="saModal" hidden>
+  <div class="box" role="dialog" aria-labelledby="saTitle">
+    <div class="row"><h3 id="saTitle">Painel adm</h3><button type="button" class="ib" id="saClose" title="Fechar" aria-label="Fechar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <form id="saLogin">
+      <label>Senha <input type="password" id="saPass" inputmode="numeric" autocomplete="current-password" maxlength="64"></label>
+      <div class="row"><span class="sa-err" id="saErr"></span><button type="submit" class="cmd big">Entrar</button></div>
+    </form>
+    <div id="saPanel" hidden>
+      <span class="lbl2">Tudo aqui aparece para todas as pessoas que estão com o Chat Pedro aberto agora.</span>
+      <button type="button" class="cmd withicon" id="saBeep"><svg class="ic" aria-hidden="true"><use href="#i-volume"/></svg> Tocar um som para todos</button>
+      <b class="lbl2">Foto, vídeo ou áudio</b>
+      <label class="sa-file"><input type="file" id="saFile" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,audio/*"><span class="cmd withicon"><svg class="ic" aria-hidden="true"><use href="#i-file"/></svg> Escolher arquivo</span></label>
+      <div class="sa-prev" id="saPrev"></div>
+      <span class="sa-err" id="saMsg"></span>
+      <button type="button" class="cmd big" id="saGo" disabled>Mostrar para todos</button>
+    </div>
+  </div>
+</div>
+
+<div id="saShow" hidden><button type="button" class="ib" id="saShowClose" title="Fechar só para mim" aria-label="Fechar só para mim"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button><div class="sa-tap" id="saTap" hidden>Toque para ouvir</div></div>
 
 <div class="modal" id="chanModal" hidden>
   <div class="box" role="dialog" aria-labelledby="chanTitle">
@@ -4822,5 +4875,6 @@ window.setIcon = (btn, name, label, extra) => {
 <script src="/guild.js"></script>
 <script src="/settings.js"></script>
 <script src="/home.js"></script>
+<script src="/siteadm.js"></script>
 </body>
 </html>

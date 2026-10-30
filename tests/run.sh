@@ -26,7 +26,7 @@ start() {
   FAKE_PID=$!
   sleep 0.5
   EMBED_ALLOW_LOCAL=1 SUPABASE_URL=http://localhost:3330 SUPABASE_PUBLISHABLE_KEY=sb_publishable_teste \
-    SUPABASE_SECRET_KEY=sb_secret_teste PORT=3331 node server.js > "$OUT/site.log" 2>&1 &
+    SUPABASE_SECRET_KEY=sb_secret_teste ADMIN_PASSWORD=senha-de-teste PORT=3331 node server.js > "$OUT/site.log" 2>&1 &
   SITE_PID=$!
   for _ in $(seq 1 30); do curl -s -o /dev/null http://localhost:3331/ && return 0; sleep 0.2; done
   echo "O site nao subiu. Veja $OUT/site.log"; return 1

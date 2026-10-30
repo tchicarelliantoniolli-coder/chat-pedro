@@ -1,0 +1,46 @@
+const { chromium } = require('playwright');
+const SP = process.argv[2] || require('path').join(__dirname, 'out'), URL = 'http://localhost:3331';
+const FX = require('path').join(__dirname, 'fixtures');
+// som de 3 s feito aqui (WAV), para nao guardar arquivo de audio no repositorio
+const wav = (() => { const n = 8000 * 3, b = Buffer.alloc(44 + n * 2); b.write('RIFF', 0); b.writeUInt32LE(36 + n * 2, 4); b.write('WAVEfmt ', 8); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(8000, 24); b.writeUInt32LE(16000, 28); b.writeUInt16LE(2, 32); b.writeUInt16LE(16, 34); b.write('data', 36); b.writeUInt32LE(n * 2, 40); for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(8000 * Math.sin(i / 5)), 44 + i * 2); return b; })();
+const ok = (c, m) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + m);
+(async () => {
+  const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const errs = [];
+  const mk = async () => { const c = await b.newContext({ viewport: { width: 1366, height: 700 } }); const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); return p; };
+  const signup = async (p, email, nick) => { await p.goto(URL); await p.waitForTimeout(500); await p.click('#tabSignup'); await p.fill('#authEmail', email); await p.fill('#authNick', nick); await p.fill('#authPass', 'senha123'); await p.click('#authGo'); await p.waitForTimeout(900); };
+  const A = await mk(); await signup(A, 'a@t.com', 'Admin');
+  await A.fill('#createName', 'G'); await A.click('#createForm button[type=submit]'); await A.waitForTimeout(1500);
+  const V = await mk(); await signup(V, 'v@t.com', 'Visitante');
+  await V.evaluate(() => { window.beeps = 0; window.io('/adm').on('adm:beep', () => window.beeps++); });
+  await A.screenshot({ path: SP + '/adm-top.png', clip: { x: 900, y: 0, width: 466, height: 60 } });
+  await A.click('#saBtn'); await A.fill('#saPass', '111'); await A.click('#saLogin button[type=submit]'); await A.waitForTimeout(300);
+  ok((await A.textContent('#saErr')).includes('errada'), 'senha errada recusada');
+  await A.fill('#saPass', 'senha-de-teste'); await A.click('#saLogin button[type=submit]'); await A.waitForTimeout(300);
+  ok(await A.isVisible('#saPanel'), 'senha certa abre o painel');
+  await A.click('#saBeep'); await A.waitForTimeout(300);
+  ok(await V.evaluate(() => window.beeps) === 1, 'som chegou para o outro');
+  await A.setInputFiles('#saFile', FX + '/blue.png'); await A.waitForTimeout(200);
+  await A.screenshot({ path: SP + '/adm-panel.png' });
+  await A.click('#saGo'); await A.waitForTimeout(1200);
+  ok(await V.isVisible('#saShow img'), 'foto em tela cheia para o outro');
+  await V.screenshot({ path: SP + '/adm-foto.png' });
+  await A.screenshot({ path: SP + '/adm-foto-admin.png' });
+  const late = await mk(); await late.goto(URL); await late.waitForTimeout(1500);
+  ok(await late.isVisible('#saShow img'), 'quem abre depois tambem ve');
+  await A.click('#saShow .sa-stop'); await A.waitForTimeout(500);
+  ok(await V.isHidden('#saShow'), 'parar some para todos');
+  await A.setInputFiles('#saFile', { name: 'som.wav', mimeType: 'audio/wav', buffer: wav }); await A.click('#saGo'); await A.waitForTimeout(1500);
+  ok(await V.evaluate(() => { const a = document.querySelector('#saShow audio'); return a && !a.paused; }), 'audio tocando no outro');
+  await V.screenshot({ path: SP + '/adm-audio.png' });
+  await A.click('#saGo'); await A.waitForTimeout(500);
+  ok(await V.isHidden('#saShow'), 'audio parou');
+  const vid = require('path').join(SP, 'adm-video.mp4');
+  try { require('child_process').execSync('ffmpeg -loglevel error -y -f lavfi -i testsrc=size=320x180:rate=15 -f lavfi -i sine=frequency=440 -t 6 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest ' + vid); } catch { console.log('erros:', errs); await b.close(); return; } // sem ffmpeg: pula o video
+  await A.setInputFiles('#saFile', vid); await A.click('#saGo'); await A.waitForTimeout(2500);
+  ok(await V.evaluate(() => { const a = document.querySelector('#saShow video'); return a && !a.paused && a.currentTime > 0.5; }), 'video tocando em tela cheia no outro');
+  await A.screenshot({ path: SP + '/adm-video.png' });
+  await A.click('#saShow .sa-stop'); await A.waitForTimeout(500);
+  ok(await V.isHidden('#saShow'), 'video parou');
+  console.log('erros:', errs); await b.close();
+})().catch(e => { console.error(e); process.exit(1); });

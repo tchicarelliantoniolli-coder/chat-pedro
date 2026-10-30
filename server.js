@@ -1710,4 +1710,64 @@ io.on("connection", (socket) => {
 
 if (!ready()) console.log("ATENÇÃO: falta SUPABASE_SECRET_KEY no Render. Sem ela ninguém consegue entrar no site.");
 cleanupExpired();
+// ---------- Painel "adm" do site: som, foto, video e audio na tela de todo mundo ----------
+// A senha fica so no Render (ADMIN_PASSWORD); sem ela o painel fica desligado.
+const fs = require("fs");
+const os = require("os");
+const ADM_MAX = 40 * 1024 * 1024; // arquivo de ate 40 MB (o plano gratis tem pouca memoria e disco)
+const ADM_FILE = path.join(os.tmpdir(), "chatpedro-adm-media");
+const admTokens = new Map(); // token -> quando vence
+const admTries = new Map();  // ip -> { n, at } (tentativas de senha erradas)
+let admMedia = null;         // { id, kind, mime, size, name }
+let admShow = null;          // o que esta na tela de todo mundo agora: { id, kind, at }
+const admOk = (req) => { const t = req.get("x-adm") || ""; const v = admTokens.get(t); if (v && v > Date.now()) return true; admTokens.delete(t); return false; };
+const admGuard = (req, res, next) => (admOk(req) ? next() : res.status(401).json({ error: "Entre de novo com a senha." }));
+// canal proprio (sem login): chega ate em quem esta na tela de entrada ou fora de servidor
+const admNs = io.of("/adm");
+admNs.on("connection", (s) => { if (admShow) s.emit("adm:show", admShowMsg()); });
+const admShowMsg = () => (admShow && admMedia ? { ...admShow, url: "/api/adm/media/" + admMedia.id, mime: admMedia.mime, now: Date.now() } : null);
+
+api.post("/adm/login", (req, res) => {
+  const pass = process.env.ADMIN_PASSWORD || "";
+  if (!pass) return res.status(503).json({ error: "O painel está desligado: falta a senha ADMIN_PASSWORD no Render." });
+  const ip = req.ip, t = admTries.get(ip) || { n: 0, at: Date.now() };
+  if (Date.now() - t.at > 15 * 60 * 1000) { t.n = 0; t.at = Date.now(); }
+  if (t.n >= 5) return res.status(429).json({ error: "Muitas tentativas. Espere 15 minutos." });
+  const a = crypto.createHash("sha256").update(String((req.body || {}).senha || "")).digest();
+  const b = crypto.createHash("sha256").update(pass).digest();
+  if (!crypto.timingSafeEqual(a, b)) { t.n++; admTries.set(ip, t); return res.status(403).json({ error: "Senha errada." }); }
+  admTries.delete(ip);
+  const token = crypto.randomBytes(24).toString("hex");
+  admTokens.set(token, Date.now() + 12 * 3600 * 1000);
+  res.json({ token, media: admMedia, showing: !!admShow });
+});
+
+api.post("/adm/media", admGuard, express.raw({ type: () => true, limit: ADM_MAX }), (req, res) => {
+  const mime = String(req.get("content-type") || "").split(";")[0].toLowerCase();
+  const kind = /^image\/(jpeg|png|gif|webp)$/.test(mime) ? "img" : /^video\/(mp4|webm|ogg|quicktime)$/.test(mime) ? "video" : /^audio\/(mpeg|mp3|mp4|x-m4a|aac|ogg|wav|x-wav|webm)$/.test(mime) ? "audio" : null;
+  if (!kind) return res.status(400).json({ error: "Use uma foto (JPG, PNG, GIF, WEBP), um vídeo (MP4, WEBM) ou um áudio (MP3, M4A, OGG, WAV)." });
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return res.status(400).json({ error: "Arquivo vazio." });
+  if (admShow) { admShow = null; admNs.emit("adm:show", null); }
+  fs.writeFile(ADM_FILE, req.body, (err) => {
+    if (err) return res.status(500).json({ error: "Não deu para guardar o arquivo." });
+    admMedia = { id: crypto.randomBytes(8).toString("hex"), kind, mime, size: req.body.length, name: (() => { try { return decodeURIComponent(req.get("x-name") || ""); } catch { return ""; } })().slice(0, 80) };
+    res.json({ media: admMedia });
+  });
+});
+
+api.get("/adm/media/:id", (req, res) => {
+  if (!admMedia || req.params.id !== admMedia.id) return res.sendStatus(404);
+  res.type(admMedia.mime);
+  res.sendFile(ADM_FILE, { maxAge: "1h" }); // sendFile entende "Range": o video pode ser pulado e toca no iPhone
+});
+
+api.post("/adm/start", admGuard, (req, res) => {
+  if (!admMedia) return res.status(400).json({ error: "Escolha um arquivo primeiro." });
+  admShow = { id: admMedia.id, kind: admMedia.kind, at: Date.now() };
+  admNs.emit("adm:show", admShowMsg());
+  res.json({ ok: true });
+});
+api.post("/adm/stop", admGuard, (req, res) => { admShow = null; admNs.emit("adm:show", null); res.json({ ok: true }); });
+api.post("/adm/beep", admGuard, (req, res) => { admNs.emit("adm:beep"); res.json({ ok: true }); });
+
 server.listen(PORT, () => console.log(`Chat Pedro rodando na porta ${PORT}`));
