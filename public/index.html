@@ -583,6 +583,21 @@ button.cmd.danger:hover, button.cmd.danger:focus-visible { background: var(--err
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
 body.ready #gate { display: none; }
+/* carregando (igual ao Discord): logo animado e uma dica; some com um fade quando o site fica pronto */
+#gate .gbox { visibility: hidden; }
+body.ready #gate .gbox { visibility: visible; }
+#boot {
+  position: fixed; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 16px; text-align: center; transition: opacity 0.3s ease, visibility 0.3s;
+}
+body.ready #boot { opacity: 0; visibility: hidden; pointer-events: none; }
+#boot .blogo { width: 64px; height: 64px; border-radius: 22px; background: var(--accent); color: #fff; display: grid; place-items: center; margin-bottom: 16px; animation: bootBob 1.6s ease-in-out infinite; }
+#boot .blogo .ic { width: 36px; height: 36px; animation: bootTilt 1.6s ease-in-out infinite; }
+#boot b { color: var(--bright); font-size: 12px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+#boot p { color: var(--fg); font-size: 16px; max-width: 360px; margin: 0; animation: fadeIn 0.6s 0.2s both; }
+@keyframes bootBob { 0%, 100% { transform: translateY(0) scale(1); border-radius: 22px; } 50% { transform: translateY(-8px) scale(1.06); border-radius: 18px; } }
+@keyframes bootTilt { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+@media (prefers-reduced-motion: reduce) { #boot .blogo, #boot .blogo .ic { animation: none; } }
 body.ready.gate #gate { display: flex; }
 .gbox { width: min(420px, 100%); border: 2px solid var(--fg); background: var(--panel); padding: 22px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; }
 .gtitle { font-size: 14px; text-align: center; }
@@ -1985,6 +2000,26 @@ body.streamer #profEmail:hover, body.streamer #invLink:focus { filter: none; }
   </div>
 </div>
 
+<div id="boot" role="status" aria-label="Carregando">
+  <div class="blogo" aria-hidden="true"><svg class="ic"><use href="#i-message"/></svg></div>
+  <b>Você sabia</b>
+  <p id="bootTip"></p>
+</div>
+<script>
+  (function () {
+    var tips = [
+      "Clique com o botão direito numa mensagem para ver mais opções.",
+      "Escreva @ e o nome de alguém para chamar a pessoa.",
+      "Passe o mouse numa mensagem e escolha um emoji para reagir.",
+      "Entre num canal de voz para conversar com a galera na call.",
+      "Você pode ter um apelido diferente em cada servidor.",
+      "Aperte Ctrl + K para pular rápido para outro canal ou servidor.",
+      "Arraste uma foto para o chat para enviar.",
+      "Use **asteriscos** para deixar o texto em negrito."
+    ];
+    document.getElementById("bootTip").textContent = tips[Math.floor(Math.random() * tips.length)];
+  })();
+</script>
 <div id="gate">
   <div class="gbox">
     <div class="logo" aria-hidden="true"><svg class="ic"><use href="#i-message"/></svg></div>
