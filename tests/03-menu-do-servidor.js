@@ -1,0 +1,33 @@
+const { chromium } = require('playwright');
+const SP = process.argv[2] || require('path').join(__dirname, 'out'), URL = 'http://localhost:3331';
+const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
+(async () => {
+  const b = await chromium.launch(); const errs = [];
+  const mk = async (w, h) => { const c = await b.newContext({ viewport: { width: w, height: h } }); const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); return p; };
+  const signup = async (p, email, nick) => { await p.goto(URL); await p.waitForTimeout(500); await p.click('#tabSignup'); await p.fill('#authEmail', email); await p.fill('#authNick', nick); await p.fill('#authPass', 'senha123'); await p.click('#authGo'); await p.waitForTimeout(900); };
+  const P = await mk(1366, 700); await signup(P, 'a@t.com', 'Pedro');
+  await P.fill('#createName', 'Galera do Pedro'); await P.click('#createForm button[type=submit]'); await P.waitForTimeout(1200);
+  await P.click('#srvBtn'); await P.waitForTimeout(300);
+  await P.screenshot({ path: SP + '/s-menu1.png' });
+  // gera uma foto 200x120 colorida
+  const png = await P.evaluate(() => { const c = document.createElement('canvas'); c.width = 200; c.height = 120; const g = c.getContext('2d'); g.fillStyle = '#ff5fa2'; g.fillRect(0, 0, 200, 120); g.fillStyle = '#ffd84d'; g.fillRect(60, 20, 80, 80); return c.toDataURL('image/png').split(',')[1]; });
+  await P.setInputFiles('#srvIconFile', { name: 'x.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') }); await P.waitForTimeout(800);
+  ok(await P.locator('#srvIcon img').count() === 1 && await P.locator('#railList .srv img').count() === 1 && await P.locator('#headIcon img').count() === 1, 'foto aparece no menu, na barra de servidores e no topo da lateral');
+  await P.click('#invMake'); await P.waitForTimeout(400); const link = await P.inputValue('#invLink');
+  await P.fill('#srvNameInput', 'Galera Top'); await P.click('#srvRename button'); await P.waitForTimeout(500);
+  ok((await P.textContent('#srvTitle')) === 'Galera Top', 'renomeia e continua no menu');
+  await P.screenshot({ path: SP + '/s-menu2.png' });
+  await P.click('#srvDelete'); await P.waitForTimeout(150); await P.screenshot({ path: SP + '/s-menu3.png' });
+  ok((await P.textContent('#srvDelete')).includes('Certeza'), 'apagar pede confirmacao e mantem o icone: ' + await P.locator('#srvDelete svg').count());
+  await P.click('#srvClose');
+  const L = await mk(1366, 700); await signup(L, 'l@t.com', 'Lucas'); await L.goto(link); await L.waitForTimeout(900);
+  await L.screenshot({ path: SP + '/s-invite.png' });
+  ok(await L.locator('#invIcon img').count() === 1, 'convite mostra a foto do servidor');
+  await L.click('#invAccept'); await L.waitForTimeout(1500);
+  await L.click('#srvBtn'); await L.waitForTimeout(300); await L.screenshot({ path: SP + '/s-member.png' });
+  ok(await L.isHidden('#srvRenameBox') && await L.isHidden('#srvMod'), 'membro nao ve personalizar nem moderar');
+  await P.click('#srvBtn'); await P.click('#srvIconDel'); await P.waitForTimeout(600);
+  ok(await L.locator('#railList .srv img').count() === 0, 'remover foto vale para os outros na hora');
+  await P.screenshot({ path: SP + '/s-desk.png' });
+  console.log('erros:', errs); await b.close();
+})();
