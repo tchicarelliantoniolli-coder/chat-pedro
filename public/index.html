@@ -2027,6 +2027,149 @@ body:not(.dm) .dmonly { display: none; }
 #saShow.audio { display: flex; align-items: center; gap: 10px; }
 #saShow.audio .sa-stop, #saShow.audio .sa-tap { position: static; translate: none; }
 #saShow .sa-tap { position: absolute; bottom: 32px; left: 50%; translate: -50% 0; padding: 10px 18px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; z-index: 3; }
+
+/* ===================== Visual novo dos jogos (poker e truco) =====================
+   Mesas com borda de madeira e feltro com luz no meio, cartas com cantos arredondados,
+   lugares em "pilula" com a foto, botoes coloridos como os do site. Nada tampa as cartas. */
+.act-head h2 { font-size: 15px; font-weight: 800; letter-spacing: 0.04em; }
+/* mesas */
+.felt::before, .tr-felt::before {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(ellipse at center, #1f8a47 0%, #15693a 55%, #0c4626 100%);
+  border-color: #5a3519;
+  box-shadow: 0 0 0 1px #2a170a, 0 0 0 4px #7a4a26, 0 0 0 5px #2a170a, 0 18px 40px rgba(0, 0, 0, 0.55), inset 0 0 0 2px rgba(255, 255, 255, 0.06), inset 0 0 50px rgba(0, 0, 0, 0.55);
+}
+.felt::after, .tr-felt::after {
+  content: ""; position: absolute; pointer-events: none; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.10);
+}
+.felt::after { inset: 15% 17%; }
+.tr-felt::after { inset: 16%; border-style: solid; }
+/* cartas */
+.card, .tcard {
+  background: linear-gradient(180deg, #ffffff 0%, #f1efe8 100%); border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 7px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 3px 8px rgba(0, 0, 0, 0.45); color: #1e1f22; font-weight: 800;
+}
+.card.red, .tcard.red { color: #d42a3a; }
+.card .r, .tcard .r { letter-spacing: -0.03em; }
+.card.back, .tcard.back {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.18) 0 18%, transparent 19%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.10) 0 3px, transparent 3px 7px), linear-gradient(160deg, #6c76f5, #3c45b8);
+  border: 2px solid #fff;
+}
+.tcard.back { background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.18) 0 18%, transparent 19%), repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.10) 0 3px, transparent 3px 7px), linear-gradient(160deg, #c0394b, #7d1726); }
+.card.slot { background: rgba(0, 0, 0, 0.12); border: 1.5px dashed rgba(255, 255, 255, 0.18); box-shadow: none; }
+.card.win { outline: 0; box-shadow: 0 0 0 3px #f0b232, 0 0 16px rgba(240, 178, 50, 0.7); transform: translateY(-3px); }
+.card.dim { opacity: 0.4; filter: grayscale(0.6); }
+.tcard.mani { box-shadow: 0 0 0 3px #f0b232, 0 3px 8px rgba(0, 0, 0, 0.45); }
+.tcard.win { box-shadow: 0 0 0 3px #23a55a, 0 0 18px rgba(35, 165, 90, 0.8); }
+/* centro do poker: pote e resultado */
+.pot { background: rgba(0, 0, 0, 0.55); border-radius: 999px; padding: 3px 12px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+.pot::before { content: ""; width: 0.75em; height: 0.75em; border-radius: 50%; background: radial-gradient(circle, #f6d365 0 35%, #c99a2e 36% 60%, #f6d365 61%); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4); }
+.banner { background: rgba(17, 18, 20, 0.92); border: 0; border-radius: 10px; padding: 6px 12px; font-weight: 700; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+/* lugares (os dois jogos) */
+.seat, .tr-seat { width: clamp(92px, 17cqw, 168px); }
+.seat .box, .tr-seat .box {
+  background: rgba(17, 18, 20, 0.92); border: 2px solid rgba(255, 255, 255, 0.08); border-radius: 999px;
+  padding: 3px 10px 3px 3px; gap: 7px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45); transition: box-shadow 0.2s, border-color 0.2s;
+}
+.seat .box .av, .tr-seat .box .av { width: clamp(22px, 3.4cqw, 34px); height: clamp(22px, 3.4cqw, 34px); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12); }
+.seat .nm, .tr-seat .nm { font-weight: 700; font-size: 0.82em; line-height: 1.15; }
+.seat .ch { color: #f0b232; font-weight: 800; font-size: 0.78em; display: flex; align-items: center; gap: 4px; }
+.seat .ch::before { content: ""; width: 0.7em; height: 0.7em; border-radius: 50%; background: radial-gradient(circle, #f6d365 0 35%, #c99a2e 36% 60%, #f6d365 61%); flex: none; }
+.seat .ch.allin { color: #ff6b6b; }
+.seat .ch.allin::before { display: none; }
+.seat.turn .box, .tr-seat.turn .box { border-color: #f0b232; box-shadow: 0 0 0 3px rgba(240, 178, 50, 0.35), 0 0 18px rgba(240, 178, 50, 0.45); animation: seatPulse 1.4s ease-in-out infinite; }
+@keyframes seatPulse { 50% { box-shadow: 0 0 0 5px rgba(240, 178, 50, 0.18), 0 0 26px rgba(240, 178, 50, 0.6); } }
+@media (prefers-reduced-motion: reduce) { .seat.turn .box, .tr-seat.turn .box { animation: none; } }
+.seat.me .box { border-color: rgba(88, 101, 242, 0.7); }
+.seat.me.turn .box { border-color: #f0b232; }
+.seat.folded { opacity: 0.5; filter: grayscale(0.7); }
+/* as cartas do jogador ficam inteiras em cima da caixa (antes a caixa cobria a metade de baixo) */
+.seat .cards { margin-bottom: 3px; gap: 3px; }
+.seat.me .cards .card { --card-w: clamp(30px, 5.4cqw, 54px); }
+.seat .timer, .tr-seat .ttimer { width: 80%; height: 4px; border-radius: 4px; overflow: hidden; background: rgba(0, 0, 0, 0.5); margin-top: 3px; }
+.seat .timer i, .tr-seat .ttimer i { background: #f0b232; border-radius: 4px; }
+.seat .act { background: #f2f3f5; color: #1e1f22; border-radius: 999px; padding: 1px 8px; font-weight: 800; font-size: 0.68em; margin-top: 3px; letter-spacing: 0.03em; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); }
+.seat .act.lose { background: #da373c; color: #fff; }
+/* lugar vazio: botao redondo "Sentar" ou um pontinho discreto */
+.seat.empty button { all: unset; cursor: pointer; padding: 5px 14px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); color: #dbdee1; font-weight: 700; font-size: 0.75em; border: 1.5px dashed rgba(255, 255, 255, 0.35); transition: background 0.15s, border-color 0.15s; }
+.seat.empty button:hover, .seat.empty button:focus-visible { background: var(--accent); color: #fff; border-color: transparent; }
+.seat.empty .dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.12); }
+/* fichas apostadas e botao do dealer */
+.chipbet { background: rgba(0, 0, 0, 0.6); color: #f6d365; border-radius: 999px; padding: 2px 9px 2px 4px; font-weight: 800; z-index: 1; }
+.chipbet::before { width: 0.95em; height: 0.95em; border: 0; background: radial-gradient(circle, #f6d365 0 30%, #c99a2e 31% 55%, #f6d365 56% 70%, #a87b1c 71%); }
+.dealer { font-family: var(--mono); font-weight: 900; background: linear-gradient(180deg, #fff, #dcdcdc); border: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); z-index: 1; }
+/* botoes de jogada: coloridos como os do site */
+.actions .big, .tr-actions .big {
+  all: unset; cursor: pointer; padding: 8px 16px; border-radius: 6px; font-weight: 700; font-size: 14px; color: #fff;
+  background: #4e5058; white-space: nowrap; transition: background 0.15s, transform 0.1s; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+.actions .big:hover, .actions .big:focus-visible, .tr-actions .big:hover, .tr-actions .big:focus-visible { background: #6d6f78; color: #fff; }
+.actions .big:active, .tr-actions .big:active { transform: translateY(1px); }
+.actions .big:not(.fold):last-of-type, .tr-actions .big:first-of-type:not(.truco):not(.no) { background: var(--accent); }
+.actions .big:not(.fold):last-of-type:hover, .tr-actions .big:first-of-type:not(.truco):not(.no):hover { background: var(--accent-hover); }
+.actions .big.fold, .tr-actions .big.no { background: #da373c; color: #fff; border: 0; }
+.actions .big.fold:hover, .tr-actions .big.no:hover, .actions .big.fold:focus-visible, .tr-actions .big.no:focus-visible { background: #a12828; color: #fff; }
+.tr-actions .big.truco { background: linear-gradient(180deg, #e8473f, #b3261e); border: 0; color: #fff; font-size: 16px; font-weight: 900; letter-spacing: 0.04em; padding: 9px 20px; box-shadow: 0 3px 0 #6e130e, 0 0 16px rgba(232, 71, 63, 0.45); }
+.tr-actions .big.truco:hover, .tr-actions .big.truco:focus-visible { background: linear-gradient(180deg, #f2554d, #c22d24); color: #fff; }
+.actions .big:disabled, .tr-actions .big:disabled { opacity: 0.45; cursor: default; background: #4e5058; transform: none; }
+.actions { gap: 8px 10px; }
+.sizing .cmd { color: #dbdee1; background: rgba(78, 80, 88, 0.45); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+.sizing .cmd:hover { background: #4e5058; }
+.sizing input[type=range] { accent-color: var(--accent); }
+.sizing input[type=number] { background: #1e1f22; color: var(--bright); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px; padding: 4px 6px; font-weight: 700; }
+/* truco: placar, meio da mesa e mao */
+.tr-score { gap: 8px 12px; padding: 8px 16px 2px; }
+.tr-score .pts { font-family: var(--mono); font-weight: 900; padding: 2px 10px; border-radius: 6px; }
+.tr-score .us { background: rgba(35, 165, 90, 0.18); color: #57d38c; }
+.tr-score .them { background: rgba(240, 178, 50, 0.16); color: #f0b232; }
+.tr-score .pts:not(.us):not(.them) { padding: 0; color: var(--dim); }
+.tr-score .val { background: #f0b232; color: #1e1f22; border-radius: 6px; font-weight: 900; padding: 2px 10px; }
+.tr-score .rounds i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.25); }
+.tr-score .rounds i.us { background: #23a55a; border-color: #23a55a; }
+.tr-score .rounds i.them { background: #f0b232; border-color: #f0b232; }
+.tr-score .rounds i.tie { background: linear-gradient(90deg, #23a55a 50%, #f0b232 50%); border-color: transparent; }
+.tr-center { flex-direction: column; gap: 6px; }
+.tr-center .lbl { background: rgba(0, 0, 0, 0.5); border-radius: 8px; padding: 3px 10px; font-weight: 700; font-size: clamp(11px, 2.6cqw, 15px); line-height: 1.2; white-space: pre-line; }
+.tr-center .lbl.vira { display: flex; flex-direction: column; align-items: center; letter-spacing: 0.08em; font-size: clamp(10px, 2.2cqw, 13px); color: var(--dim); }
+.tr-center .lbl.vira small { color: #f0b232; letter-spacing: 0; font-size: 1.15em; }
+.tr-seat.them .box { border-color: rgba(240, 178, 50, 0.55); }
+.tr-seat:not(.them):not(.empty) .box { border-color: rgba(35, 165, 90, 0.6); }
+.tr-seat.turn .box { border-color: #f0b232; }
+.tr-seat .box.off { opacity: 0.55; }
+.seat .dchip, .tr-seat .dchip { flex: none; width: 1.3em; height: 1.3em; border-radius: 50%; background: linear-gradient(180deg, #fff, #dcdcdc); color: #1e1f22; font-size: 0.62em; font-weight: 900; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+.tr-seat .box button.cmd { border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; padding: 3px 8px; }
+.tr-seat .bubble { border: 0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); font-weight: 700; padding: 3px 10px; }
+.tr-hand { gap: 12px; }
+.tr-hand button.tcard { transition: transform 0.15s var(--ease), box-shadow 0.15s; }
+.tr-hand button.tcard:hover:not(:disabled), .tr-hand button.tcard:focus-visible { transform: translateY(-10px) rotate(-1deg); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 0 3px var(--accent); }
+.tr-hand button.tcard:disabled { filter: brightness(0.82) saturate(0.85); }
+.tr-timebar, .tr-timebar i { border-radius: 6px; }
+.tr-timebar i, .tr-seat .ttimer i { background: #f0b232; }
+.tr-fun .cmd { border-radius: 999px; background: rgba(78, 80, 88, 0.35); padding: 3px 12px; color: #dbdee1; }
+.tr-fun .cmd:hover, .tr-fun .cmd:focus-visible { background: #4e5058; color: #fff; }
+.tr-shout { font-family: var(--mono); text-shadow: 0 4px 0 #000, 0 0 20px rgba(0, 0, 0, 0.7); animation-timing-function: ease-out; }
+.tablebar .cmd { border-radius: 6px; padding: 3px 8px; }
+.tablebar .cmd:hover { background: var(--hover); color: var(--bright); }
+.tablebar .cmd.on { background: var(--accent); color: #fff; }
+.dealerlog { border: 0; border-radius: 8px; background: rgba(0, 0, 0, 0.3); }
+.act-head h2 { white-space: nowrap; }
+.seat.me { width: clamp(120px, 20cqw, 184px); z-index: 2; }
+.tr-felt::before { inset: 13%; }
+.tr-felt::after { inset: 18%; }
+.tr-seat { width: clamp(76px, 24cqw, 140px); }
+/* mesa de poker estreita (celular ou painel pequeno): as cartas viradas dos outros ficam pequenininhas
+   no canto da caixa, assim os lugares de baixo nao se amontoam em cima uns dos outros */
+@container (max-width: 520px) {
+  .seat:not(.me) .cards { position: absolute; right: -6px; top: -16px; margin: 0; gap: 1px; z-index: 3; }
+  .seat:not(.me) .cards .card { --card-w: 15px; border-width: 1px; border-radius: 3px; font-size: 9px; }
+  .seat:not(.me) .cards .card:not(.back) { --card-w: 24px; font-size: 12px; }
+  .seat { width: clamp(84px, 24cqw, 120px); }
+  .seat.me { width: clamp(110px, 32cqw, 150px); }
+}
+/* poker: sem o dashed velho nas cartas do meio vazias */
+.board { gap: 6px; }
 </style>
 </head>
 <body>

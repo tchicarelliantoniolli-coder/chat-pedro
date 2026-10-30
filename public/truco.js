@@ -116,16 +116,17 @@
       felt.append(c);
       return;
     }
-    const SEAT = [39, 39]; // mesa redonda: todo mundo na mesma distancia do centro
-    const PLAY = [23, 23];
+    const SEAT = [42, 42]; // mesa redonda: todo mundo na mesma distancia do centro (na beirada, longe das cartas jogadas)
+    const PLAY = st.size === 6 ? [27, 27] : [26, 26]; // longe o bastante da vira para nao encostar
     // centro: vira e manilha
     const center = el("div", "tr-center");
     if (st.vira && !["lobby"].includes(st.stage)) {
       const v = el("div", "");
       v.append(hopCard(card(st.vira), 0));
       center.append(v);
-      center.append(el("div", "lbl", st.manilha ? "VIRA\nmanilha: " + (RANK[st.manilha] || st.manilha) : "VIRA\n(no escuro)"));
-      center.lastChild.style.whiteSpace = "pre";
+      const lb = el("div", "lbl vira", "VIRA");
+      lb.append(el("small", "", st.manilha ? "manilha " + (RANK[st.manilha] || st.manilha) : "no escuro"));
+      center.append(lb);
     } else if (st.stage === "lobby") {
       const n = st.seats.filter((s) => s.nick).length;
       center.append(el("div", "lbl", n + " de " + st.size + " sentados\n" + (n < st.size ? "esperando a galera..." : "pronto para começar!")));
@@ -139,14 +140,17 @@
 
     st.seats.forEach((s, i) => {
       const pos = spot(i, SEAT);
-      const seat = el("div", "tr-seat" + (s.team === usTeam() ? "" : " them") + (s.nick ? "" : " empty") + (st.toPlay === i && st.stage === "playing" ? " turn" : ""));
+      const seat = el("div", "tr-seat" + (s.team === usTeam() ? "" : " them") + (s.nick ? "" : " empty") + (st.toPlay === i && st.stage === "playing" ? " turn" : "") + (i === st.me ? " me" : ""));
       seat.style.left = pos.x + "%"; seat.style.top = pos.y + "%";
       // cartas do parceiro na mao de onze
       if (s.hand) { const ph = el("div", "partner"); s.hand.forEach((c) => ph.append(card(c))); seat.append(ph); }
       else if (s.cards && i !== st.me) { const bk = el("div", "backs"); for (let k = 0; k < s.cards; k++) bk.append(hopCard(card("??"), i + 1)); seat.append(bk); }
       const box = el("div", "box");
       if (s.nick) {
-        box.append(avatar(s.nick), el("span", "nm", s.nick + (i === st.me ? " (você)" : "")));
+        box.append(avatar(s.nick), el("span", "nm", s.nick));
+        if (i === st.me) box.title = "você";
+        // quem deu as cartas: fichinha "D" dentro da caixa (antes era um texto solto em cima da mesa)
+        if (i === st.dealer && st.stage !== "lobby") { const d = el("span", "dchip", "D"); d.title = "deu as cartas"; box.append(d); }
       } else if (st.me < 0 && app.nick && st.stage !== "gameOver") {
         const b = el("button", "cmd", st.stage === "lobby" ? "Sentar" : "Assumir");
         b.type = "button"; b.style.width = "100%";
@@ -155,10 +159,7 @@
       } else box.append(el("span", "nm", st.stage === "lobby" ? "vazio" : "vazio (joga sozinho)"));
       seat.append(box);
       if (whoActs().seats.includes(i)) { const tm = el("div", "ttimer"); tm.append(el("i")); seat.append(tm); }
-      const tags = [];
-      if (i === st.dealer && !["lobby"].includes(st.stage)) tags.push("deu as cartas");
-      if (s.nick && !s.online) tags.push("offline");
-      if (tags.length) seat.append(el("span", "tag", tags.join(" | ")));
+      if (s.nick && !s.online) box.classList.add("off");
       const bub = bubbles.get(i);
       if (bub && bub.until > Date.now()) seat.append(el("div", "bubble" + (bub.sig ? " sig" : ""), bub.text));
       felt.append(seat);

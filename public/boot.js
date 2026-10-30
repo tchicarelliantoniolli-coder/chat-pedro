@@ -126,7 +126,7 @@
 
   $("authForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = $("authEmail").value.trim(), password = $("authPass").value, nick = $("authNick").value.trim();
+    const email = $("authEmail").value.trim().toLowerCase(), password = $("authPass").value, nick = $("authNick").value.trim(); // o e-mail fica salvo em minusculas
     $("authGo").disabled = true; gmsg("");
     try {
       if (mode === "newpass") {
@@ -149,7 +149,7 @@
   });
 
   $("forgotBtn").addEventListener("click", async () => {
-    const email = $("authEmail").value.trim();
+    const email = $("authEmail").value.trim().toLowerCase();
     if (!email) return gmsg("Escreva seu e-mail no campo acima e clique de novo.");
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + "/" });
     gmsg(error ? authErr(error.message) : "Se esse e-mail tiver conta, chega um link para criar uma senha nova. Olhe também o spam.");

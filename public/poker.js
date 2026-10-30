@@ -70,22 +70,26 @@
           b.title = ask ? "O ADM precisa aceitar" : "Sentar neste lugar";
           b.addEventListener("click", () => socket.emit("poker:sit", i, done));
           seat.append(b);
-        } else seat.append(el("span", "", "vazio"));
+        } else { const d = el("span", "dot"); d.title = "lugar vazio"; seat.append(d); }
         felt.append(seat);
         continue;
       }
       if (s.folded) seat.classList.add("folded");
       if (s.sittingOut) seat.classList.add("out");
       if (st.toAct === i) seat.classList.add("turn");
+      if (i === st.mySeat) seat.classList.add("me");
       const cards = el("div", "cards");
       for (const c of s.cards) cards.append(card(c, s.best && winningCards.size ? (winningCards.has(c) ? "win" : "dim") : ""));
       seat.append(cards);
       const box = el("div", "box");
       const info = el("div", "info");
-      const nm = el("div", "nm", s.nick + (i === st.mySeat ? " (você)" : ""));
+      const nm = el("div", "nm", s.nick);
+      if (i === st.mySeat) nm.title = "você";
       if (s.admin) { const c = el("span", "crown", "\u2605 "); c.title = "ADM"; nm.prepend(c); }
-      info.append(nm, el("div", "ch", s.allIn && s.chips === 0 ? "ALL-IN" : s.chips + ""));
+      info.append(nm, el("div", "ch" + (s.allIn && s.chips === 0 ? " allin" : ""), s.allIn && s.chips === 0 ? "ALL-IN" : s.chips.toLocaleString("pt-BR")));
       box.append(avatar(s.nick), info);
+      // botao do dealer dentro da caixa do lugar: nunca cai em cima das cartas
+      if (st.button === i && st.stage !== "waiting") { const d = el("span", "dchip", "D"); d.title = "dealer (botão)"; box.append(d); }
       seat.append(box);
       if (st.toAct === i) { const tm = el("div", "timer"); tm.append(el("i")); seat.append(tm); }
       if (st.result && st.result.losers && st.result.losers.includes(s.nick)) seat.append(el("div", "act lose", "SE FODEU"));
@@ -97,12 +101,6 @@
         const chip = el("div", "chipbet", s.bet + "");
         chip.style.left = bp.x + "%"; chip.style.top = bp.y + "%";
         felt.append(chip);
-      }
-      if (st.button === i && st.stage !== "waiting") {
-        const d = el("div", "dealer", "D"); // botao do dealer, um pouco ao lado da aposta
-        const a = (90 + ((i - (st.mySeat >= 0 ? st.mySeat : 0) + 9) % 9) * 40 + 16) * Math.PI / 180;
-        d.style.left = (50 + (BRX + 4) * Math.cos(a)) + "%"; d.style.top = (50 + (BRY + 4) * Math.sin(a)) + "%";
-        felt.append(d);
       }
     }
     renderActions();
