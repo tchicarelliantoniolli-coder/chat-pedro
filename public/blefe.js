@@ -227,7 +227,7 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b0807);
     scene.fog = new THREE.Fog(0x0b0807, 5.5, 12);
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.03, 40);
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.12, 30);
     camera.rotation.order = "YXZ";
     scene.add(camera);
 
@@ -237,7 +237,7 @@
       wall: std({ map: brickTex() }),
       wood: std({ map: woodTex("#4a2c17", "#7a4a26", 3), color: 0xcfa27a }),
       darkWood: std({ color: 0x2a170c }),
-      felt: std({ color: 0x3e0d16, roughness: 1 }),
+      felt: std({ color: 0x3e0d16, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
       rim: std({ color: 0x3a2010, roughness: 0.5 }),
       metal: std({ color: 0x3b3d42, metalness: 0.85, roughness: 0.35 }),
       grip: std({ color: 0x6b3b1d, roughness: 0.6 }),
@@ -259,7 +259,7 @@
 
     // porao: chao de tabua, paredes de tijolo, barris e uma prateleira com garrafas
     const floor = mesh(new THREE.PlaneGeometry(14, 14), M.floor); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
-    const room = mesh(new THREE.BoxGeometry(12, 4.2, 12), M.wall); room.material = M.wall.clone(); room.material.side = THREE.BackSide; room.position.y = 2.1; scene.add(room);
+    const room = mesh(new THREE.BoxGeometry(12, 4.2, 12), M.wall); room.material = M.wall.clone(); room.material.side = THREE.BackSide; room.position.y = 2.05; scene.add(room); // fundo da caixa fica 5 cm abaixo do chao
     const barrelGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.05, lite ? 10 : 18);
     const hoopGeo = new THREE.TorusGeometry(0.43, 0.025, 6, lite ? 12 : 20);
     for (const [bx, bz] of [[-4.2, -3.6], [-3.4, -4.4], [4.5, 3.9], [4.3, -4.2]]) {
@@ -274,7 +274,7 @@
     // mesa redonda com feltro vinho
     const table = new THREE.Group(); scene.add(table);
     const top = mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.08, lite ? 28 : 48), M.rim, true); top.position.y = TABLE_Y - 0.04; table.add(top);
-    const felt = mesh(new THREE.CircleGeometry(1.13, lite ? 28 : 48), M.felt); felt.rotation.x = -Math.PI / 2; felt.position.y = TABLE_Y + 0.001; felt.receiveShadow = true; table.add(felt);
+    const felt = mesh(new THREE.CircleGeometry(1.13, lite ? 28 : 48), M.felt); felt.rotation.x = -Math.PI / 2; felt.position.y = TABLE_Y + 0.006; felt.receiveShadow = true; table.add(felt);
     const leg = mesh(new THREE.CylinderGeometry(0.12, 0.16, TABLE_Y - 0.08, 12), M.darkWood, true); leg.position.y = (TABLE_Y - 0.08) / 2; table.add(leg);
     const foot = mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.06, 20), M.darkWood, true); foot.position.y = 0.03; table.add(foot);
 
@@ -292,7 +292,7 @@
     const bulb = mesh(new THREE.SphereGeometry(0.07, 12, 8), M.bulb); bulb.position.y = lampY - 0.12; scene.add(bulb);
     const spot = new THREE.SpotLight(0xffc98a, 16, 0, 1.0, 0.6, 1.2);
     spot.position.set(0, lampY - 0.1, 0); spot.target.position.set(0, 0, 0);
-    spot.castShadow = !lite; spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.0005;
+    spot.castShadow = !lite; spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.0005; spot.shadow.normalBias = 0.02;
     scene.add(spot, spot.target);
     const fill = new THREE.PointLight(0xffa860, 4, 9, 1.4); fill.position.set(0, 2.3, 0); scene.add(fill);
     scene.add(new THREE.HemisphereLight(0x6a5646, 0x0b0705, 1.1));
@@ -513,7 +513,7 @@
   }
   function placeOnPile(c, k) {
     const s = c.userData.spot || (c.userData.spot = pileSpot());
-    c.position.set(s.x, TABLE_Y + 0.004 + k * 0.0015, s.z);
+    c.position.set(s.x, TABLE_Y + 0.012 + k * 0.004, s.z);
     c.rotation.set(-Math.PI / 2, 0, s.rz);
     c.userData.inner.rotation.set(0, Math.PI, 0); // de costas
   }
@@ -723,7 +723,7 @@
       if (p <= 0) continue;
       const s = f.card.userData.spot || (f.card.userData.spot = pileSpot());
       const e = easeOut(p);
-      f.card.position.set(lerp(f.from.x, s.x, e), lerp(f.from.y, TABLE_Y + 0.004 + R.pile.length * 0.0015, e) + Math.sin(p * Math.PI) * 0.25, lerp(f.from.z, s.z, e));
+      f.card.position.set(lerp(f.from.x, s.x, e), lerp(f.from.y, TABLE_Y + 0.012 + R.pile.length * 0.004, e) + Math.sin(p * Math.PI) * 0.25, lerp(f.from.z, s.z, e));
       f.card.rotation.set(-Math.PI / 2 * e, 0, s.rz * e + (1 - e) * 4);
       f.card.userData.inner.rotation.y = Math.PI;
       if (p >= 1) { R.flying.splice(k, 1); placeOnPile(f.card, R.pile.length); R.pile.push(f.card); }
