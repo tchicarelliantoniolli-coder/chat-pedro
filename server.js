@@ -72,6 +72,25 @@ if (process.env.TURN_URLS) {
     credential: process.env.TURN_CREDENTIAL || "",
   });
 }
+// TURN da Cloudflare (gratis ate 1 TB por mes): o servidor pede senhas temporarias e renova a cada 12 h
+let cfIce = null, cfIceAt = 0;
+async function iceServers() {
+  const id = process.env.CF_TURN_KEY_ID, token = process.env.CF_TURN_API_TOKEN;
+  if (!id || !token) return ICE_SERVERS;
+  if (!cfIce || Date.now() - cfIceAt > 12 * 3600 * 1000) {
+    try {
+      const r = await fetch("https://rtc.live.cloudflare.com/v1/turn/keys/" + encodeURIComponent(id) + "/credentials/generate-ice-servers", {
+        method: "POST", headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({ ttl: 86400 }), signal: AbortSignal.timeout(5000),
+      });
+      const j = await r.json();
+      const list = Array.isArray(j.iceServers) ? j.iceServers : j.iceServers ? [j.iceServers] : [];
+      if (!r.ok || !list.length) throw new Error("resposta " + r.status);
+      cfIce = list; cfIceAt = Date.now();
+    } catch (e) { console.error("TURN da Cloudflare:", e.message); if (!cfIce) return ICE_SERVERS; }
+  }
+  return [...ICE_SERVERS, ...cfIce];
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -968,7 +987,7 @@ io.on("connection", (socket) => {
   socket.emit("events", ctx.events);
   if (ctx.banner) socket.emit("banner", ctx.banner);
   socket.emit("call:members", [...ctx.callMembers.values()]);
-  socket.emit("ice", ICE_SERVERS);
+  iceServers().then((list) => socket.emit("ice", list));
   socket.emit("watch:state", watchMsg(ctx));
   sendUsers(ctx);
   ctx.poker.handle(socket);

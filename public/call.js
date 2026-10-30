@@ -182,7 +182,15 @@
       } catch (e) { console.warn(e); } finally { p.makingOffer = false; }
     };
     pc.onicecandidate = ({ candidate }) => { if (candidate) socket.emit("call:signal", { to: id, candidate }); };
-    pc.onconnectionstatechange = () => { if (pc.connectionState === "failed") pc.restartIce(); };
+    // caiu: tenta de novo (ate 3 vezes); se nao voltar, avisa (a internet de alguem bloqueia a ligacao direta)
+    p.fails = 0;
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === "connected") p.fails = 0;
+      if (pc.connectionState !== "failed") return;
+      if (++p.fails <= 3) { pc.restartIce(); return; }
+      const m = members.find((x) => x.id === id);
+      setNote("Não deu para conectar com " + (m ? m.nick : "uma pessoa") + ": a internet de um de vocês bloqueia a ligação direta, então a voz, a câmera e a tela dela não chegam. Saiam e entrem de novo na call.", true);
+    };
     pc.ontrack = ({ track, streams }) => {
       const stream = streams[0] || new MediaStream([track]);
       p.streams[stream.id] = stream;
@@ -627,6 +635,10 @@
     if (e.key === "Escape") for (const el of tiles.values()) if (el.classList.contains("theater")) { el.classList.remove("theater"); syncFullButtons(); }
   });
 
+  // alguns navegadores mudam o nome do video no caminho: se a tela nao for achada pelo nome,
+  // usa o video que chegou dessa pessoa e que nao e a camera
+  const otherVideo = (p, camId) => Object.values(p.streams).find((s) => s.id !== camId && s.getVideoTracks().some((t) => t.readyState === "live")) || null;
+
   function renderTiles() {
     if (!inCall) return;
     const want = [];
@@ -634,7 +646,7 @@
       const me = m.id === socket.id;
       const p = peers.get(m.id);
       const cam = me ? camStream : p && m.cam ? p.streams[m.cam] : null;
-      const scr = me ? screenStream : p && m.screen ? p.streams[m.screen] : null;
+      const scr = me ? screenStream : p && m.screen ? p.streams[m.screen] || otherVideo(p, m.cam) : null;
       const muted = !m.mic || m.deaf;
       want.push(videoTile(m.id + ":main", cam, {
         id: m.id, nick: m.nick, title: m.nick + (me ? " (você)" : ""), mirror: me, muted, deaf: m.deaf, volume: !me,
