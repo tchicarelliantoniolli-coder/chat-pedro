@@ -116,6 +116,8 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
   Playwright no scratchpad (cada execução precisa de e-mails novos ou de reiniciar o Supabase falso).
 - Cuidado: `pkill -f` com um padrão que aparece no próprio comando mata o terminal (mate pelo PID).
 - Antes de commitar: `node --check` nos arquivos JS mudados.
+- O servidor nunca pode cair por um pedido malfeito: todo `socket.on` passa pelo `guardSocket` (erro vira registro) e há
+  `process.on("uncaughtException")`. Silenciados ficam salvos (`mutes` no `chat_kv`). Teste `13-correcoes`.
 
 ## Commits
 Mensagens de commit em português. Não escreva nome/versão de modelo de IA em código, commits ou PR.

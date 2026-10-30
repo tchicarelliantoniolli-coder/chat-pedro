@@ -292,7 +292,7 @@ function createBlefe(io, helpers, timing) {
         // no meio da partida so da para assumir um lugar vivo que ficou vazio
         if (was >= 0) return reply(cb, "Você já está na mesa.");
         if (!s || s.key || !s.inGame || !s.alive) return reply(cb, "Não dá para sentar aí agora.");
-        s.key = u.key; s.nick = u.nick; s.look = cleanLook(msg.look);
+        s.key = u.key; s.nick = u.nick; s.look = cleanLook(msg && msg.look);
         say(u.nick + " assumiu um lugar vazio");
       } else {
         if (s && s.key) return reply(cb, "Lugar ocupado.");

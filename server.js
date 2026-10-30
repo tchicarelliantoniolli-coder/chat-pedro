@@ -224,6 +224,8 @@ async function buildCtx(serverId) {
       for (const n of ["memberRoles", "nicks", "welcome"]) if (meta[n] && typeof meta[n] === "object") ctx[n] = meta[n];
       if (typeof meta.banner === "string") ctx.banner = meta.banner;
       if (typeof meta.vanity === "string") ctx.vanity = meta.vanity;
+      // silenciados continuam silenciados depois que o Render dorme e acorda
+      if (meta.mutes && typeof meta.mutes === "object") for (const [id, until] of Object.entries(meta.mutes)) if (Number(until) > Date.now()) ctx.mutes.set(id, Number(until));
     } catch (e) {
       console.error("Não deu para carregar os canais do servidor " + serverId + ":", e.message);
     }
@@ -325,6 +327,7 @@ const textChannel = (ctx, id) => ctx.channels.find((c) => c.id === id && (c.type
 const voiceChannel = (ctx, id) => ctx.channels.find((c) => c.id === id && c.type === "voice");
 const saveMeta = (ctx, name) => ctx.storage && !ctx.dead && ctx.storage.saveMeta(name, ctx[name]);
 const sendChannels = (ctx) => toRoom(ctx, "channels", ctx.channels);
+const saveMutes = (ctx) => ctx.storage && !ctx.dead && ctx.storage.saveMeta("mutes", Object.fromEntries([...ctx.mutes].filter(([, until]) => until > Date.now())));
 // registro de moderacao (o que o dono e os ADMs fizeram)
 function audit(ctx, by, action, target) {
   ctx.audit.unshift({ ts: Date.now(), by, action, target: target || "" });
@@ -544,7 +547,19 @@ api.patch("/me", wrap(async (req, res) => {
         let changed = false;
         for (const who of Object.values(m.reactions || {})) { const i = who.indexOf(old.nick); if (i >= 0) { who[i] = patch.nick; changed = true; } }
         if (changed) toRoom(ctx, "message:update", { id: m.id, reactions: m.reactions });
+        // votos das enquetes tambem (senao daria para votar de novo com o nome novo)
+        if (m.type === "poll" && m.poll.options.some((o) => o.votes.includes(old.nick))) {
+          for (const o of m.poll.options) o.votes = o.votes.map((n) => (n === old.nick ? patch.nick : n));
+          toRoom(ctx, "message:update", { id: m.id, poll: m.poll });
+        }
       }
+      // eventos: quem vai e quem criou
+      let evChanged = false;
+      for (const ev of ctx.events) {
+        if (ev.by === old.nick) { ev.by = patch.nick; evChanged = true; }
+        if (ev.going.includes(old.nick)) { ev.going = ev.going.map((n) => (n === old.nick ? patch.nick : n)); evChanged = true; }
+      }
+      if (evChanged) { saveMeta(ctx, "events"); toRoom(ctx, "events", ctx.events); }
       persist(ctx);
       ctx.poker.rename(old.nick, patch.nick);
       ctx.truco.rename(old.nick, patch.nick);
@@ -977,7 +992,20 @@ function meOf(ctx, s) {
   return { uid: s.data.user.id, nick: s.data.nick, role: s.data.role, perms: [...permsOf(ctx, s.data.user.id, s.data.role)], server: { id: ctx.id, name: ctx.name, icon: ctx.icon, dm: ctx.dm } };
 }
 
+// Protecao: um pedido malfeito (de proposito ou nao) nunca derruba o site. Se uma funcao der erro,
+// so aquele pedido falha; o erro vai para o registro do Render.
+function guardSocket(socket) {
+  const on = socket.on.bind(socket);
+  socket.on = (ev, fn) => on(ev, (...args) => {
+    try {
+      const r = fn(...args);
+      if (r && typeof r.catch === "function") r.catch((e) => console.error("Erro em " + ev + ":", e.message));
+    } catch (e) { console.error("Erro em " + ev + ":", e.message); }
+  });
+}
+
 io.on("connection", (socket) => {
+  guardSocket(socket);
   const ctx = socket.data.ctx;
   const uid = socket.data.user.id;
   socket.join(ctx.room);
@@ -1027,6 +1055,7 @@ io.on("connection", (socket) => {
       if (flood.strikes.length >= 4) {
         ctx.mutes.set(uid, now + 2 * 60000);
         ctx.floodMuted.add(uid);
+        saveMutes(ctx);
         flood.strikes = [];
         sys(ctx, nickNow() + " foi silenciado por 2 min (flood)");
         return "Você foi silenciado por 2 min por flood.";
@@ -1352,6 +1381,7 @@ io.on("connection", (socket) => {
     ctx.floodMuted.delete(t.id);
     if (min) { ctx.mutes.set(t.id, Date.now() + min * 60000); sys(ctx, t.nick + " foi silenciado por " + min + " min"); audit(ctx, nickNow(), "silenciou por " + min + " min", t.nick); }
     else if (ctx.mutes.delete(t.id)) { sys(ctx, t.nick + " pode falar de novo"); audit(ctx, nickNow(), "liberou", t.nick); }
+    saveMutes(ctx);
     sendModeration(ctx);
   });
 
@@ -1493,6 +1523,10 @@ io.on("connection", (socket) => {
       const gone = new Set([old.id]);
       ctx.channels = ctx.channels.filter((c) => c !== old);
       dropMessages(ctx, ctx.history.filter((m) => gone.has(chOf(m))));
+      // a mensagem que tinha esse topico deixa de mostrar o link para ele
+      const oldRoot = old.msg && ctx.history.find((x) => x.id === old.msg);
+      if (oldRoot && oldRoot.thread) { delete oldRoot.thread; toRoom(ctx, "message:update", { id: oldRoot.id, thread: null }); }
+      persist(ctx);
     }
     const root = t.msg ? ctx.history.find((x) => x.id === Number(t.msg) && chOf(x) === parent.id && x.type !== "sys") : null;
     if (t.msg && (!root || root.thread)) return done(root && root.thread ? root.thread.id : null);
@@ -1759,6 +1793,7 @@ api.post("/adm/login", (req, res) => {
   const b = crypto.createHash("sha256").update(pass).digest();
   if (!crypto.timingSafeEqual(a, b)) { t.n++; admTries.set(ip, t); return res.status(403).json({ error: "Senha errada." }); }
   admTries.delete(ip);
+  for (const [t, until] of admTokens) if (until <= Date.now()) admTokens.delete(t); // tira as chaves vencidas
   const token = crypto.randomBytes(24).toString("hex");
   admTokens.set(token, Date.now() + 12 * 3600 * 1000);
   res.json({ token, media: admMedia, showing: !!admShow });
@@ -1791,5 +1826,9 @@ api.post("/adm/start", admGuard, (req, res) => {
 });
 api.post("/adm/stop", admGuard, (req, res) => { admShow = null; admNs.emit("adm:show", null); res.json({ ok: true }); });
 api.post("/adm/beep", admGuard, (req, res) => { admNs.emit("adm:beep"); res.json({ ok: true }); });
+
+// ultima rede de seguranca: um erro esquecido vai para o registro em vez de desligar o site
+process.on("uncaughtException", (e) => console.error("Erro sem tratamento:", e && e.stack || e));
+process.on("unhandledRejection", (e) => console.error("Promessa sem tratamento:", e && e.message || e));
 
 server.listen(PORT, () => console.log(`Chat Pedro rodando na porta ${PORT}`));

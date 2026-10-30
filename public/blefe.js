@@ -165,7 +165,7 @@
     const hit = faceCache.get(key);
     if (hit && hit.src === src) return hit.tex;
     const c = document.createElement("canvas"); c.width = c.height = 256;
-    const x = c.getContext("2d");
+    const x = c.getContext("2d", { willReadFrequently: !!gray }); // o rosto cinza le os pixels de volta
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
     const paint = (image) => {
       x.fillStyle = SKIN; x.fillRect(0, 0, 256, 256);

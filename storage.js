@@ -18,7 +18,7 @@ async function getMany(keys) {
 }
 
 // tudo do servidor que nao e mensagem (cada um fica numa chave srv:<id>:<nome>)
-const META_NAMES = ["channels", "automod", "audit", "events", "roles", "memberRoles", "nicks", "emojis", "stickers", "webhooks", "welcome", "banner", "vanity"];
+const META_NAMES = ["channels", "automod", "audit", "events", "roles", "memberRoles", "nicks", "emojis", "stickers", "webhooks", "welcome", "banner", "vanity", "mutes"];
 
 function createStorage(serverId) {
   if (!ready()) return null;
