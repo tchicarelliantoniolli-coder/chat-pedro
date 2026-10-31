@@ -239,7 +239,9 @@
   const pop = el("div", "upop"); pop.id = "upPop"; pop.hidden = true; pop.setAttribute("role", "menu");
   document.body.append(pop);
   let popFor = null;
+  let onPopClose = null;
   function closePops() {
+    if (onPopClose) { onPopClose(); onPopClose = null; }
     if (pop.hidden) return false;
     pop.hidden = true;
     if (popFor) popFor.setAttribute("aria-expanded", "false");
@@ -353,6 +355,41 @@
   const reposition = (anchor) => place(anchor);
   $("upMicMenu").addEventListener("click", devPop($("upMicMenu"), "audioinput"));
   app.openDeviceMenu = (btn, kind) => devPop(btn, kind)({ stopPropagation() {} });
+
+  // janelinha da supressao de ruido (botao de onda do "Voz conectada"), igual a do Discord:
+  // liga/desliga, explicacao, teste do microfone e quem fornece
+  function noisePop(box) {
+    const a = app.audio;
+    box.replaceChildren();
+    const row = el("label", "unrow"); row.append(el("span", "", "Supressão de ruído"));
+    const tg = el("input"); tg.type = "checkbox"; tg.className = "utog"; tg.checked = a.prefs.noise === "ia";
+    tg.setAttribute("aria-label", "Supressão de ruído");
+    // desligar volta para a supressao padrao do navegador (o Discord faz igual quando desliga o Krisp)
+    tg.addEventListener("change", () => a.setNoise(tg.checked ? "ia" : "padrao"));
+    row.append(tg);
+    const text = el("div", "untext", "Ative a supressão de ruído com inteligência artificial! Tente fazer barulho, como bater palmas, enquanto você fala. Seus amigos só vão ouvir a sua linda voz.");
+    const test = el("div", "untest");
+    const meter = el("div", "unmeter"); const fill = el("i"); meter.append(fill);
+    const btn = el("button", "unbtn", "Testar"); btn.type = "button";
+    let timer = 0, on = false;
+    const stop = () => { clearInterval(timer); timer = 0; if (on) a.micTest(false); on = false; btn.textContent = "Testar"; btn.classList.remove("stop"); fill.style.width = "0"; };
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (on) return stop();
+      on = true; btn.textContent = "Parar"; btn.classList.add("stop");
+      if (await a.micTest(true) === false) return stop();
+      timer = setInterval(() => { fill.style.width = Math.round(a.micLevel() * 100) + "%"; }, 80);
+    });
+    onPopClose = stop;
+    const bar = el("div", "unbar"); bar.append(meter, btn);
+    test.append(el("div", "unlabel", "Teste do microfone"), bar);
+    const foot = el("div", "unfoot");
+    const by = el("span", "", "Fornecido por GTCRN, de código aberto");
+    const more = el("a", "", "Saiba mais"); more.href = "https://github.com/Xiaobin-Rong/gtcrn"; more.target = "_blank"; more.rel = "noopener";
+    foot.append(by, more);
+    box.append(row, text, test, foot);
+  }
+  app.openNoisePop = (btn) => { openPop(btn, noisePop); if (!pop.hidden) pop.classList.add("unoise"); place(btn); };
   $("upDeafMenu").addEventListener("click", devPop($("upDeafMenu"), "audiooutput"));
 
   $("usAgent").textContent = navigator.platform || "";

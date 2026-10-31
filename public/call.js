@@ -35,6 +35,7 @@
     simple: store.get("cp-simplemic") === "on",
     outId: store.get("cp-out") || "",
     sens: Number(store.get("cp-sens") || 0), // sensibilidade de entrada (0 = automatica, sempre passa)
+    noise: ["ia", "padrao", "nenhuma"].includes(store.get("cp-noise")) ? store.get("cp-noise") : "ia", // supressao de ruido
   };
   const canPickOutput = "setSinkId" in HTMLMediaElement.prototype;
   let micBlocked = false; // o navegador negou o microfone da ultima vez
@@ -61,8 +62,8 @@
     btn("vpCam", camStream ? "ucam" : "ucam-off", camStream ? "Desligar câmera" : "Ligar câmera", camStream ? "on" : "");
     btn("vpScreen", "uscreen", screenStream ? "Parar de compartilhar" : "Compartilhar sua tela", screenStream ? "on" : "");
     $("vpScreen").hidden = !canShareScreen;
-    $("vpNoise").classList.toggle("on", !prefs.simple);
-    setIcon($("vpNoise"), "wave", prefs.simple ? "Supressão de ruído: desligada" : "Supressão de ruído: ligada");
+    $("vpNoise").classList.toggle("on", prefs.noise === "ia");
+    setIcon($("vpNoise"), "wave", prefs.noise === "ia" ? "Supressão de ruído ativada" : "Supressão de ruído desativada");
     if (app.renderMe) app.renderMe();
     // conversa privada: alguem ja esta na chamada -> o telefone do topo fica verde
     const ringing = !inCall && allMembers.length > 0;
@@ -108,23 +109,64 @@
     $("upDeaf").parentElement.classList.toggle("off", deaf);
   }
 
+  // ---------- supressao de ruido com IA (no lugar do Krisp do Discord) ----------
+  // O Discord usa o Krisp, que e pago e licenciado so para ele. Aqui e o GTCRN (codigo aberto, licenca MIT):
+  // uma rede neural pequena que tira o barulho de fundo e deixa a voz. Roda no proprio navegador (AudioWorklet +
+  // WebAssembly, ~200 KB, ~5% de um nucleo, ~32 ms de atraso), so com o audio a 48 kHz.
+  // Os arquivos vem do pacote @sapphi-red/web-noise-suppressor, servidos em /vendor/ruido.
+  let nsWasm = null, denoise = null, nsBlocked = false, nsWarned = false;
+  async function makeDenoise() {
+    if (prefs.noise !== "ia" || nsBlocked) return null;
+    if (!ctx.audioWorklet || ctx.sampleRate !== 48000) throw new Error("sem suporte");
+    nsWasm = nsWasm || fetch("/vendor/ruido/gtcrn.wasm").then((r) => { if (!r.ok) throw new Error("wasm"); return r.arrayBuffer(); });
+    const wasm = await nsWasm;
+    if (!ctx.nsLoaded) { await ctx.audioWorklet.addModule("/vendor/ruido/gtcrn/workletProcessor.js"); ctx.nsLoaded = true; }
+    return new AudioWorkletNode(ctx, "@sapphi-red/web-noise-suppressor/gtcrn", {
+      channelCount: 1, channelCountMode: "explicit", processorOptions: { maxChannels: 1, wasmBinary: wasm },
+    });
+  }
+  function dropDenoise() {
+    if (!denoise) return;
+    try { denoise.port.postMessage("destroy"); denoise.disconnect(); } catch {}
+    denoise = null;
+  }
+
   // ---------- audio local ----------
   async function startMic() {
     if (micRaw) micRaw.getTracks().forEach((t) => t.stop());
+    dropDenoise();
+    try { denoise = await makeDenoise(); }
+    catch {
+      denoise = null; nsWasm = null;
+      if (!nsWarned) { nsWarned = true; setNote("A supressão de ruído com IA não funciona neste navegador. Usei a supressão padrão.", true); }
+    }
     const filters = !prefs.simple;
-    const want = (id) => ({ audio: { deviceId: id ? { exact: id } : undefined, echoCancellation: filters, noiseSuppression: filters, autoGainControl: filters } });
+    // com a IA ligada a reducao de ruido do navegador fica desligada (o Discord faz igual com o Krisp)
+    const ns = filters && prefs.noise !== "nenhuma" && !denoise;
+    const want = (id) => ({ audio: { deviceId: id ? { exact: id } : undefined, echoCancellation: filters, noiseSuppression: ns, autoGainControl: filters } });
     // usa exatamente o microfone escolhido (antes o navegador podia pegar outro, como o DroidCam);
     // se ele sumiu, cai no padrao
     try { micRaw = await navigator.mediaDevices.getUserMedia(want(prefs.micId)); }
     catch (e) { if (!prefs.micId || e.name === "NotAllowedError") throw e; micRaw = await navigator.mediaDevices.getUserMedia(want("")); }
     if (micSource) micSource.disconnect();
-    micSource = ctx.createMediaStreamSource(micRaw);
-    micSource.connect(micGain);
-    micSource.connect(micAnalyser);
+    try { micSource = ctx.createMediaStreamSource(micRaw); }
+    catch (e) {
+      // Firefox antigo nao aceita o microfone num audio de 48 kHz diferente do dele: volta ao jeito sem IA
+      if (nsBlocked) throw e;
+      nsBlocked = true; dropDenoise();
+      ctx.close().catch(() => {}); buildAudioGraph();
+      return startMic();
+    }
+    // o medidor (e o "quem esta falando") ouve o som ja limpo, o mesmo que os outros ouvem
+    const head = denoise ? micSource.connect(denoise) : micSource;
+    head.connect(micGain);
+    head.connect(micAnalyser);
   }
 
   function buildAudioGraph() {
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const AC = window.AudioContext || window.webkitAudioContext;
+    // 48 kHz: a supressao de ruido com IA so funciona assim
+    try { ctx = nsBlocked ? new AC() : new AC({ sampleRate: 48000 }); } catch { ctx = new AC(); }
     // audio do navegador pausado = os outros nao ouvem nada; garante que esta rodando
     ctx.resume().catch(() => {});
     if (prefs.outId && ctx.setSinkId) ctx.setSinkId(prefs.outId).catch(() => {});
@@ -139,7 +181,7 @@
   // com outro volume ele passa pelo ajuste do navegador
   const rawTrack = () => micRaw && micRaw.getAudioTracks()[0];
   // com a sensibilidade ligada o som passa pelo ajuste (o microfone cru continua ouvindo para abrir o portao)
-  const useRaw = () => (prefs.micGain === 100 && !prefs.sens) || !micDest;
+  const useRaw = () => (prefs.micGain === 100 && !prefs.sens && !denoise) || !micDest;
   const micTrack = () => (useRaw() ? rawTrack() : micDest.stream.getAudioTracks()[0]) || null;
   const micStream = () => (useRaw() ? micRaw : micDest.stream);
   // troca o som enviado para todo mundo sem refazer a conexao
@@ -371,6 +413,7 @@
     for (const s of [micRaw, camStream, screenStream]) if (s) s.getTracks().forEach((t) => t.stop());
     micRaw = camStream = screenStream = null;
     if (ctx) ctx.close().catch(() => {});
+    dropDenoise(); stopMicTest();
     ctx = micSource = micGain = micDest = micAnalyser = null;
     inCall = false; myCh = null; members = [];
     focused.clear();
@@ -540,10 +583,43 @@
     preview = false;
     if (micRaw) micRaw.getTracks().forEach((t) => t.stop());
     if (ctx) ctx.close().catch(() => {});
+    dropDenoise();
+    testing = false; testOut = null;
     micRaw = null; ctx = micSource = micGain = micDest = micAnalyser = null;
   }
   // fechou a janela (pelo X, clicando fora ou ESC): desliga o teste
-  new MutationObserver(() => { if ($("settings").hidden && preview) stopPreview(); }).observe($("settings"), { attributes: true, attributeFilter: ["hidden"] });
+  new MutationObserver(() => { if ($("settings").hidden && preview && !testing) stopPreview(); }).observe($("settings"), { attributes: true, attributeFilter: ["hidden"] });
+  // supressao de ruido: "ia" (GTCRN), "padrao" (a do navegador) ou "nenhuma"
+  async function setNoise(mode) {
+    if (!["ia", "padrao", "nenhuma"].includes(mode) || mode === prefs.noise) return;
+    prefs.noise = mode; store.set("cp-noise", mode);
+    document.querySelectorAll('#noiseRadio input').forEach((r) => { r.checked = r.value === mode; });
+    refreshButtons();
+    if (!inCall && !preview) return;
+    try { await startMic(); syncMicTrack(); } catch { setNote("ERRO: não deu para usar esse microfone.", true); }
+  }
+  document.querySelectorAll('#noiseRadio input').forEach((r) => {
+    r.checked = r.value === prefs.noise;
+    r.addEventListener("change", () => { if (r.checked) setNoise(r.value); });
+  });
+  // "Teste do microfone" da janelinha: voce se ouve como os outros te ouvem (com a supressao aplicada)
+  let testing = false, testOut = null;
+  async function micTest(on) {
+    if (!on) return stopMicTest();
+    if (!inCall && !preview) {
+      preview = true; buildAudioGraph();
+      try { await startMic(); } catch { stopPreview(); setNote("Sem acesso ao microfone: libere no cadeado ao lado do endereço.", true); return false; }
+    }
+    testing = true;
+    testOut = ctx.createGain(); testOut.gain.value = prefs.master / 100;
+    micGain.connect(testOut); testOut.connect(ctx.destination);
+    return true;
+  }
+  function stopMicTest() {
+    if (testOut) { try { testOut.disconnect(); if (micGain) micGain.disconnect(testOut); } catch {} testOut = null; }
+    if (testing && preview && $("settings").hidden) stopPreview();
+    testing = false;
+  }
   app.openAV = openSettings;
   app.onAVShown = avShown;
   // menus das setinhas do microfone e do fone (settings.js)
@@ -557,6 +633,9 @@
       sel.value = id; sel.dispatchEvent(new Event("change"));
     },
     setRange(id, v) { const r = $(id); r.value = v; r.dispatchEvent(new Event("input")); },
+    setNoise, micTest,
+    noiseActive: () => !!denoise,
+    micLevel: () => (micAnalyser ? Math.min(1, level(micAnalyser) * (prefs.micGain / 100) * 4) : 0),
   };
   // o navegador pode pausar o audio ate a pessoa clicar em algo: retoma no primeiro clique ou tecla
   for (const ev of ["pointerdown", "keydown"]) document.addEventListener(ev, () => { if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); }, true);
@@ -1193,7 +1272,8 @@
   $("vpCam").addEventListener("click", () => $("camBtn").click());
   $("vpScreen").addEventListener("click", () => $("screenBtn").click());
   $("vpAct").addEventListener("click", (e) => { e.stopPropagation(); actsMenu($("vpAct"), true); });
-  $("vpNoise").addEventListener("click", () => { $("simpleMic").click(); setTimeout(refreshButtons, 50); });
+  // como no Discord: o botao de onda abre a janelinha da supressao de ruido (settings.js)
+  $("vpNoise").addEventListener("click", (e) => { e.stopPropagation(); if (app.openNoisePop) app.openNoisePop($("vpNoise")); });
   // conversa privada: ligar e ligar com video pelo topo (como no Discord)
   $("dmCallBtn").addEventListener("click", () => { if (!inCall) join(firstVoice()); else { $("call").classList.remove("min"); refreshButtons(); } });
   $("dmVideoBtn").addEventListener("click", () => joinCall(true));

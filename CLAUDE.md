@@ -87,6 +87,14 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   `m.screen` da pessoa, por isso o vídeo da tela é enviado antes do som). Tela nova de outra pessoa vira o quadro em
   destaque sozinha (`.tile.focus`, um por vez; clicar escolhe/volta para a grade; "AO VIVO" na lista também foca); com
   destaque a call cresce e os outros viram miniaturas de 64px embaixo. Teste `16-compartilhar-tela` (3 pessoas).
+  Supressão de ruído no lugar do Krisp (o Discord usa o Krisp JS, pago e licenciado só para ele): GTCRN, rede neural de
+  código aberto (MIT) do pacote `@sapphi-red/web-noise-suppressor`, servido em `/vendor/ruido`; roda no navegador num
+  AudioWorklet (`makeDenoise`, áudio a 48 kHz, ~5% de um núcleo, ~32 ms de atraso) entre o microfone e o que vai para a
+  call. `prefs.noise` (`cp-noise`): "ia" (padrão, a do navegador fica desligada como no Discord com o Krisp), "padrao"
+  (a do navegador) ou "nenhuma". Botão de onda `#vpNoise` abre a janelinha `app.openNoisePop` (settings.js: liga/desliga,
+  "Teste do microfone" que toca a sua voz já limpa, `app.audio.micTest`); opções em `#noiseRadio` (Voz e vídeo). Se o
+  navegador não aguentar, cai na padrão com aviso. Teste `17-supressao-de-ruido` (microfone falso toca
+  `tests/fixtures/fala-com-ruido.wav`, fala do Open Speech Repository com ventilador e teclado).
 - `public/ring.js`: ligar na DM e na DM em grupo como no Discord. Quem começa a chamada faz tocar para os outros
   (servidor: `startDmCall`/`ringUser`/`stopRing`, eventos `call:ring`, `call:ringstop`, `call:ringing`, `call:decline`;
   toca por até 1 minuto, em qualquer aba do site). Janelinha "Chamada recebida..." (`.ringpop`, no meio da tela,
@@ -146,7 +154,7 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
 Mensagens de commit em português. Não escreva nome/versão de modelo de IA em código, commits ou PR.
 
 ## O que ficou de fora do Discord (e por quê)
-o arquivo de som do toque de chamada (é do Discord, como os ícones: o nosso é feito no código, mesmo ritmo e
+o Krisp (pago e licenciado só para o Discord; no lugar está o GTCRN, livre); o arquivo de som do toque de chamada (é do Discord, como os ícones: o nosso é feito no código, mesmo ritmo e
 duração, melodia própria); GIFs e soundboard (pedido do dono; por isso o painel "Voz conectada" tem 3 botões e não 4); Nitro, impulsos,
 loja, presentes, missões e super reações (sistema pago); bots com comandos e apps (rodar código de terceiros);
 conexões verificadas (precisa de conta de desenvolvedor em cada site; hoje a pessoa digita o usuário); clipes e

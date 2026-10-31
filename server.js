@@ -110,6 +110,7 @@ app.use("/vendor/supabase", vendor(path.join(__dirname, "node_modules", "@supaba
 app.use("/vendor/socket.io", vendor(path.join(__dirname, "node_modules", "socket.io", "client-dist")));
 // 3D da Mesa do Blefe: so e baixado quando alguem abre a mesa
 app.use("/vendor/three", vendor(path.join(__dirname, "node_modules", "three", "build")));
+app.use("/vendor/ruido", vendor(path.join(__dirname, "node_modules", "@sapphi-red", "web-noise-suppressor", "dist"))); // supressao de ruido com IA (GTCRN e RNNoise)
 app.get(["/s/:id", "/convite/:code"], (req, res) => res.sendFile(INDEX));
 
 const keyOf = (nick) => String(nick || "").toLowerCase();

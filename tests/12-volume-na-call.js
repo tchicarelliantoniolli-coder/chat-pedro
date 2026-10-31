@@ -2,7 +2,8 @@ const { chromium } = require('playwright');
 const SP = process.argv[2] || require('path').join(__dirname, 'out'), URL = 'http://localhost:3331';
 const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
 (async () => {
-  const b = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] }); const errs = [];
+  // microfone falso tocando fala (o bipe padrao seria cortado pela supressao de ruido com IA, que trata bipe como barulho)
+  const b = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--use-file-for-fake-audio-capture=' + require('path').join(__dirname, 'fixtures', 'fala-com-ruido.wav'), '--autoplay-policy=no-user-gesture-required'] }); const errs = [];
   const mk = async (touch) => { const c = await b.newContext({ viewport: touch ? { width: 390, height: 800 } : { width: 1366, height: 700 }, permissions: ['microphone', 'camera'], hasTouch: !!touch, isMobile: !!touch }); const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); return p; };
   const signup = async (p, email, nick) => { await p.goto(URL); await p.waitForTimeout(500); await p.click('#tabSignup'); await p.fill('#authEmail', email); await p.fill('#authNick', nick); await p.fill('#authPass', 'senha123'); await p.click('#authGo'); await p.waitForTimeout(900); };
   const P = await mk(); await signup(P, 'a@t.com', 'Pedro');
