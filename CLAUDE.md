@@ -89,6 +89,18 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   As páginas das Configurações de usuário também estão no HTML (`#userSettings`, uma `.us-page` por seção).
 - `public/boot.js`: login, 2 etapas, barra de servidores, menu do servidor, perfil (`window.ChatPedroAuth`:
   `updateProfile`, `deleteAccount`, `signOutOthers`, `exportData`...).
+- Trocar de servidor NÃO recarrega a página (como no Discord; teste `20-trocar-servidor`): `ChatPedroAuth.goServer(id, opts)`
+  faz `pushState` (o voltar do navegador funciona via `popstate`), chama `app.switchServer` (no `index.html`: guarda a tela
+  de cada servidor em `srvCache` e mostra na hora quando volta; fecha janelas, painéis e jogos; módulos se ajeitam com
+  `app.onSwitch(fn)`) e reconecta a MESMA conexão (`socket.disconnect().connect()`, o `handshake()` leva o servidor novo).
+  O evento `me` chega a cada conexão: manda o status e chama `app.onJoin()` toda vez. Servidor fora da lista: recarrega.
+  Nunca use `location.href = "/s/..."` para trocar de servidor; use `goServer` (com `{ answer: "voz" }` atende a chamada).
+- Call com conexão própria (`cs` no `call.js`, `auth.call = true`; no servidor `socket.data.callOnly`, sala
+  `<sala>:call`, só recebe o que é da call via `toCall`, sem jogos/mensagens): a call continua enquanto a pessoa olha
+  outro servidor. Dentro do `call.js`, `socket` é um atalho para a conexão da call e `view` é a da tela; `here()` = a tela
+  mostra o servidor da call (`#call` só aparece nele). `allMembers` = canais de voz da tela (barra), `callAll` = do
+  servidor da call. "Voz conectada" mostra "canal / servidor" e clicar em `#vpWhere` volta para o servidor da call.
+  Entrar em canal de voz de outro servidor sai da call atual. O status vai também pela conexão da call (`emitProfile`).
 - `public/call.js`: call (WebRTC), canais de voz, palco, sensibilidade do microfone, assistir YouTube junto.
   Visual igual ao do Discord: fundo preto, só fotos redondas quando ninguém tem câmera (`#tiles.avmode`, com
   bolinha vermelha `.mbadge` de mudo), barra de botões em grupos (`.ctray`), menu "..." (`#moreBtn`) e

@@ -95,8 +95,9 @@
   function answer(id, video) {
     drop(id);
     if (id === app.serverId) { app.joinCall(video); return; }
-    // outra conversa ou servidor: abre a conversa ja entrando na chamada
-    location.href = "/s/" + id + "?atender=" + (video ? "video" : "voz");
+    // outra conversa ou servidor: abre a conversa (sem recarregar) ja entrando na chamada
+    if (window.ChatPedroAuth) window.ChatPedroAuth.goServer(id, { answer: video ? "video" : "voz" });
+    else location.href = "/s/" + id + "?atender=" + (video ? "video" : "voz");
   }
   // janelinha que aparece no meio da tela (da para arrastar; volta para onde a pessoa deixou)
   function popup(p) {

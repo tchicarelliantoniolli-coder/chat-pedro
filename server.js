@@ -368,13 +368,13 @@ function pushMessage(ctx, msg) {
   const byId = new Map(ctx.members.map((m) => [m.id, m]));
   for (const s of io.sockets.sockets.values()) {
     const u = s.data.user && s.data.user.id;
-    if (!u || s.data.ctx === ctx || u === msg.uid || !byId.has(u)) continue;
+    if (!u || s.data.ctx === ctx || u === msg.uid || !byId.has(u) || s.data.callOnly) continue;
     s.emit("srv:ping", { server: ctx.id, mention: !!mentioned(byId.get(u)) });
   }
 }
 // manda um evento para todas as abas abertas de uma conta (em qualquer servidor, menos o skip)
 function toUser(uid, event, data, skip) {
-  for (const s of io.sockets.sockets.values()) if (s.data.user && s.data.user.id === uid && s.data.ctx !== skip) s.emit(event, data);
+  for (const s of io.sockets.sockets.values()) if (s.data.user && s.data.user.id === uid && s.data.ctx !== skip && !s.data.callOnly) s.emit(event, data);
 }
 // Historico sem o conteudo das fotos e audios (que sao pesados): o navegador pede cada um quando precisa
 const historyFor = (ctx, ch) => ctx.history.filter((m) => chOf(m) === ch).map((m) => (isMedia(m) ? { ...m, src: undefined, lazy: true } : m));
@@ -394,10 +394,12 @@ function audit(ctx, by, action, target) {
 
 const watchMsg = (ctx) => ctx.watch && { ...ctx.watch, now: Date.now() }; // "now" deixa cada um corrigir o proprio relogio
 
+// avisos da call vao para quem esta com o servidor na tela e para as conexoes so da call (sala "<sala>:call")
+const toCall = (ctx, ev, data) => io.to([ctx.room, ctx.room + ":call"]).emit(ev, data);
 function sendCall(ctx) {
-  toRoom(ctx, "call:members", [...ctx.callMembers.values()]);
+  toCall(ctx, "call:members", [...ctx.callMembers.values()]);
   // o video junto acaba quando o canal de voz dele fica vazio
-  if (ctx.watch && ![...ctx.callMembers.values()].some((m) => m.ch === ctx.watch.ch)) { ctx.watch = null; toRoom(ctx, "watch:state", null); }
+  if (ctx.watch && ![...ctx.callMembers.values()].some((m) => m.ch === ctx.watch.ch)) { ctx.watch = null; toCall(ctx, "watch:state", null); }
 }
 
 // ---------- ligar na conversa privada (como no Discord) ----------
@@ -407,7 +409,7 @@ const RING_MS = 60000;
 const ringingCtx = new Map(); // id da conversa -> ctx (conversas tocando agora)
 const uidInCall = (ctx, uid) => [...ctx.callMembers.values()].some((m) => m.uid === uid);
 const ringList = (ctx) => (ctx.ring ? [...ctx.ring.targets.keys()] : []);
-const sendRinging = (ctx) => toRoom(ctx, "call:ringing", ringList(ctx));
+const sendRinging = (ctx) => toCall(ctx, "call:ringing", ringList(ctx));
 function ringPayload(ctx) {
   const by = ctx.members.find((m) => m.id === ctx.ring.uid) || {};
   const group = ctx.members.length > 2;
@@ -1107,7 +1109,8 @@ io.use(async (socket, next) => {
     if (!profile) return next(new Error("login"));
     const ctx = await getCtx(serverId);
     if (ctx.dead) return next(new Error("nao_membro"));
-    socket.data = { user, role, nick: profile.nick, ctx };
+    // call: true = conexao so da call (o navegador abre uma para a call continuar enquanto a pessoa olha outro servidor)
+    socket.data = { user, role, nick: profile.nick, ctx, callOnly: (socket.handshake.auth || {}).call === true };
     next();
   } catch (e) {
     console.error("Erro ao conectar:", e.message);
@@ -1135,11 +1138,19 @@ io.on("connection", (socket) => {
   guardSocket(socket);
   const ctx = socket.data.ctx;
   const uid = socket.data.user.id;
-  socket.join(ctx.room);
+  const callOnly = !!socket.data.callOnly;
+  // conexao so da call: recebe so o que e da call (nada de mensagens, jogos...) e conta como online no servidor
+  socket.join(callOnly ? ctx.room + ":call" : ctx.room);
   ctx.sockets.set(socket.id, socket);
   ctx.online.set(socket.id, socket.data.nick);
   if (!ctx.members.some((m) => m.id === uid)) loadMembers(ctx).then(() => sendUsers(ctx, true)).catch(() => {});
-
+  if (callOnly) {
+    socket.emit("call:members", [...ctx.callMembers.values()]);
+    if (ctx.dm) socket.emit("call:ringing", ringList(ctx));
+    iceServers().then((list) => socket.emit("ice", list));
+    socket.emit("watch:state", watchMsg(ctx));
+    sendUsers(ctx);
+  } else {
   socket.emit("me", meOf(ctx, socket));
   socket.emit("avatars", avatarsOf(ctx));
   socket.emit("guild", guildOf(ctx));
@@ -1160,11 +1171,12 @@ io.on("connection", (socket) => {
   ctx.truco.broadcast();
   ctx.blefe.broadcast();
   ctx.poker.refresh();
+  }
 
   const nickNow = () => ctx.online.get(socket.id);
   const can = (perm) => permsOf(ctx, uid, socket.data.role).has(perm);
   const notice = (text) => socket.emit("notice", text);
-  if (can("members")) sendModeration(ctx);
+  if (can("members") && !callOnly) sendModeration(ctx);
 
   // ---------- anti-flood ----------
   const flood = { times: [], last: "", lastAt: 0, repeats: 0, strikes: [] };
@@ -1863,7 +1875,7 @@ io.on("connection", (socket) => {
     if (!member) return;
     if (!m) return notice("Esse link não parece ser do YouTube.");
     ctx.watch = { id: m[1], playing: true, pos: 0, at: Date.now(), by: member.nick, ch: member.ch };
-    toRoom(ctx, "watch:state", watchMsg(ctx));
+    toCall(ctx, "watch:state", watchMsg(ctx));
   });
 
   socket.on("watch:control", (msg) => {
@@ -1875,13 +1887,13 @@ io.on("connection", (socket) => {
     else if (msg.action === "seek") Object.assign(ctx.watch, { pos, at: Date.now() });
     else return;
     ctx.watch.by = member.nick;
-    toRoom(ctx, "watch:state", watchMsg(ctx));
+    toCall(ctx, "watch:state", watchMsg(ctx));
   });
 
   socket.on("watch:stop", () => {
     if (!ctx.callMembers.has(socket.id) || !ctx.watch) return;
     ctx.watch = null;
-    toRoom(ctx, "watch:state", null);
+    toCall(ctx, "watch:state", null);
   });
 
   function leaveCall() {

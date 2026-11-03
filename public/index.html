@@ -1080,6 +1080,9 @@ header h1.site { font-size: 14px; }
 #voicePanel .vsig { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 8px; background: rgba(35, 165, 90, 0.12); color: #23a55a; }
 #voicePanel .vsig .ic { width: 18px; height: 18px; }
 #voicePanel .vt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+/* canal / servidor da call: clicar volta para ele (como no Discord, sublinha ao passar o mouse) */
+#vpWhere { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#vpWhere:hover { text-decoration: underline; }
 #voicePanel b { color: #23a55a; font-size: 14px; font-weight: 600; }
 #voicePanel small { color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #voicePanel .vrow .ib { width: 32px; height: 32px; min-width: 0; padding: 0; justify-content: center; border-radius: 8px; color: #b5bac1; }
@@ -3697,7 +3700,8 @@ window.setIcon = (btn, name, label, extra) => {
       if (jumpId) setTimeout(() => jumpTo(jumpId), 80);
     };
     if (info.loaded) return show();
-    log.replaceChildren(span("sys loading", "carregando..."));
+    // ja tinha aberto (voltou para um servidor visitado): mostra o que estava guardado e atualiza quando chegar
+    if (info.entries.length) show(); else log.replaceChildren(span("sys loading", "carregando..."));
     socket.emit("channel:open", id, (h) => {
       if (curCh !== id) { info.entries = h || []; info.loaded = !!h; return; }
       info.entries = h || []; info.loaded = true;
@@ -4332,7 +4336,7 @@ window.setIcon = (btn, name, label, extra) => {
     const all = [
       ...channels.filter((c) => c.type === "text").map((c) => ({ label: "# " + c.name, sub: "canal", go: () => openChannel(c.id) })),
       ...channels.filter((c) => c.type === "voice").map((c) => ({ label: "🔊 " + c.name, sub: "canal de voz", go: () => { const b = document.querySelector('.chan.voice[data-voice="' + c.id + '"]'); if (b) b.click(); } })),
-      ...srvs.filter((x) => x.id !== serverId).map((x) => ({ label: (x.dm ? "@ " : "") + x.name, sub: x.dm ? "conversa" : "servidor", go: () => { location.href = "/s/" + x.id; } })),
+      ...srvs.filter((x) => x.id !== serverId).map((x) => ({ label: (x.dm ? "@ " : "") + x.name, sub: x.dm ? "conversa" : "servidor", go: () => window.ChatPedroAuth.goServer(x.id) })),
     ];
     qsItems = all.filter((x) => !q || fold(x.label).includes(q)).slice(0, 20);
     qsSel = Math.min(qsSel, Math.max(0, qsItems.length - 1));
@@ -4375,10 +4379,10 @@ window.setIcon = (btn, name, label, extra) => {
   let lastActive = Date.now(), autoIdle = false;
   for (const ev of ["pointerdown", "keydown", "pointermove"]) document.addEventListener(ev, () => {
     lastActive = Date.now();
-    if (autoIdle) { autoIdle = false; socket.emit("profile", { status: myStatus }); }
+    if (autoIdle) { autoIdle = false; emitProfile({ status: myStatus }); }
   }, { passive: true });
   setInterval(() => {
-    if (!autoIdle && myStatus === "online" && nick && Date.now() - lastActive > 10 * 60000) { autoIdle = true; socket.emit("profile", { status: "ausente" }); }
+    if (!autoIdle && myStatus === "online" && nick && Date.now() - lastActive > 10 * 60000) { autoIdle = true; emitProfile({ status: "ausente" }); }
   }, 30000);
 
   // ---------- editar mensagem no lugar (Enter salva, Esc cancela) ----------
@@ -4832,13 +4836,50 @@ window.setIcon = (btn, name, label, extra) => {
     renderPeople();
     renderMod();
     if (window.ChatPedroAuth) window.ChatPedroAuth.onMe(me);
-    if (firstMe) {
-      firstMe = false;
-      setNote("");
-      socket.emit("profile", { status: myStatus });
-      window.ChatPedro.onJoin();
-    }
+    if (firstMe) { firstMe = false; setNote(""); }
+    // a cada conexao (tambem depois de trocar de servidor): status e os modulos (call, jogos) se ajeitam
+    sendProfile();
+    window.ChatPedro.onJoin();
   });
+
+  // ---------- trocar de servidor sem recarregar a pagina (como no Discord) ----------
+  // O que ja estava na tela de cada servidor fica guardado: voltar para ele mostra tudo na hora e atualiza
+  // quando a conexao (que so troca de servidor) responder.
+  const srvCache = new Map(); // id do servidor -> estado da tela
+  const switchHooks = [];     // call, jogos, inicio... se ajeitam na troca
+  function switchServer(id, name) {
+    if (!id || id === serverId) return;
+    if (editing) editing.cancel();
+    if (serverId) {
+      if (curCh) chInfo(curCh).entries = entries;
+      srvCache.set(serverId, { channels, chData: new Map(chData), curCh, curForum, members, users, avatars, profiles, guild, events, isDm, name: $("serverName").textContent });
+    }
+    const c = srvCache.get(id);
+    closePanel(); clearReply(); typers.clear(); renderTyping();
+    document.querySelectorAll(".modal:not([hidden])").forEach((m) => { m.hidden = true; });
+    $("forumView").hidden = true;
+    // jogos abertos sao do servidor antigo: fecham (cada um tem a mesa do seu servidor)
+    for (const [sec, btn] of [["activity", "actClose"], ["truco", "trClose"], ["blefe", "blClose"]]) if ($(sec) && !$(sec).hidden) $(btn).click();
+    for (const h of switchHooks) { try { h(id); } catch (e) { console.error(e); } }
+    serverId = id; welcomeShown = false; newMarker = null; startJump = null;
+    startCh = store.get("chatpedro-ch-" + id);
+    chData.clear();
+    if (c) {
+      for (const [k, v] of c.chData) chData.set(k, v);
+      ({ channels, curCh, curForum, members, users, avatars, profiles, guild, events, isDm } = c);
+      $("serverName").textContent = c.name;
+    } else {
+      channels = []; curCh = null; curForum = null; members = []; users = []; profiles = {}; events = [];
+      guild = { roles: [], memberRoles: {}, nicks: {}, emojis: [], stickers: [], welcome: { desc: "", rules: [] }, vanity: null, isPublic: false, description: "" };
+      $("serverName").textContent = name || "";
+    }
+    document.body.classList.toggle("dm", isDm);
+    entries = []; prevM = null; lineById.clear();
+    log.replaceChildren();
+    renderChannels(); renderPeople(); renderEvents();
+    const info = curCh && chData.get(curCh);
+    if (info && info.entries.length) { entries = info.entries; for (const m of entries) appendEntry(m, false); scroller.scrollTop = scroller.scrollHeight; updateHead(); }
+  }
 
   const localSys = (text) => addLine({ type: "sys", text, ts: Date.now() });
 
@@ -5181,7 +5222,13 @@ window.setIcon = (btn, name, label, extra) => {
   const STATUS = { online: "Online", ausente: "Ausente", ocupado: "Não perturbe", invisivel: "Invisível" };
   let myColor = ""; // vem da conta (boot.js)
   let myStatus = store.get("chatpedro-status") || "online";
-  function sendProfile() { if (nick) socket.emit("profile", { status: myStatus, hideAct: !P("activity") }); }
+  function sendProfile() { if (nick) emitProfile({ status: myStatus, hideAct: !P("activity") }); }
+  // o status vale tambem na conexao da call (que pode estar em outro servidor)
+  function emitProfile(p) {
+    socket.emit("profile", p);
+    const cs = window.ChatPedro && window.ChatPedro.callSocket;
+    if (cs && cs.connected) cs.emit("profile", p);
+  }
   function renderProfile() {
     $("colorPick").replaceChildren(...NAME_COLORS.map((c) => {
       const b = document.createElement("button"); b.type = "button"; b.style.background = c;
@@ -5286,6 +5333,8 @@ window.setIcon = (btn, name, label, extra) => {
     blefeNicks: new Set(),
     speakingNicks: new Set(),
     onJoin() {},
+    switchServer,
+    onSwitch: (fn) => switchHooks.push(fn),
     // mensagem direta chegando enquanto voce esta em outro servidor
     dmAlert(p) {
       if (myStatus === "ocupado") return;

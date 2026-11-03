@@ -21,6 +21,7 @@
     document.body.classList.remove("home", "disc");
     $("homeView").hidden = true; $("discView").hidden = true;
   }
+  app.closeHome = closeAll; // trocar de servidor fecha o Inicio e o Descobrir
   $("railHome").addEventListener("click", () => (document.body.classList.contains("home") ? closeAll() : openHome()));
   $("hClose").addEventListener("click", closeAll);
   $("railDisc").addEventListener("click", () => (document.body.classList.contains("disc") ? closeAll() : openDisc()));

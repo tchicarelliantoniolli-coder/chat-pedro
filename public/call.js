@@ -3,7 +3,18 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const app = window.ChatPedro;
-  const { socket, avatar, setNote, store } = app;
+  const { avatar, setNote, store } = app;
+  // Duas conexoes, como no Discord: "view" e a do servidor que esta na tela (troca quando voce troca de servidor);
+  // a call tem a SUA conexao (cs), aberta ao entrar e ligada ao servidor da call. Assim da para olhar outro
+  // servidor sem sair da call. Aqui dentro, "socket" fala com a conexao da call.
+  const view = app.socket;
+  let cs = null, callSrv = null, callSrvName = "", callChName = "", callStage = false;
+  const socket = {
+    get id() { return cs ? cs.id : null; },
+    emit: (...a) => { if (cs) cs.emit(...a); },
+    timeout: (ms) => ({ emit: (...a) => (cs ? cs.timeout(ms).emit(...a) : a[a.length - 1](new Error("sem conexao"))) }),
+  };
+  const here = () => inCall && callSrv === app.serverId; // a tela mostra o servidor da call
   const sfx = (name) => { if (window.ChatPedroSfx) window.ChatPedroSfx.play(name); };
   // STUN padrao; se o servidor tiver TURN configurado (variaveis TURN_* no Render), ele manda a lista completa
   const ICE_DEFAULT = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
@@ -11,7 +22,8 @@
   const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
   let members = [];        // quem esta no MEU canal de voz
-  let allMembers = [];     // todo mundo em qualquer canal de voz do servidor
+  let allMembers = [];     // todo mundo nos canais de voz do servidor que esta na tela (barra da esquerda)
+  let callAll = [];        // todo mundo nos canais de voz do servidor DA CALL (vem da conexao da call)
   let myCh = null;         // canal de voz em que estou
   const voiceName = (ch) => { const el = document.querySelector('.chan.voice[data-voice="' + ch + '"] .vn'); return el ? el.textContent : "Call"; };
   const firstVoice = () => { const el = document.querySelector(".chan.voice[data-voice]"); return el ? el.dataset.voice : null; };
@@ -67,40 +79,43 @@
     setIcon($("vpNoise"), "wave", prefs.noise === "ia" ? "Supressão de ruído ativada" : "Supressão de ruído desativada");
     if (app.renderMe) app.renderMe();
     // conversa privada: alguem ja esta na chamada -> o telefone do topo fica verde
-    const ringing = !inCall && allMembers.length > 0;
+    const ringing = !here() && allMembers.length > 0;
     $("dmCallBtn").classList.toggle("ring", ringing);
-    setIcon($("dmCallBtn"), "uphone", inCall ? "Mostrar a chamada" : ringing ? "Entrar na chamada" : "Iniciar chamada de voz");
+    setIcon($("dmCallBtn"), "uphone", here() ? "Mostrar a chamada" : ringing ? "Entrar na chamada" : "Iniciar chamada de voz");
     $("pttBtn").hidden = !(inCall && prefs.ptt);
     const min = $("call").classList.contains("min");
     setIcon($("minBtn"), min ? "chevron-down" : "chevron-up", min ? "Mostrar os vídeos" : "Esconder os vídeos");
     // botao grande da call ao lado do nome do servidor
-    const n = members.length, cb = $("callBtn");
+    const n = here() ? members.length : 0, cb = $("callBtn");
     const txt = (cls, t) => { const s = document.createElement("span"); s.className = cls; s.textContent = t; return s; };
-    cb.replaceChildren(icon("headphones"), ...(inCall ? [txt("", "Na call")] : [txt("long", "Entrar na call"), txt("short", "Call")]));
+    cb.replaceChildren(icon("headphones"), ...(here() ? [txt("", "Na call")] : [txt("long", "Entrar na call"), txt("short", "Call")]));
     if (n) cb.append(txt("cnt", n));
-    cb.classList.toggle("in", inCall);
-    cb.classList.toggle("busy", !inCall && n > 0); // tem gente conversando: o numero pulsa
-    const label = inCall ? "Você está na call com " + n + (n === 1 ? " pessoa" : " pessoas") + ". Clique para ver" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call";
+    cb.classList.toggle("in", here());
+    cb.classList.toggle("busy", !here() && n > 0); // tem gente conversando: o numero pulsa
+    const label = here() ? "Você está na call com " + n + (n === 1 ? " pessoa" : " pessoas") + ". Clique para ver" : n ? "Entrar na call (" + n + " dentro)" : "Entrar na call";
     cb.title = label; cb.setAttribute("aria-label", label);
     cb.hidden = !app.nick;
     // canais de voz na barra da esquerda (como no Discord) e o painel "Voz conectada"
     document.querySelectorAll(".chan.voice[data-voice]").forEach((vc) => {
-      const here = inCall && vc.dataset.voice === myCh;
+      const mine = here() && vc.dataset.voice === myCh;
       const cnt = allMembers.filter((m) => m.ch === vc.dataset.voice).length;
-      vc.classList.toggle("in", here);
+      vc.classList.toggle("in", mine);
       const vj = vc.querySelector(".vj");
-      if (vj) vj.textContent = here ? "você está aqui" : cnt ? cnt + (cnt === 1 ? " pessoa" : " pessoas") + " · entrar" : "entrar";
-      vc.title = here ? "Mostrar a call" : "Entrar em " + vc.querySelector(".vn").textContent;
+      if (vj) vj.textContent = mine ? "você está aqui" : cnt ? cnt + (cnt === 1 ? " pessoa" : " pessoas") + " · entrar" : "entrar";
+      vc.title = mine ? "Mostrar a call" : "Entrar em " + vc.querySelector(".vn").textContent;
     });
     $("voicePanel").hidden = !inCall;
-    const me = meInCall(), stage = inCall && isStageCh(myCh);
+    const me = meInCall(), stage = inCall && callStage;
     $("handBtn").hidden = !stage || !me;
     if (stage && me) {
       const lab = me.speaker ? "Descer do palco" : me.hand ? "Baixar a mão" : "Levantar a mão";
       setIcon($("handBtn"), me.speaker ? "log-out" : "hand", lab);
       $("handBtn").classList.toggle("on", !!me.hand);
     }
-    $("vpWhere").textContent = voiceName(myCh) + " / " + n + (n === 1 ? " pessoa" : " pessoas");
+    // como no Discord: canal / servidor; clicar volta para o servidor da call
+    if (here()) { callChName = voiceName(myCh); callSrvName = $("serverName").textContent; }
+    $("vpWhere").textContent = callChName + " / " + callSrvName;
+    $("vpWhere").title = here() ? "Você está aqui" : "Voltar para " + callSrvName;
     // microfone e fone do painel do usuario, embaixo da barra
     setIcon($("upMic"), micOn ? "umic" : "umic-off", micOn ? "Silenciar" : "Dessilenciar");
     $("upMic").classList.toggle("off", !micOn);
@@ -259,7 +274,7 @@
       const stream = streams[0] || new MediaStream([track]);
       p.streams[stream.id] = stream;
       if (track.kind === "audio") {
-        const m = allMembers.find((x) => x.id === id);
+        const m = callAll.find((x) => x.id === id);
         if (stream.getVideoTracks().length || (m && m.screen === stream.id)) attachScreenAudio(id, p, stream);
         else attachAudio(id, p, stream);
       }
@@ -364,7 +379,7 @@
       return "a=fmtp:" + pt + " " + [...kv].map(([k, v]) => (v === "" ? k : k + "=" + v)).join(";");
     });
   }
-  socket.on("call:signal", async ({ from, description, candidate }) => {
+  const onSignal = async ({ from, description, candidate }) => {
     if (!inCall) return;
     const p = getPeer(from), pc = p.pc;
     try {
@@ -381,7 +396,7 @@
         try { await pc.addIceCandidate(candidate); } catch (e) { if (!p.ignoreOffer) throw e; }
       }
     } catch (e) { console.warn(e); }
-  });
+  };
 
   function addTrackToAll(track, stream) {
     for (const p of peers.values()) p.senders.set(track.id, p.pc.addTrack(track, stream));
@@ -400,7 +415,8 @@
   let joining = false;
   // video: comecou pelo botao de video (na conversa privada a outra pessoa ve "Chamada de video recebida...")
   async function join(ch, video) {
-    if (inCall || joining || !app.nick) return;
+    if (joining || !app.nick) return;
+    if (inCall) { if (here() && myCh === (ch || firstVoice())) return; leave(); } // em outro canal ou servidor: troca de call
     myCh = ch || firstVoice();
     if (!myCh) return;
     joining = true;
@@ -414,6 +430,11 @@
     try { await startMic(); }
     catch { micOn = false; micBlocked = true; setNote("Sem acesso ao microfone. Você entrou mudo; libere o microfone no navegador (no cadeado ao lado do endereço) para falar.", true); }
     applyMic();
+    // conexao propria da call, ligada ao servidor que esta na tela agora
+    callSrv = app.serverId; callSrvName = $("serverName").textContent; callChName = voiceName(myCh); callStage = isStageCh(myCh);
+    cs = await openCallSocket(callSrv);
+    app.callSocket = cs;
+    if (!cs) { setNote("ERRO: não deu para entrar na chamada.", true); cleanup(); return; }
     await new Promise((done) => socket.timeout(10000).emit("call:join", { ...myState(), ch: myCh, video: !!video }, (err, res) => {
       done();
       if (err) res = null; // o servidor nao respondeu
@@ -421,11 +442,11 @@
       inCall = true;
       sfx("join");
       // quem ja estava no canal nao faz som de "entrou"
-      const here = allMembers.filter((m) => m.ch === myCh);
-      seenMembers = new Set(here.map((m) => m.id)); seenLive = new Set(here.filter((m) => m.screen && m.id !== socket.id).map((m) => m.id));
+      const already = callAll.filter((m) => m.ch === myCh);
+      seenMembers = new Set(already.map((m) => m.id)); seenLive = new Set(already.filter((m) => m.screen && m.id !== socket.id).map((m) => m.id));
       applyMic();
       syncWatch();
-      $("call").hidden = false;
+      $("call").hidden = !here();
       $("call").classList.remove("min");
       for (const id of res.others) getPeer(id); // quem entra chama quem ja esta
       refreshButtons();
@@ -446,7 +467,9 @@
     if (ctx) ctx.close().catch(() => {});
     dropDenoise(); stopMicTest();
     ctx = micSource = micGain = micDest = micAnalyser = null;
-    inCall = false; myCh = null; members = [];
+    inCall = false; myCh = null; members = []; callAll = [];
+    if (cs) { const s = cs; cs = null; app.callSocket = null; s.disconnect(); }
+    callSrv = null;
     focused.clear();
     $("call").hidden = true;
     if (app.ringTone) app.ringTone.calling(false);
@@ -461,8 +484,30 @@
     renderSidebar();
   }
 
-  // Se a conexao com o servidor cair, a chamada acaba; e preciso entrar de novo.
-  socket.on("disconnect", () => { if (inCall) { sfx("leave"); cleanup(); refreshButtons(); setNote("A conexão caiu e você saiu da chamada. Entre de novo.", true); } });
+  // A conexao da call: abre ao entrar, fecha ao sair. Se ela cair, a chamada acaba (e preciso entrar de novo).
+  function openCallSocket(srv) {
+    return new Promise((resolve) => {
+      const s = window.io({ forceNew: true, transports: ["websocket", "polling"], tryAllTransports: true, auth: (cb) => { const h = window.ChatPedroAuth ? window.ChatPedroAuth.handshake() : {}; cb({ token: h.token, server: srv, call: true }); } });
+      s.on("call:signal", onSignal);
+      s.on("call:members", onCallMembers);
+      s.on("call:ringing", onRinging);
+      s.on("watch:state", onWatch);
+      s.on("connect", () => s.emit("profile", { status: app.myStatus }));
+      s.on("connect_error", (err) => { if (err && (err.message === "timeout" || err.type === "TransportError")) s.io.opts.transports = ["polling", "websocket"]; });
+      s.on("disconnect", (reason) => {
+        if (s !== cs || reason === "io client disconnect") return;
+        if (inCall) { sfx("leave"); cleanup(); refreshButtons(); renderSidebar(); setNote("A conexão caiu e você saiu da chamada. Entre de novo.", true); }
+      });
+      const t = setTimeout(() => { s.disconnect(); resolve(null); }, 15000);
+      s.once("connect", () => { clearTimeout(t); resolve(s); });
+    });
+  }
+  // trocou de servidor na tela: a call continua; a tela da call so aparece no servidor dela
+  app.onSwitch((id) => {
+    allMembers = [];
+    $("call").hidden = !(inCall && callSrv === id);
+    setTimeout(() => { refreshButtons(); renderSidebar(); if (here()) renderTiles(); }, 0);
+  });
 
   // ---------- controles ----------
   async function toggleCam() {
@@ -516,8 +561,8 @@
   // ---------- palco: so oradores falam ----------
   const chanOf = (id) => (app.channels || []).find((c) => c.id === id);
   const isStageCh = (id) => !!(chanOf(id) || {}).stage;
-  const meInCall = () => allMembers.find((m) => m.id === socket.id);
-  const audience = () => inCall && isStageCh(myCh) && !(meInCall() || {}).speaker;
+  const meInCall = () => callAll.find((m) => m.id === socket.id);
+  const audience = () => inCall && callStage && !(meInCall() || {}).speaker;
   function stageBlocked() {
     if (!audience()) return false;
     setNote("Você está na plateia. Levante a mão para pedir para falar.", true);
@@ -930,10 +975,10 @@
   }
   // quem esta na chamada ouve "chamando" enquanto alguem esta sendo chamado (igual ao Discord)
   const syncCalling = () => { if (app.ringTone) app.ringTone.calling(inCall && app.isDm && ringingUids.length > 0); };
-  socket.on("call:ringing", (list) => {
+  const onRinging = (list) => {
     ringingUids = Array.isArray(list) ? list : [];
     renderTiles(); syncCalling();
-  });
+  };
 
   function renderSidebar() {
     document.querySelectorAll("ul.vpeople[data-vp]").forEach((ul) => {
@@ -977,7 +1022,7 @@
         li.classList.add("click");
         li.addEventListener("click", (e) => {
           e.stopPropagation();
-          app.showMenu([m.speaker ? ["Mover para a plateia", "users", () => socket.emit("stage:speaker", { sid: m.id, on: false })] : ["Convidar para falar", "mic", () => socket.emit("stage:speaker", { sid: m.id, on: true })]], e.clientX, e.clientY);
+          app.showMenu([m.speaker ? ["Mover para a plateia", "users", () => view.emit("stage:speaker", { sid: m.id, on: false })] : ["Convidar para falar", "mic", () => view.emit("stage:speaker", { sid: m.id, on: true })]], e.clientX, e.clientY);
         });
       }
       ul.append(li);
@@ -1001,24 +1046,31 @@
     }
     seenMembers = ids; seenLive = live;
   }
-  socket.on("call:members", (list) => {
-    const wasAudience = audience();
+  // servidor da tela: so a barra da esquerda (quem esta em cada canal de voz)
+  view.on("call:members", (list) => {
     allMembers = Array.isArray(list) ? list : [];
+    renderSidebar(); refreshButtons();
+  });
+  // servidor da call: quem esta comigo
+  const onCallMembers = (list) => {
+    const wasAudience = audience();
+    callAll = Array.isArray(list) ? list : [];
+    if (here()) callStage = isStageCh(myCh);
     // plateia do palco fica muda (e sem camera/tela); virar orador libera
     if (inCall && audience()) {
       if (micOn) { micOn = false; applyMic(); }
       if (camStream) toggleCam();
       if (screenStream) stopScreen();
     } else if (inCall && wasAudience && isStageCh(myCh)) setNote("Você agora é orador no palco. Ligue o microfone para falar.");
-    members = inCall && myCh ? allMembers.filter((m) => m.ch === myCh) : [];
+    members = inCall && myCh ? callAll.filter((m) => m.ch === myCh) : [];
     if (inCall) callSounds();
     if (inCall) {
       const ids = new Set(members.map((m) => m.id));
       for (const id of [...peers.keys()]) if (!ids.has(id)) closePeer(id);
       for (const id of peers.keys()) applyVolume(id);
     }
-    renderSidebar(); refreshButtons(); renderTiles();
-  });
+    refreshButtons(); renderTiles();
+  };
 
   // Indicador de quem esta falando (borda verde), como no Discord
   let lastHeard = 0;
@@ -1049,7 +1101,7 @@
     const speaking = new Set();
     if (micAnalyser && micLive() && level(micAnalyser) * (prefs.micGain / 100) > 0.04) speaking.add(socket.id);
     for (const [id, p] of peers) if (p.analyser && level(p.analyser) > 0.04) speaking.add(id);
-    app.speakingNicks = new Set(allMembers.filter((m) => speaking.has(m.id)).map((m) => m.nick)); // boca dos bonecos da Mesa do Blefe
+    app.speakingNicks = new Set(callAll.filter((m) => speaking.has(m.id)).map((m) => m.nick)); // boca dos bonecos da Mesa do Blefe
     document.querySelectorAll("#tiles .tile").forEach((el) => el.classList.toggle("speaking", !el.classList.contains("screen") && speaking.has(el.dataset.member)));
     document.querySelectorAll(".vpeople li").forEach((li) => li.classList.toggle("speaking", speaking.has(li.dataset.member)));
   }, 120);
@@ -1179,10 +1231,10 @@
     });
     return ytReady;
   }
-  socket.on("watch:state", (w) => {
+  const onWatch = (w) => {
     watchState = w ? { ...w, localOffset: Date.now() - w.now } : null;
     syncWatch();
-  });
+  };
   async function syncWatch() {
     const box = $("watch");
     if (!inCall || !watchState || (watchState.ch && watchState.ch !== myCh)) { box.hidden = true; if (player) { try { player.destroy(); } catch {} player = null; playerVid = null; $("ytBox").replaceChildren(Object.assign(document.createElement("div"), { id: "ytPlayer" })); } return; }
@@ -1239,7 +1291,7 @@
   $("watchStop").addEventListener("click", () => socket.emit("watch:stop"));
 
   $("callBtn").addEventListener("click", () => {
-    if (!inCall) return join(firstVoice());
+    if (!here()) return join(firstVoice());
     $("call").classList.toggle("min", false);
     $("call").scrollIntoView({ block: "nearest" });
   });
@@ -1251,9 +1303,14 @@
     if (!vc || e.target.closest(".cgear")) return;
     document.body.classList.remove("railopen");
     const ch = vc.dataset.voice;
-    if (inCall && myCh === ch) { $("call").classList.toggle("min", false); refreshButtons(); return; }
-    if (inCall) leave();
-    join(ch);
+    if (here() && myCh === ch) { $("call").classList.toggle("min", false); refreshButtons(); return; }
+    join(ch); // em outra call (outro canal ou servidor): sai dela e entra nesta
+  });
+  // "Voz conectada": clicar no canal/servidor volta para o servidor da call (com a call na tela)
+  $("vpWhere").addEventListener("click", () => {
+    if (!inCall) return;
+    if (!here() && window.ChatPedroAuth) window.ChatPedroAuth.goServer(callSrv);
+    else { $("call").hidden = false; $("call").classList.remove("min"); refreshButtons(); }
   });
   $("upMic").addEventListener("click", toggleMic);
   $("upDeaf").addEventListener("click", toggleDeaf);
@@ -1318,13 +1375,13 @@
   // como no Discord: o botao de onda abre a janelinha da supressao de ruido (settings.js)
   $("vpNoise").addEventListener("click", (e) => { e.stopPropagation(); if (app.openNoisePop) app.openNoisePop($("vpNoise")); });
   // conversa privada: ligar e ligar com video pelo topo (como no Discord)
-  $("dmCallBtn").addEventListener("click", () => { if (!inCall) join(firstVoice()); else { $("call").classList.remove("min"); refreshButtons(); } });
+  $("dmCallBtn").addEventListener("click", () => { if (!here()) join(firstVoice()); else { $("call").classList.remove("min"); refreshButtons(); } });
   $("dmVideoBtn").addEventListener("click", () => joinCall(true));
   // atender uma chamada (janelinha "Chamada recebida..." do ring.js)
   async function joinCall(video) {
     // logo depois de abrir a pagina os canais podem ainda nao ter chegado
     for (let i = 0; i < 40 && !firstVoice(); i++) await new Promise((r) => setTimeout(r, 150));
-    if (!inCall) await join(firstVoice(), video);
+    if (!here()) await join(firstVoice(), video);
     if (video && inCall && !camStream) toggleCam();
   }
   app.joinCall = joinCall;
@@ -1332,12 +1389,16 @@
   const answerParam = new URLSearchParams(location.search).get("atender");
   window.addEventListener("beforeunload", () => { if (inCall) socket.emit("call:leave"); });
 
+  let answered = false;
   app.onJoin = () => {
     refreshButtons(); renderSidebar();
-    if (answerParam && !app.answering) {
+    // atender: veio do endereco (?atender=) ou da janelinha em outra conversa (app.pendingAnswer, sem recarregar)
+    const ans = app.pendingAnswer || (!answered && answerParam);
+    if (ans && !app.answering) {
+      answered = true; app.pendingAnswer = null;
       app.answering = app.serverId;
-      history.replaceState(null, "", location.pathname);
-      joinCall(answerParam === "video").finally(() => { app.answering = null; });
+      if (answerParam) history.replaceState(null, "", location.pathname);
+      joinCall(ans === "video").finally(() => { app.answering = null; });
     }
   };
   app.renderVoice = renderSidebar;

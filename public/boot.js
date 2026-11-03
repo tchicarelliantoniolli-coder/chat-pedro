@@ -33,7 +33,7 @@
   window.ChatPedroAuth = {
     api,
     paintIcon,
-    goServer: (id) => goServer(id),
+    goServer: (id, opts) => goServer(id, opts),
     get me() { return me; },
     get profile() { return profile; },
     get current() { return current; },
@@ -215,7 +215,33 @@
     hideGate();
     socket.connect();
   }
-  const goServer = (id) => { location.href = "/s/" + id; }; // trocar de servidor recarrega a pagina (sai da call e dos jogos)
+  // Trocar de servidor NAO recarrega a pagina (como no Discord): a barra fica parada, a mesma conexao so troca de
+  // servidor e o meio da tela muda. A call continua (ela tem conexao propria, no call.js).
+  // opts.answer = "voz" | "video": atende a chamada desse servidor assim que entrar.
+  async function goServer(id, opts = {}) {
+    if (!servers.some((x) => x.id === id)) await refreshServers(); // servidor ou conversa nova
+    if (!servers.some((x) => x.id === id) || !app.switchServer) { location.href = "/s/" + id + (opts.answer ? "?atender=" + opts.answer : ""); return; }
+    if (app.closeHome) app.closeHome();
+    document.body.classList.remove("railopen");
+    if (opts.answer) app.pendingAnswer = opts.answer;
+    if (id === current) { if (opts.answer && app.onJoin) app.onJoin(); return; }
+    if (!opts.fromHistory) history.pushState(null, "", "/s/" + id);
+    dmUnread.delete(id); srvUnread.delete(id);
+    current = id;
+    store.set("chatpedro-server", id);
+    const srv = currentServer();
+    app.switchServer(id, srv ? srv.name : "");
+    renderRail();
+    renderServerMenu();
+    hideGate();
+    retried = false;
+    socket.disconnect().connect();
+  }
+  // botao voltar/avancar do navegador entre servidores
+  window.addEventListener("popstate", () => {
+    const m = location.pathname.match(/^\/s\/([0-9a-f-]{36})/i);
+    if (m && m[1] !== current && servers.some((x) => x.id === m[1])) goServer(m[1], { fromHistory: true });
+  });
 
   // ---------- sem servidor: criar um ou entrar com convite ----------
   function showHome(canGoBack) {
