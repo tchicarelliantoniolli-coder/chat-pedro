@@ -4,6 +4,7 @@
   const $ = (id) => document.getElementById(id);
   // canal proprio do painel: chega ate em quem nao entrou em servidor (divide a conexao com o chat)
   const socket = window.io("/adm");
+  window.ChatPedroAdmSocket = socket; // o aviso de versao nova (embaixo) usa este mesmo canal
   socket.connect();
   let token = "";
   try { token = sessionStorage.getItem("cp-adm") || ""; } catch {}
@@ -204,7 +205,8 @@
 // Site atualizado: quando sai uma versao nova (o Render reinicia o servidor), cada navegador recarrega
 // sozinho. O que estava escrito na caixa de mensagem volta depois de recarregar.
 (() => {
-  const socket = window.io("/adm");
+  // usa o mesmo canal do painel: um segundo io("/adm") abriria outra conexao inteira com o servidor
+  const socket = window.ChatPedroAdmSocket || window.io("/adm");
   let version = null, reloading = false;
   try {
     const draft = sessionStorage.getItem("cp-draft");

@@ -13,8 +13,20 @@ const kv = async () => (await fetch('http://localhost:3330/rest/v1/chat_kv?selec
   const mk = async () => { const c = await b.newContext({ viewport: { width: 1366, height: 760 } }); const p = await c.newPage(); p.on('pageerror', e => errs.push(e.message)); return p; };
   const signup = async (p, email, nick) => { await p.goto(URL); await p.waitForTimeout(500); await p.click('#tabSignup'); await p.fill('#authEmail', email); await p.fill('#authNick', nick); await p.fill('#authPass', 'senha123'); await p.click('#authGo'); await p.waitForTimeout(900); };
   const loaded = (p) => p.evaluate(() => [...document.querySelectorAll('#log img:not(.cemoji)')].filter((i) => (i.getAttribute('src') || '').startsWith('data:image/')).length);
-  const P = await mk(); await signup(P, 'p@t.com', 'Pedro');
+  const P = await mk();
+  // cada pessoa abre UMA conexao em tempo real (o chat e o painel adm dividem a mesma)
+  const ws = []; P.on('websocket', (w) => { if (w.url().includes('/socket.io/')) ws.push(w); });
+  await signup(P, 'p@t.com', 'Pedro');
   await P.fill('#createName', 'Galera'); await P.click('#createForm button[type=submit]'); await P.waitForTimeout(1500);
+  ws.length = 0; await P.reload(); await P.waitForTimeout(2500);
+  ok(ws.filter((w) => !w.isClosed()).length === 1, 'uma conexao so com o servidor por pessoa: ' + ws.filter((w) => !w.isClosed()).length + ' abertas');
+  // aviso de versao nova continua chegando pelo canal unico: recarrega sozinho e a mensagem escrita volta
+  await P.fill('#input', 'rascunho que nao pode sumir');
+  const reloaded = P.waitForEvent('load', { timeout: 8000 }).then(() => true, () => false);
+  await P.evaluate(() => window.ChatPedroAdmSocket.listeners('site:version').forEach((f) => f('versao-nova')));
+  ok(await reloaded, 'versao nova do site: a pagina recarrega sozinha');
+  await P.waitForTimeout(2500);
+  ok(await P.inputValue('#input') === 'rascunho que nao pode sumir', 'o texto da caixa de mensagem volta depois de recarregar');
   const photo = await P.evaluate(() => { const cv = document.createElement('canvas'); cv.width = cv.height = 120; const x = cv.getContext('2d'); x.fillStyle = '#e33'; x.fillRect(0, 0, 120, 120); x.fillStyle = '#33e'; x.fillRect(30, 30, 60, 60); return cv.toDataURL('image/webp', 0.9); });
   await P.evaluate((d) => window.ChatPedro.socket.emit('image', d, undefined, 'chat'), photo); await P.waitForTimeout(2500);
   const media = (await kv()).filter((r) => /:media:\d+$/.test(r.key));
