@@ -40,6 +40,13 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   arquivo; ler com `jq`). Os CSS do app estão listados no HTML de `https://discord.com/app` (`/assets/*.css`)
   e os carregados depois estão no mapa `"<id>"===e?...".css"` do `web.*.js`. Baixe tudo e procure as regras
   pelo nome da classe (ex.: `panels_`, `audioButtonParent_`, `actionButtons_`, `wrapper_cb9592`).
+- O CSS diz o padrão, mas algumas medidas o app muda pelo JavaScript: confira no JS antes de copiar. Ex.: a coluna da
+  esquerda (servidores + canais) usa `--custom-guild-sidebar-width`, que o CSS deixa em 268px mas o JS põe em 375px ao
+  abrir (arrastável de 264 a 432px). No Chat Pedro: `#side` = `--side-w` (303px), `#sideResize` em `settings.js`
+  (`cp-sidew`). Tokens de cor: leia os valores finais na página aberta (`getComputedStyle` no `html`, que tem
+  `theme-dark theme-darker visual-refresh`). Os nomes das classes vêm em mapas no JS (`C3:"panels__5e434"`); procure
+  o hash e depois as regras com ele. A linha de canal da barra (classe de canal do servidor) não está nos CSS que dá
+  para baixar sem login.
 - Os textos oficiais em pt-BR ficam num pacote de mensagens (achar o chunk do `"pt-BR":()=>n.e("...")`
   ao lado do en-US e comparar as chaves).
 - Fotos que o dono manda: meça cores e tamanhos com PIL (`getpixel`, recorte e amplie).

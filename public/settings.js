@@ -393,4 +393,35 @@
   $("upDeafMenu").addEventListener("click", devPop($("upDeafMenu"), "audiooutput"));
 
   $("usAgent").textContent = navigator.platform || "";
+
+  // ---------- largura da barra de canais (como no Discord) ----------
+  // A coluna da esquerda (servidores + canais) comeca com 375px; arrastando a borda vai de 264 a 432px;
+  // setas do teclado mudam de 10 em 10 e Home/End vao para o minimo/maximo. Fica guardada neste navegador.
+  const RAIL = 72, MIN = 264, MAX = 432, DEF = 375;
+  const handle = $("sideResize");
+  const setW = (total, save) => {
+    const t = Math.round(Math.min(MAX, Math.max(MIN, total)));
+    if (t === DEF) document.body.style.removeProperty("--side-w"); else document.body.style.setProperty("--side-w", (t - RAIL) + "px");
+    if (save) store.set("cp-sidew", String(t));
+    return t;
+  };
+  let sideW = setW(Number(store.get("cp-sidew")) || DEF, false);
+  if (handle) {
+    const mobile = () => matchMedia("(max-width: 760px)").matches;
+    handle.addEventListener("pointerdown", (e) => {
+      if (mobile() || e.button !== 0) return;
+      e.preventDefault(); handle.setPointerCapture(e.pointerId); document.body.classList.add("resizing");
+      const left = $("side").getBoundingClientRect().left - RAIL;
+      const move = (ev) => { sideW = setW(ev.clientX - left, false); };
+      const up = () => { handle.removeEventListener("pointermove", move); document.body.classList.remove("resizing"); setW(sideW, true); };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", up, { once: true });
+      handle.addEventListener("pointercancel", up, { once: true });
+    });
+    handle.addEventListener("keydown", (e) => {
+      const next = { ArrowRight: sideW + 10, ArrowLeft: sideW - 10, Home: MIN, End: MAX }[e.key];
+      if (next === undefined) return;
+      e.preventDefault(); sideW = setW(next, true);
+    });
+  }
 })();
