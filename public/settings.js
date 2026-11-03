@@ -12,7 +12,7 @@
   const DEFAULTS = {
     typing: true, compact: false, font: 16, gap: 12, zoom: 100, sat: 100, underline: false, rolecolors: true, reduce: false, anim: true,
     images: true, embeds: true, reactions: true, emoticons: true, stickers: true, spoilers: false,
-    titlebadge: true, mute: false, "snd-mention": true, "snd-dm": true, "snd-ring": true, "snd-calling": true, dev: false, activity: true,
+    titlebadge: true, mute: false, "snd-mention": true, "snd-dm": true, "snd-ring": true, "snd-calling": true, "snd-mute": true, "snd-deafen": true, "snd-voice": true, "snd-user": true, "snd-stream": true, "snd-ptt": true, "snd-activity": true, "snd-sent": true, "snd-react": true, dev: false, activity: true,
   };
   let prefs = {};
   try { prefs = JSON.parse(store.get("chatpedro-prefs") || "{}") || {}; } catch { prefs = {}; }
@@ -58,7 +58,7 @@
   }
   document.querySelectorAll("#userSettings [data-pref]").forEach((c) => {
     const k = c.dataset.pref;
-    if (c.type === "checkbox") c.addEventListener("change", () => set(k, c.checked));
+    if (c.type === "checkbox") c.addEventListener("change", () => { set(k, c.checked); if (c.checked && c.dataset.sfx && window.ChatPedroSfx) window.ChatPedroSfx.preview(c.dataset.sfx); });
     else if (c.type === "range") c.addEventListener("input", () => { set(k, Number(c.value)); syncControls(); });
     else if (c.classList.contains("us-radio")) c.addEventListener("change", (e) => set(k, e.target.value === "on"));
   });
@@ -384,8 +384,8 @@
     const bar = el("div", "unbar"); bar.append(meter, btn);
     test.append(el("div", "unlabel", "Teste do microfone"), bar);
     const foot = el("div", "unfoot");
-    const by = el("span", "", "Fornecido por GTCRN, de código aberto");
-    const more = el("a", "", "Saiba mais"); more.href = "https://github.com/Xiaobin-Rong/gtcrn"; more.target = "_blank"; more.rel = "noopener";
+    const by = el("span", "", "Fornecido por RNNoise, de código aberto");
+    const more = el("a", "", "Saiba mais"); more.href = "https://jmvalin.ca/demo/rnnoise/"; more.target = "_blank"; more.rel = "noopener";
     foot.append(by, more);
     box.append(row, text, test, foot);
   }

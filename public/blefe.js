@@ -35,8 +35,8 @@
     let t = a.currentTime;
     for (const [freq, dur, type, vol] of notes) {
       const o = a.createOscillator(), g = a.createGain();
-      o.type = type || "square"; o.frequency.value = freq;
-      g.gain.setValueAtTime(vol || 0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.type = type === "square" || !type ? "triangle" : type; o.frequency.value = freq; // triangulo: o mesmo "jeito de jogo", sem a aspereza da onda quadrada
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime((vol || 0.05) * 1.6, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
       o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur);
       t += dur * 0.9;
     }

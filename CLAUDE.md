@@ -87,14 +87,24 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   `m.screen` da pessoa, por isso o vídeo da tela é enviado antes do som). Tela nova de outra pessoa vira o quadro em
   destaque sozinha (`.tile.focus`, um por vez; clicar escolhe/volta para a grade; "AO VIVO" na lista também foca); com
   destaque a call cresce e os outros viram miniaturas de 64px embaixo. Teste `16-compartilhar-tela` (3 pessoas).
-  Supressão de ruído no lugar do Krisp (o Discord usa o Krisp JS, pago e licenciado só para ele): GTCRN, rede neural de
-  código aberto (MIT) do pacote `@sapphi-red/web-noise-suppressor`, servido em `/vendor/ruido`; roda no navegador num
-  AudioWorklet (`makeDenoise`, áudio a 48 kHz, ~5% de um núcleo, ~32 ms de atraso) entre o microfone e o que vai para a
-  call. `prefs.noise` (`cp-noise`): "ia" (padrão, a do navegador fica desligada como no Discord com o Krisp), "padrao"
+  Supressão de ruído no lugar do Krisp (o Discord usa o Krisp JS, pago e licenciado só para ele): RNNoise, rede neural de
+  código aberto (BSD) do pacote `@sapphi-red/web-noise-suppressor`, servido em `/vendor/ruido`; roda no navegador num
+  AudioWorklet (`makeDenoise`, 48 kHz de verdade, ~10 ms de atraso) entre o microfone e o que vai para a call.
+  NÃO volte para o GTCRN: ele só trabalha em 16 kHz e corta tudo acima de 8 kHz (voz abafada; medido).
+  Qualidade da voz: `tuneSdp` ajusta a descrição que chega (Opus `maxaveragebitrate=96000`, `useinbandfec=1`, 48 kHz) e
+  `voicePriority` dá prioridade alta e até 96 kbps ao som (o navegador mandava ~32 kbps). Teste `18-sons-e-qualidade`. `prefs.noise` (`cp-noise`): "ia" (padrão, a do navegador fica desligada como no Discord com o Krisp), "padrao"
   (a do navegador) ou "nenhuma". Botão de onda `#vpNoise` abre a janelinha `app.openNoisePop` (settings.js: liga/desliga,
   "Teste do microfone" que toca a sua voz já limpa, `app.audio.micTest`); opções em `#noiseRadio` (Voz e vídeo). Se o
   navegador não aguentar, cai na padrão com aviso. Teste `17-supressao-de-ruido` (microfone falso toca
   `tests/fixtures/fala-com-ruido.wav`, fala do Open Speech Repository com ventilador e teclado).
+- `public/sfx.js`: TODOS os sons do site (`window.ChatPedroSfx.play("nome")`). Feitos no navegador, sem arquivos
+  (os do Discord são dele): cada som é gravado uma vez em 48 kHz estéreo num OfflineAudioContext (marimba, sino de vidro,
+  nota macia, "toc"; envelope sem estalo e eco de sala) quando o navegador está parado, depois só toca o buffer.
+  Sons: `message`, `mention`, `mute`/`unmute`, `deafen`/`undeafen`, `join`/`leave` (você na call), `userJoin`/`userLeave`,
+  `streamStart`/`streamEnd`, `pttOn`/`pttOff`, `activity`, `sent`, `react`, `test`. Cada um tem a opção `snd-*` em
+  Notificações > Sons (ligar toca uma prévia, `data-sfx`); `allowed()` decide (avisos param com "Desativar todos" e
+  "Não perturbe"; com o fone desativado só tocam mutar/fone). `bus()` é a saída com eco usada pelos toques do `ring.js`.
+  Para conferir um som novo: grave em WAV e olhe o espectrograma (sem riscos verticais = sem estalo).
 - `public/ring.js`: ligar na DM e na DM em grupo como no Discord. Quem começa a chamada faz tocar para os outros
   (servidor: `startDmCall`/`ringUser`/`stopRing`, eventos `call:ring`, `call:ringstop`, `call:ringing`, `call:decline`;
   toca por até 1 minuto, em qualquer aba do site). Janelinha "Chamada recebida..." (`.ringpop`, no meio da tela,
@@ -126,6 +136,10 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   uma vez no primeiro clique) e o título da aba pisca; some quando a pessoa volta ou o adm para.
   Teste `10-painel-adm` (a senha de teste está no `run.sh`). O mesmo arquivo recarrega o site sozinho quando sai
   versão nova: o servidor manda `site:version` (hash dos arquivos) no `/adm`; o texto da caixa de mensagem volta.
+- Leveza (medida com Playwright + CDP `Performance.getMetrics`): a barrinha de ações de cada mensagem só é montada
+  quando o mouse/dedo chega nela (`ensureActs`; nos testes, passe o mouse na linha antes de clicar nos botões); o chat
+  aberto guarda no máximo ~320 linhas (volta para 220); a animação da tela de carregamento só roda enquanto carrega
+  (`body.booted` esconde); brilhos que pulsam usam transform/opacity num `::after` (nunca animar `box-shadow` sem parar).
 - Painel do usuário (embaixo à esquerda): se estica por baixo da barra de servidores como no Discord atual;
   microfone e fone com setinha (`.agrp`), vermelho quando mudo (`.off`); mostra "Em uma chamada" na call.
 
@@ -154,8 +168,8 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
 Mensagens de commit em português. Não escreva nome/versão de modelo de IA em código, commits ou PR.
 
 ## O que ficou de fora do Discord (e por quê)
-o Krisp (pago e licenciado só para o Discord; no lugar está o GTCRN, livre); o arquivo de som do toque de chamada (é do Discord, como os ícones: o nosso é feito no código, mesmo ritmo e
-duração, melodia própria); GIFs e soundboard (pedido do dono; por isso o painel "Voz conectada" tem 3 botões e não 4); Nitro, impulsos,
+o Krisp (pago e licenciado só para o Discord; no lugar está o RNNoise, livre); os arquivos de som do Discord (são dele, como os ícones: os nossos são feitos no código pelo `sfx.js`, nos mesmos
+momentos, com melodias próprias; o toque de chamada tem o mesmo ritmo e duração); GIFs e soundboard (pedido do dono; por isso o painel "Voz conectada" tem 3 botões e não 4); Nitro, impulsos,
 loja, presentes, missões e super reações (sistema pago); bots com comandos e apps (rodar código de terceiros);
 conexões verificadas (precisa de conta de desenvolvedor em cada site; hoje a pessoa digita o usuário); clipes e
 fundo de vídeo (pesado demais para o plano grátis); temas claros (o dono pediu só o do Discord); atalhos de

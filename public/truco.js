@@ -28,8 +28,8 @@
       let t = actx.currentTime;
       for (const [freq, dur, type] of notes) {
         const o = actx.createOscillator(), g = actx.createGain();
-        o.type = type || "square"; o.frequency.value = freq;
-        g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.type = type === "square" || !type ? "triangle" : type; o.frequency.value = freq; // triangulo: o mesmo "jeito de jogo", sem a aspereza da onda quadrada
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime((0.06) * 1.6, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
         o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur);
         t += dur * 0.9;
       }

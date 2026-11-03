@@ -25,7 +25,7 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { console.log('
   });
 
   await step('na call', async () => {
-    const r = await P.request.get(URL + '/vendor/ruido/gtcrn.wasm');
+    const r = await P.request.get(URL + '/vendor/ruido/rnnoise_simd.wasm');
     ok(r.ok() && (r.headers()['content-type'] || '').includes('wasm'), 'o site entrega o arquivo da IA (' + r.headers()['content-type'] + ')');
     await P.locator('.chan.voice').first().click(); await L.locator('.chan.voice').first().click(); await P.waitForTimeout(3000);
     ok(await P.evaluate(() => window.ChatPedro.audio.noiseActive()), 'supressão de ruído com IA ligada sozinha na call');

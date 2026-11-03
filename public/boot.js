@@ -92,10 +92,10 @@
 
   // ---------- telas de entrada ----------
   function showGate(which) {
-    document.body.classList.add("ready", "gate");
+    document.body.classList.add("ready", "gate", "booted");
     for (const id of ["gAuth", "gHome", "gInvite", "gMfa"]) $(id).hidden = id !== which;
   }
-  function hideGate() { document.body.classList.remove("gate"); document.body.classList.add("ready"); }
+  function hideGate() { document.body.classList.remove("gate"); document.body.classList.add("ready"); setTimeout(() => { if (document.body.classList.contains("ready")) document.body.classList.add("booted"); }, 400); }
 
   function setMode(m) {
     mode = m;

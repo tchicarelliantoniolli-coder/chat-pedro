@@ -4,6 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const app = window.ChatPedro;
   const { socket, avatar, setNote, store } = app;
+  const sfx = (name) => { if (window.ChatPedroSfx) window.ChatPedroSfx.play(name); };
   // STUN padrao; se o servidor tiver TURN configurado (variaveis TURN_* no Render), ele manda a lista completa
   const ICE_DEFAULT = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
   const iceConfig = () => ({ iceServers: app.ice && app.ice.length ? app.ice : ICE_DEFAULT });
@@ -25,7 +26,7 @@
   let micRaw = null;            // stream do microfone
   let micSource = null, micGain = null, micDest = null, micAnalyser = null;
   let camStream = null, screenStream = null;
-  let micOn = true, deaf = false;
+  let micOn = true, deaf = false, micBeforeDeaf = false;
   const prefs = {
     micId: store.get("cp-mic") || "",
     camId: store.get("cp-cam") || "",
@@ -110,18 +111,20 @@
   }
 
   // ---------- supressao de ruido com IA (no lugar do Krisp do Discord) ----------
-  // O Discord usa o Krisp, que e pago e licenciado so para ele. Aqui e o GTCRN (codigo aberto, licenca MIT):
+  // O Discord usa o Krisp, que e pago e licenciado so para ele. Aqui e o RNNoise (codigo aberto, licenca BSD):
   // uma rede neural pequena que tira o barulho de fundo e deixa a voz. Roda no proprio navegador (AudioWorklet +
-  // WebAssembly, ~200 KB, ~5% de um nucleo, ~32 ms de atraso), so com o audio a 48 kHz.
+  // WebAssembly, ~150 KB, ~10 ms de atraso) em 48 kHz de verdade: a voz continua com todos os agudos.
+  // (Antes era o GTCRN, que so trabalha em 16 kHz e cortava tudo acima de 8 kHz: a voz ficava abafada.)
   // Os arquivos vem do pacote @sapphi-red/web-noise-suppressor, servidos em /vendor/ruido.
   let nsWasm = null, denoise = null, nsBlocked = false, nsWarned = false;
+  const simd = () => { try { return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11])); } catch { return false; } };
   async function makeDenoise() {
     if (prefs.noise !== "ia" || nsBlocked) return null;
     if (!ctx.audioWorklet || ctx.sampleRate !== 48000) throw new Error("sem suporte");
-    nsWasm = nsWasm || fetch("/vendor/ruido/gtcrn.wasm").then((r) => { if (!r.ok) throw new Error("wasm"); return r.arrayBuffer(); });
+    nsWasm = nsWasm || fetch("/vendor/ruido/" + (simd() ? "rnnoise_simd.wasm" : "rnnoise.wasm")).then((r) => { if (!r.ok) throw new Error("wasm"); return r.arrayBuffer(); });
     const wasm = await nsWasm;
-    if (!ctx.nsLoaded) { await ctx.audioWorklet.addModule("/vendor/ruido/gtcrn/workletProcessor.js"); ctx.nsLoaded = true; }
-    return new AudioWorkletNode(ctx, "@sapphi-red/web-noise-suppressor/gtcrn", {
+    if (!ctx.nsLoaded) { await ctx.audioWorklet.addModule("/vendor/ruido/rnnoise/workletProcessor.js"); ctx.nsLoaded = true; }
+    return new AudioWorkletNode(ctx, "@sapphi-red/web-noise-suppressor/rnnoise", {
       channelCount: 1, channelCountMode: "explicit", processorOptions: { maxChannels: 1, wasmBinary: wasm },
     });
   }
@@ -143,7 +146,8 @@
     const filters = !prefs.simple;
     // com a IA ligada a reducao de ruido do navegador fica desligada (o Discord faz igual com o Krisp)
     const ns = filters && prefs.noise !== "nenhuma" && !denoise;
-    const want = (id) => ({ audio: { deviceId: id ? { exact: id } : undefined, echoCancellation: filters, noiseSuppression: ns, autoGainControl: filters } });
+    // 48 kHz em mono: a voz sai com qualidade cheia (o Opus da call trabalha assim)
+    const want = (id) => ({ audio: { deviceId: id ? { exact: id } : undefined, echoCancellation: filters, noiseSuppression: ns, autoGainControl: filters, sampleRate: { ideal: 48000 }, channelCount: { ideal: 1 } } });
     // usa exatamente o microfone escolhido (antes o navegador podia pegar outro, como o DroidCam);
     // se ele sumiu, cai no padrao
     try { micRaw = await navigator.mediaDevices.getUserMedia(want(prefs.micId)); }
@@ -194,6 +198,15 @@
     applyMic();
   }
 
+  // a voz tem prioridade na internet de quem manda (antes do video e da tela) e pode usar ate 96 kbps
+  function voicePriority(sender) {
+    try {
+      const ps = sender.getParameters();
+      if (!ps.encodings || !ps.encodings.length) return; // ainda negociando: aplica quando conectar
+      for (const e of ps.encodings) { e.maxBitrate = 96000; e.priority = "high"; e.networkPriority = "high"; }
+      sender.setParameters(ps).catch(() => {});
+    } catch {}
+  }
   function level(analyser) {
     const buf = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(buf);
@@ -222,7 +235,7 @@
     for (const [track, stream] of localTracks()) {
       const sender = pc.addTrack(track, stream);
       p.senders.set(track.id, sender);
-      if (track.kind === "audio") p.micSender = sender;
+      if (track.kind === "audio" && track === micTrack()) p.micSender = sender; // (o som da tela tem o seu proprio)
     }
 
     pc.onnegotiationneeded = async () => {
@@ -236,7 +249,7 @@
     // caiu: tenta de novo (ate 3 vezes); se nao voltar, avisa (a internet de alguem bloqueia a ligacao direta)
     p.fails = 0;
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected") p.fails = 0;
+      if (pc.connectionState === "connected") { p.fails = 0; for (const sd of pc.getSenders()) if (sd.track && sd.track.kind === "audio") voicePriority(sd); }
       if (pc.connectionState !== "failed") return;
       if (++p.fails <= 3) { pc.restartIce(); return; }
       const m = members.find((x) => x.id === id);
@@ -337,6 +350,20 @@
     peers.delete(id);
   }
 
+  // Qualidade da voz: o navegador manda o Opus a ~32 kbps por padrao. Pedimos ate 96 kbps (o Discord usa 64 e ate 96),
+  // 48 kHz de banda cheia e correcao de perdas (FEC), que esconde os cortes quando a internet falha um pouco.
+  // Os parametros de um "fmtp" dizem como o OUTRO lado deve mandar o som; por isso ajustamos a descricao que chega.
+  function tuneSdp(sdp) {
+    const opus = new Set();
+    for (const m of sdp.matchAll(/a=rtpmap:(\d+) opus\/48000/gi)) opus.add(m[1]);
+    return sdp.replace(/a=fmtp:(\d+) ([^\r\n]*)/g, (line, pt, params) => {
+      if (!opus.has(pt)) return line;
+      const kv = new Map(params.split(";").map((x) => x.trim()).filter(Boolean).map((x) => { const i = x.indexOf("="); return i < 0 ? [x, ""] : [x.slice(0, i), x.slice(i + 1)]; }));
+      kv.set("useinbandfec", "1"); kv.set("maxaveragebitrate", "96000"); kv.set("maxplaybackrate", "48000");
+      if (!kv.has("minptime")) kv.set("minptime", "10");
+      return "a=fmtp:" + pt + " " + [...kv].map(([k, v]) => (v === "" ? k : k + "=" + v)).join(";");
+    });
+  }
   socket.on("call:signal", async ({ from, description, candidate }) => {
     if (!inCall) return;
     const p = getPeer(from), pc = p.pc;
@@ -345,7 +372,7 @@
         const collision = description.type === "offer" && (p.makingOffer || pc.signalingState !== "stable");
         p.ignoreOffer = !p.polite && collision;
         if (p.ignoreOffer) return;
-        await pc.setRemoteDescription(description);
+        await pc.setRemoteDescription(description.sdp ? { type: description.type, sdp: tuneSdp(description.sdp) } : description);
         if (description.type === "offer") {
           await pc.setLocalDescription();
           socket.emit("call:signal", { to: from, description: pc.localDescription });
@@ -392,6 +419,10 @@
       if (err) res = null; // o servidor nao respondeu
       if (!res || !res.ok) { setNote("ERRO: não deu para entrar na chamada.", true); cleanup(); return; }
       inCall = true;
+      sfx("join");
+      // quem ja estava no canal nao faz som de "entrou"
+      const here = allMembers.filter((m) => m.ch === myCh);
+      seenMembers = new Set(here.map((m) => m.id)); seenLive = new Set(here.filter((m) => m.screen && m.id !== socket.id).map((m) => m.id));
       applyMic();
       syncWatch();
       $("call").hidden = false;
@@ -423,6 +454,7 @@
 
   function leave() {
     if (!inCall) return;
+    sfx("leave");
     socket.emit("call:leave");
     cleanup();
     refreshButtons();
@@ -430,7 +462,7 @@
   }
 
   // Se a conexao com o servidor cair, a chamada acaba; e preciso entrar de novo.
-  socket.on("disconnect", () => { if (inCall) { cleanup(); refreshButtons(); setNote("A conexão caiu e você saiu da chamada. Entre de novo.", true); } });
+  socket.on("disconnect", () => { if (inCall) { sfx("leave"); cleanup(); refreshButtons(); setNote("A conexão caiu e você saiu da chamada. Entre de novo.", true); } });
 
   // ---------- controles ----------
   async function toggleCam() {
@@ -469,6 +501,7 @@
     if ("contentHint" in track) track.contentHint = "detail"; // texto da tela nitido
     track.onended = stopScreen; // "Parar compartilhamento" do proprio navegador
     for (const t of screenTracks()) addTrackToAll(t, screenStream);
+    sfx("streamStart");
     sendState(); refreshButtons(); renderTiles();
   }
   function stopScreen() {
@@ -476,6 +509,7 @@
     for (const t of screenStream.getTracks()) removeTrackFromAll(t);
     screenStream.getTracks().forEach((t) => t.stop());
     screenStream = null;
+    if (inCall) sfx("streamEnd");
     sendState(); refreshButtons(); renderTiles();
   }
 
@@ -496,18 +530,23 @@
     else socket.emit("stage:hand", !me.hand);
   });
   function toggleMic() {
-    if (!inCall) { micOn = !micOn; if (micOn) deaf = false; refreshButtons(); return; } // fora da call: so guarda a escolha
+    if (!inCall) { const wasDeaf = deaf; micOn = !micOn; if (micOn) deaf = false; sfx(wasDeaf && !deaf ? "undeafen" : micOn ? "unmute" : "mute"); refreshButtons(); return; } // fora da call: so guarda a escolha
     if (!micOn && stageBlocked()) return;
     if (!micRaw) { setNote("Sem acesso ao microfone. Libere o microfone no navegador e entre de novo.", true); return; }
     micOn = !micOn;
     if (!micOn && deaf) {} // mutar nao mexe no fone
+    const wasDeaf = deaf;
     if (micOn && deaf) { deaf = false; for (const id of peers.keys()) applyVolume(id); } // como no Discord: ligar o mic tira o modo surdo
+    sfx(wasDeaf && !deaf ? "undeafen" : micOn ? "unmute" : "mute");
     applyMic();
     sendState(); refreshButtons(); renderTiles();
   }
   function toggleDeaf() {
     deaf = !deaf;
-    if (deaf && micOn) { micOn = false; applyMic(); } // como no Discord: surdo tambem muta
+    sfx(deaf ? "deafen" : "undeafen");
+    // como no Discord: surdo tambem muta, e reativar o audio devolve o microfone como estava antes
+    if (deaf) { micBeforeDeaf = micOn; if (micOn) { micOn = false; applyMic(); } }
+    else if (micBeforeDeaf && !micOn && !audience()) { micOn = true; applyMic(); }
     for (const id of peers.keys()) applyVolume(id);
     sendState(); refreshButtons(); renderTiles();
   }
@@ -546,24 +585,13 @@
     prefs.outId = e.target.value; store.set("cp-out", prefs.outId);
     for (const p of peers.values()) for (const a of [p.audio, p.boost && p.boost.out]) if (a) a.setSinkId(prefs.outId).catch(() => {});
     if (ctx && ctx.setSinkId) ctx.setSinkId(prefs.outId).catch(() => {});
+    if (window.ChatPedroSfx) window.ChatPedroSfx.setSink(prefs.outId);
   });
-  // som de teste: um bipe curto na saida escolhida
-  function beepUrl() {
-    const rate = 22050, n = Math.floor(rate * 0.5), buf = new DataView(new ArrayBuffer(44 + n * 2));
-    const str = (o, t) => { for (let i = 0; i < t.length; i++) buf.setUint8(o + i, t.charCodeAt(i)); };
-    str(0, "RIFF"); buf.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt "); buf.setUint32(16, 16, true); buf.setUint16(20, 1, true); buf.setUint16(22, 1, true);
-    buf.setUint32(24, rate, true); buf.setUint32(28, rate * 2, true); buf.setUint16(32, 2, true); buf.setUint16(34, 16, true); str(36, "data"); buf.setUint32(40, n * 2, true);
-    for (let i = 0; i < n; i++) {
-      const t = i / rate, f = t < 0.25 ? 660 : 880, env = Math.min(1, (0.5 - t) * 8, t * 50);
-      buf.setInt16(44 + i * 2, Math.sign(Math.sin(2 * Math.PI * f * t)) * 6000 * env, true);
-    }
-    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
-  }
-  $("outTest").addEventListener("click", async () => {
-    const a = new Audio(beepUrl());
-    a.volume = prefs.master / 100;
-    if (canPickOutput && prefs.outId) await a.setSinkId(prefs.outId).catch(() => {});
-    a.play().catch(() => setNote("Não deu para tocar o som de teste.", true));
+  // som de teste: um acorde curto na saida escolhida (o mesmo motor dos sons do site, sfx.js)
+  $("outTest").addEventListener("click", () => {
+    if (!window.ChatPedroSfx) return setNote("Não deu para tocar o som de teste.", true);
+    if (prefs.outId) window.ChatPedroSfx.setSink(prefs.outId);
+    window.ChatPedroSfx.preview("test");
   });
 
   // ---------- testar o microfone fora da call ----------
@@ -589,7 +617,7 @@
   }
   // fechou a janela (pelo X, clicando fora ou ESC): desliga o teste
   new MutationObserver(() => { if ($("settings").hidden && preview && !testing) stopPreview(); }).observe($("settings"), { attributes: true, attributeFilter: ["hidden"] });
-  // supressao de ruido: "ia" (GTCRN), "padrao" (a do navegador) ou "nenhuma"
+  // supressao de ruido: "ia" (RNNoise), "padrao" (a do navegador) ou "nenhuma"
   async function setNoise(mode) {
     if (!["ia", "padrao", "nenhuma"].includes(mode) || mode === prefs.noise) return;
     prefs.noise = mode; store.set("cp-noise", mode);
@@ -960,6 +988,19 @@
     app.renderPeople();
   }
 
+  // sons da call (como no Discord): alguem entrou ou saiu do seu canal, alguem comecou ou parou de mostrar a tela
+  let seenMembers = null, seenLive = null;
+  function callSounds() {
+    const ids = new Set(members.map((m) => m.id)), live = new Set(members.filter((m) => m.screen && m.id !== socket.id).map((m) => m.id));
+    if (seenMembers) {
+      const came = [...ids].some((id) => id !== socket.id && !seenMembers.has(id));
+      const went = [...seenMembers].some((id) => id !== socket.id && !ids.has(id));
+      const liveOn = [...live].some((id) => !seenLive.has(id)), liveOff = [...seenLive].some((id) => !live.has(id) && ids.has(id));
+      if (liveOn) sfx("streamStart"); else if (liveOff) sfx("streamEnd");
+      else if (came) sfx("userJoin"); else if (went) sfx("userLeave");
+    }
+    seenMembers = ids; seenLive = live;
+  }
   socket.on("call:members", (list) => {
     const wasAudience = audience();
     allMembers = Array.isArray(list) ? list : [];
@@ -970,6 +1011,7 @@
       if (screenStream) stopScreen();
     } else if (inCall && wasAudience && isStageCh(myCh)) setNote("Você agora é orador no palco. Ligue o microfone para falar.");
     members = inCall && myCh ? allMembers.filter((m) => m.ch === myCh) : [];
+    if (inCall) callSounds();
     if (inCall) {
       const ids = new Set(members.map((m) => m.id));
       for (const id of [...peers.keys()]) if (!ids.has(id)) closePeer(id);
@@ -1023,6 +1065,7 @@
   function setPtt(held) {
     if (pttHeld === held) return;
     pttHeld = held;
+    if (inCall && prefs.ptt) sfx(held ? "pttOn" : "pttOff");
     $("pttBtn").classList.toggle("held", held);
     applyMic();
   }
@@ -1260,10 +1303,10 @@
   function actsMenu(anchor, up) {
     const r = anchor.getBoundingClientRect();
     const items = [
-      inCall ? ["Assistir YouTube junto", "play", () => { $("watchForm").hidden = !$("watchForm").hidden; if (!$("watchForm").hidden) $("watchUrl").focus(); }] : null,
-      ["Poker", "spade", () => $("actOpen").click()],
-      ["Truco", "club", () => $("trOpen").click()],
-      ["Mesa do Blefe", "bluff", () => $("blOpen").click()],
+      inCall ? ["Assistir YouTube junto", "play", () => { $("watchForm").hidden = !$("watchForm").hidden; if (!$("watchForm").hidden) { sfx("activity"); $("watchUrl").focus(); } }] : null,
+      ["Poker", "spade", () => { sfx("activity"); $("actOpen").click(); }],
+      ["Truco", "club", () => { sfx("activity"); $("trOpen").click(); }],
+      ["Mesa do Blefe", "bluff", () => { sfx("activity"); $("blOpen").click(); }],
     ];
     app.showMenu(items, r.left, up ? r.top - 8 - items.filter(Boolean).length * 40 : r.bottom + 6);
   }

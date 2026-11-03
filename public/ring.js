@@ -9,8 +9,11 @@
   const P = (k) => (window.ChatPedroPrefs ? window.ChatPedroPrefs.get(k) : true);
 
   // ---------- sons ----------
+  // toca pelo motor de sons do site (sfx.js): mesma saida de som escolhida e um pouco de eco de sala
   let ac = null;
   function audio() {
+    const S = window.ChatPedroSfx;
+    if (S && S.ctx()) { ac = S.ctx(); return ac; }
     if (!ac) {
       ac = new (window.AudioContext || window.webkitAudioContext)();
       const out = store.get("cp-out");
@@ -19,19 +22,21 @@
     if (ac.state !== "running") ac.resume().catch(() => {});
     return ac;
   }
+  const outBus = (c) => { const S = window.ChatPedroSfx, b = S && S.bus(); return b && b.context === c ? b : c.destination; };
   // o navegador so deixa tocar som depois que a pessoa mexe na pagina: destrava no primeiro toque
   addEventListener("pointerdown", () => { if (ac && ac.state !== "running") ac.resume().catch(() => {}); }, true);
   const hz = (n) => 440 * Math.pow(2, (n - 69) / 12);
-  // nota de sino suave (fundamental + oitava + duas oitavas que somem antes)
+  // nota de sino suave: fundamental redonda + parciais de sino (2,76x e 5,4x) que somem antes; sem estalo no ataque
   function bell(c, out, t, midi, len, vol) {
-    for (const [mult, part] of [[1, 1], [2, 0.4], [4, 0.1]]) {
+    const f0 = hz(midi);
+    for (const [mult, part, l] of [[1, 1, len], [2, 0.22, len * 0.6], [2.76, 0.12, len * 0.35], [5.4, 0.04, len * 0.18]]) {
+      if (f0 * mult > 16000) continue;
       const o = c.createOscillator(), g = c.createGain();
-      o.type = "sine"; o.frequency.value = hz(midi) * mult;
-      const end = t + len / (mult === 1 ? 1 : 1.8);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(vol * part, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, end);
-      o.connect(g).connect(out); o.start(t); o.stop(end + 0.02);
+      o.type = "sine"; o.frequency.value = f0 * mult;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol * part, t + 0.004);
+      g.gain.setTargetAtTime(0, t + 0.004, l / 4);
+      o.connect(g).connect(out); o.start(t); o.stop(t + l * 1.4 + 0.05);
     }
   }
   // "Chamada recebida": 4 frases de 1,35 s (uma para cada pulso da foto), arpejo por cima de um baixo
@@ -50,7 +55,7 @@
   }
   function loop(pattern, period) {
     const c = audio(), out = c.createGain();
-    out.gain.value = 0.9; out.connect(c.destination);
+    out.gain.value = 0.9; out.connect(outBus(c));
     let next = c.currentTime + 0.05, timer = 0, on = true;
     const plan = () => { if (!on) return; while (next < c.currentTime + 1) { pattern(c, out, next); next += period; } timer = setTimeout(plan, 300); };
     plan();
