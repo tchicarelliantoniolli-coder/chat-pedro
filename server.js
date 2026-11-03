@@ -527,7 +527,10 @@ api.get("/me", wrap(async (req, res) => {
       const o = list[0]; d.name = o ? o.nick : "Conversa"; d.icon = o ? o.avatar || null : null; d.peer = o ? o.id : null;
     }
   }
-  res.json({ user: { id: user.id, email: user.email }, profile, servers: list });
+  // conversa de 2 repetida (criada antes da correcao do clique duplo): mostra so a primeira
+  const seenPeer = new Set();
+  const shown = list.filter((x) => { if (!x.dm || x.group || !x.peer) return true; if (seenPeer.has(x.peer)) return false; seenPeer.add(x.peer); return true; });
+  res.json({ user: { id: user.id, email: user.email }, profile, servers: shown });
 }));
 
 // Muda apelido, cor ou foto (vale em todos os servidores)
@@ -746,23 +749,39 @@ api.post("/dm", wrap(async (req, res) => {
   }
   const other = String(req.body.userId || "");
   if (!UUID_RE.test(other) || other === user.id) return fail(res, 400, "Pessoa inválida.");
-  const mine = await db.select("server_members", { select: "server_id,server:servers(dm)", user_id: "eq." + user.id });
-  const theirs = await db.select("server_members", { select: "server_id,server:servers(dm)", user_id: "eq." + other });
+  // Um pedido por vez para cada dupla: antes, dois pedidos juntos (clique duplo, ou os dois clicando ao mesmo tempo)
+  // viam que a conversa ainda nao existia e cada um criava a sua, e ela aparecia repetida na barra da esquerda.
+  const out = await oneAtATime("dm:" + [user.id, other].sort().join(":"), () => openDm(user.id, other));
+  if (out.error) return fail(res, out.status, out.error);
+  res.json({ server: { id: out.id } });
+}));
+const dmLocks = new Map(); // chave -> fila de pedidos
+function oneAtATime(key, fn) {
+  const run = (dmLocks.get(key) || Promise.resolve()).then(fn, fn);
+  const tail = run.catch(() => {});
+  dmLocks.set(key, tail);
+  tail.then(() => { if (dmLocks.get(key) === tail) dmLocks.delete(key); });
+  return run;
+}
+async function openDm(uid, other) {
+  const mine = await db.select("server_members", { select: "server_id,server:servers(dm,created_at)", user_id: "eq." + uid });
+  const theirs = await db.select("server_members", { select: "server_id", user_id: "eq." + other });
   const theirSet = new Set(theirs.map((m) => m.server_id));
   const shared = mine.filter((m) => theirSet.has(m.server_id));
-  // conversa de 2 que ja existe (grupo nao conta)
-  const dmIds = shared.filter((m) => m.server && m.server.dm).map((m) => m.server_id);
-  if (dmIds.length) {
+  // conversa de 2 que ja existe (grupo nao conta); se houver mais de uma (de antes desta correcao), a mais antiga
+  const dmRows = shared.filter((m) => m.server && m.server.dm).sort((a, b) => String(a.server.created_at).localeCompare(String(b.server.created_at)));
+  if (dmRows.length) {
+    const dmIds = dmRows.map((m) => m.server_id);
     const mem = await db.select("server_members", { select: "server_id,user_id", server_id: db.inList(dmIds) });
     const two = dmIds.find((id) => mem.filter((m) => m.server_id === id).length === 2);
-    if (two) return res.json({ server: { id: two } });
+    if (two) return { id: two };
   }
-  if (!shared.some((m) => m.server && !m.server.dm) && !areFriends(await friendsOf(user.id), user.id, other)) return fail(res, 403, "Você só pode mandar mensagem para amigos ou para quem está em um servidor com você.");
-  const [srv] = await db.insert("servers", [{ name: "DM", owner_id: user.id, dm: true }]);
-  await db.insert("server_members", [{ server_id: srv.id, user_id: user.id, role: "member" }, { server_id: srv.id, user_id: other, role: "member" }], false);
+  if (!shared.some((m) => m.server && !m.server.dm) && !areFriends(await friendsOf(uid), uid, other)) return { status: 403, error: "Você só pode mandar mensagem para amigos ou para quem está em um servidor com você." };
+  const [srv] = await db.insert("servers", [{ name: "DM", owner_id: uid, dm: true }]);
+  await db.insert("server_members", [{ server_id: srv.id, user_id: uid, role: "member" }, { server_id: srv.id, user_id: other, role: "member" }], false);
   toUser(other, "dm:new", { server: srv.id });
-  res.json({ server: { id: srv.id } });
-}));
+  return { id: srv.id };
+}
 
 // Convites do servidor: a moderacao ve a lista e pode cancelar
 api.get("/servers/:id/invites", wrap(async (req, res) => {

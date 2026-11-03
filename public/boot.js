@@ -5,6 +5,7 @@
   const app = window.ChatPedro;
   const { socket, store } = app;
   let sb = null, session = null, me = null, profile = null, servers = [], current = null, mode = "login";
+  const dmOpening = new Set(); // conversas privadas sendo abertas agora
 
   const gmsg = (t) => { $("gMsg").textContent = t || ""; };
   const hue = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
@@ -61,9 +62,13 @@
     // conversa privada: o nome mostrado e o da outra pessoa
     peerName: () => { const srv = currentServer(); return srv && srv.dm ? srv.name : null; },
     serverList: () => servers.slice(),
+    // clique duplo no "Mandar mensagem" vira um pedido so
     async openDm(userId) {
+      if (dmOpening.has(userId)) return;
+      dmOpening.add(userId);
       try { const r = await api("/api/dm", { method: "POST", body: { userId } }); goServer(r.server.id); }
       catch (err) { app.setNote(err.message, true); }
+      finally { dmOpening.delete(userId); }
     },
     // Configuracoes > Minha conta: confere a senha e apaga a conta
     async deleteAccount(pw) {

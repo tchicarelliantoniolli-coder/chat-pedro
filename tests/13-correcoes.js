@@ -28,5 +28,19 @@ const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
   ok(poll2.options[0].votes.length === 0, 'votar de novo tira o voto (nao conta dobrado)');
   await P.click('#eventsBtn'); await P.waitForTimeout(400);
   ok((await P.textContent('body')).includes('PedroNovo'), 'evento mostra o apelido novo de quem vai');
+  // conversa privada repetida: varios pedidos de "abrir conversa" ao mesmo tempo (clique duplo, ou os dois clicando juntos)
+  // tem que dar sempre a MESMA conversa
+  await P.evaluate(() => { document.getElementById('eventsModal').hidden = true; }); await P.waitForTimeout(200);
+  await P.click('#srvBtn'); await P.click('#invMake'); await P.waitForTimeout(300); const link = await P.inputValue('#invLink'); await P.click('#srvClose');
+  const L = await mk(); await signup(L, 'l@t.com', 'Lucas'); await L.goto(link); await L.waitForTimeout(800); await L.click('#invAccept'); await L.waitForTimeout(1500);
+  const lid = await L.evaluate(() => window.ChatPedroAuth.api('/api/me').then((r) => r.user.id));
+  const pid = await P.evaluate(() => window.ChatPedroAuth.api('/api/me').then((r) => r.user.id));
+  const [a1, a2] = await Promise.all([
+    P.evaluate((id) => Promise.all([1, 2, 3].map(() => window.ChatPedroAuth.api('/api/dm', { method: 'POST', body: { userId: id } }).then((r) => r.server.id))), lid),
+    L.evaluate((id) => Promise.all([1, 2].map(() => window.ChatPedroAuth.api('/api/dm', { method: 'POST', body: { userId: id } }).then((r) => r.server.id))), pid),
+  ]);
+  ok(new Set([...a1, ...a2]).size === 1, 'abrir a conversa 5 vezes ao mesmo tempo (dos dois lados) cria uma conversa so: ' + new Set([...a1, ...a2]).size);
+  const dms = await P.evaluate(() => window.ChatPedroAuth.api('/api/me').then((r) => r.servers.filter((s) => s.dm).length));
+  ok(dms === 1, 'a barra da esquerda mostra a conversa uma vez so: ' + dms);
   console.log('erros:', errs); await b.close();
 })().catch(e => { console.error(e); process.exit(1); });
