@@ -1084,10 +1084,10 @@ io.use(async (socket, next) => {
     if (!user) return next(new Error("login"));
     if (user.needCode) return next(new Error("codigo"));
     if (!UUID_RE.test(String(serverId || ""))) return next(new Error("nao_membro"));
-    const role = await membership(serverId, user.id);
+    // as tres consultas vao juntas ao banco (antes uma esperava a outra: cada uma e uma viagem ate o banco)
+    const [role, ban, profile] = await Promise.all([membership(serverId, user.id), activeBan(serverId, user.id), getProfile(user.id)]);
     if (!role) return next(new Error("nao_membro"));
-    if (await activeBan(serverId, user.id)) return next(new Error("banido"));
-    const profile = await getProfile(user.id);
+    if (ban) return next(new Error("banido"));
     if (!profile) return next(new Error("login"));
     const ctx = await getCtx(serverId);
     if (ctx.dead) return next(new Error("nao_membro"));

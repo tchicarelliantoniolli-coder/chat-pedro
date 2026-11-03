@@ -57,6 +57,14 @@ const kv = async () => (await fetch('http://localhost:3330/rest/v1/chat_kv?selec
   ok(await loaded(L) === 1, 'foto apagada do banco nao volta da memoria do servidor: ' + await loaded(L) + ' foto na tela');
   ok((await L.textContent('#log')).includes('não está mais guardada'), 'aparece "foto que não está mais guardada"');
   await L.screenshot({ path: SP + '/memoria.png' });
+  // banido nao entra, mesmo que ainda conste como membro (as checagens da conexao agora vao juntas ao banco)
+  const sid = await P.evaluate(() => location.pathname.split('/').pop());
+  const lid = await L.evaluate(() => window.ChatPedroAuth.api('/api/me').then((r) => r.user.id));
+  await P.evaluate((id) => window.ChatPedro.socket.emit('admin:ban', { id, minutes: 0 }), lid); await P.waitForTimeout(1500);
+  await fetch('http://localhost:3330/rest/v1/server_members', { method: 'POST', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify([{ server_id: sid, user_id: lid, role: 'member' }]) });
+  await L.goto(URL + '/s/' + sid); await L.waitForTimeout(2500);
+  ok((await L.textContent('body')).includes('Você está banido desse servidor.'), 'banido nao consegue entrar no servidor');
+  await fetch('http://localhost:3330/rest/v1/server_bans?user_id=eq.' + lid, { method: 'DELETE', headers: H });
   // rede que bloqueia WebSocket: cai no "polling" e o chat funciona igual
   // (o WebSocket da erro ao abrir, como numa rede que barra)
   const B = await mk();
