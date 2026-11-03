@@ -35,7 +35,15 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   Os "cheios" do estilo Discord têm prefixo `u` (`i-umic`, `i-uhead`, `i-ucam`, `i-uscreen`, `i-ugear`...).
 
 ## Como copiar o Discord (REA)
-- O app do Discord exige login; não dá para abrir as telas logado. O que funciona: abrir o discord.com
+- MELHOR FONTE: o dono salva o Discord logado no Chrome (Ctrl+S, "Página da Web, arquivo único" = `.mhtml`) e manda.
+  Abra o `.mhtml` no Chromium do Playwright (`page.goto("file://...mhtml")`, bloqueando a rede) e meça com
+  `getBoundingClientRect`/`getComputedStyle` achando cada peça pelo texto (cores vêm em `oklab(...)`: converta pintando
+  num canvas). Medido assim (nov/2026): linha de canal 32px + 1px em cima/embaixo, a 8px da borda, ícone 20px, texto
+  16/500; categoria 40px (16 + 24), 14/500; título do canal 16/500 com ícone 20px; busca 244x32, fundo
+  `rgba(0,0,0,.12)`, borda `rgba(151,151,159,.2)`, lupa na direita; nome no topo 14/500 `#efeff1`; painel do usuário com
+  borda `rgba(151,151,159,.04)`, nome 16/500, subtexto 12/500 `#abacb2`, botões `#abacb2` com 8px entre grupos e mudo
+  `rgba(210,45,57,.12)`. NÃO tente logar na conta: o Discord pede captcha (não resolvemos) e o QR também cai no captcha.
+- Sem o arquivo do dono, o app do Discord exige login; não dá para abrir as telas logado. O que funciona: abrir o discord.com
   num Chromium com `--remote-debugging-port` e usar `mcp__rea__inspect_web_page` (resultado grande vai para
   arquivo; ler com `jq`). Os CSS do app estão listados no HTML de `https://discord.com/app` (`/assets/*.css`)
   e os carregados depois estão no mapa `"<id>"===e?...".css"` do `web.*.js`. Baixe tudo e procure as regras

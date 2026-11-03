@@ -1096,17 +1096,17 @@ header h1.site { font-size: 14px; }
 .vbtn.on:hover { background: rgba(35, 165, 90, 0.24); }
 .vbtn[hidden] { display: none; }
 /* painel do usuario (medidas do Discord: 56px de altura, botoes de 32px, setinha de 16px colada no botao) */
-.profile { margin: 0 8px 8px; padding: 0 8px 0 4px; height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: 4px; background: var(--box); border: 1px solid var(--line); border-radius: 8px; }
+.profile { margin: 0 8px 8px; padding: 0 11px 0 6px; height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; background: var(--box); border: 1px solid rgba(151, 151, 159, 0.04); border-radius: 8px; }
 #voicePanel:not([hidden]) + .profile { border-radius: 0 0 8px 8px; }
 .profile[hidden] { display: none; }
 .profile .me { all: unset; box-sizing: border-box; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s ease; }
 .profile .me:hover, .profile .me[aria-expanded="true"] { background: rgba(151, 151, 159, 0.16); }
 .profile .me .av.big { width: 32px; height: 32px; font-size: 13px; }
 .profile .mt { display: flex; flex-direction: column; min-width: 0; line-height: 18px; }
-.profile .mt b { font-size: 14px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.profile .mt b { font-size: 16px; font-weight: 500; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* embaixo do nome: o status; com o mouse em cima sobe o nome da conta (como no Discord) */
-.profile .msub { display: grid; height: 16px; overflow: hidden; }
-.profile .msub small { grid-area: 1 / 1; font-size: 12px; line-height: 16px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: transform 0.2s var(--ease), opacity 0.2s; }
+.profile .msub { display: grid; height: 14px; margin-top: 2px; overflow: hidden; }
+.profile .msub small { grid-area: 1 / 1; font-size: 12px; font-weight: 500; line-height: 14px; color: #abacb2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: transform 0.2s var(--ease), opacity 0.2s; }
 .profile .msub #meUser { transform: translateY(100%); opacity: 0; }
 .profile .me:hover #meStatus { transform: translateY(-100%); opacity: 0; }
 .profile .me:hover #meUser { transform: none; opacity: 1; }
@@ -1114,8 +1114,8 @@ header h1.site { font-size: 14px; }
 #side > .profile, #side > #voicePanel { position: relative; z-index: 2; margin-left: -64px; }
 #rail { padding-bottom: 72px; }
 body:has(#voicePanel:not([hidden])) #rail { padding-bottom: 136px; }
-.ubtns { display: flex; align-items: center; flex: none; }
-.profile .ib { width: 32px; min-width: 0; height: 32px; padding: 0; justify-content: center; border-radius: 8px; color: #b5bac1; transition: background-color 0.2s ease, color 0.2s ease; }
+.ubtns { display: flex; align-items: center; flex: none; gap: 8px; }
+.profile .ib { width: 32px; min-width: 0; height: 32px; padding: 0; justify-content: center; border-radius: 8px; color: #abacb2; transition: background-color 0.2s ease, color 0.2s ease; }
 .profile .ib .ic { width: 20px; height: 20px; }
 .profile .ib:hover { background: rgba(151, 151, 159, 0.2); color: var(--bright); }
 .agrp { display: flex; }
@@ -1126,7 +1126,7 @@ body:has(#voicePanel:not([hidden])) #rail { padding-bottom: 136px; }
 .agrp:hover > .ib { background: rgba(151, 151, 159, 0.08); }
 .agrp:hover > .ib:hover, .agrp > .ib[aria-expanded="true"] { background: rgba(151, 151, 159, 0.2); color: var(--bright); }
 /* mudo / sem audio: icone vermelho com fundo avermelhado */
-.agrp.off > .ib { color: #f23f43; background: rgba(218, 62, 68, 0.12); }
+.agrp.off > .ib { color: #f23f43; background: rgba(210, 45, 57, 0.12); }
 .agrp.off:hover > .ib { background: rgba(218, 62, 68, 0.18); }
 .agrp.off > .ib:hover, .agrp.off > .ib[aria-expanded="true"] { background: rgba(218, 62, 68, 0.24); color: #f23f43; }
 /* chat com o canto arredondado, como no Discord */
@@ -1235,7 +1235,7 @@ body > header { border-bottom: 0; box-shadow: none; box-sizing: border-box; }
 header h1.site { font-size: 13px; }
 .sub { font-size: 12px; }
 .topsrv { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 8px; max-width: 40vw; pointer-events: none; }
-.topsrv b { font-size: 14px; font-weight: 600; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topsrv b { font-size: 14px; font-weight: 500; color: #efeff1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topsrv .srvicon { width: 18px; height: 18px; font-size: 7px; border-radius: 5px; }
 .topsrv:not(:has(b:not(:empty))) { display: none; }
 /* servidores: 72px, icones de 40px */
@@ -1248,9 +1248,9 @@ header h1.site { font-size: 13px; }
 #sideResize { position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; cursor: col-resize; z-index: 5; touch-action: none; }
 #sideResize:focus-visible { outline: none; box-shadow: inset -3px 0 0 var(--accent); }
 body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
-.chans { padding: 8px 8px 12px; }
-.cat { font-size: 14px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--channel); padding: 16px 8px 4px; }
-.chan { margin: 1px 0 1px 8px; width: calc(100% - 8px); padding: 6px 8px; border-radius: 8px; color: var(--channel); line-height: 24px; font-size: 16px; font-weight: 500; }
+.chans { padding: 8px 8px 16px 0; } /* linhas a 8px da borda, como no Discord logado */
+.cat { font-size: 14px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--channel); padding: 16px 8px 0 16px; line-height: 24px; } /* categoria: 40px (16 + linha de 24) */
+.chan { margin: 1px 0 1px 8px; width: calc(100% - 8px); padding: 4px 8px; border-radius: 8px; color: var(--channel); line-height: 24px; font-size: 16px; font-weight: 500; } /* linha de 32px + 1px em cima e embaixo = 34px (Discord logado) */
 .chan .ic { color: var(--channel); }
 .chan:hover, .chan:focus-visible { background: var(--int-hover); color: var(--bright); }
 .chan.on { background: var(--int-selected); color: var(--bright); }
@@ -1259,8 +1259,14 @@ body.resizing, body.resizing * { cursor: col-resize !important; user-select: non
 .vpeople { padding-left: 36px; }
 /* cabecalho do chat: 48px + borda */
 .chathead { height: 48px; }
-.chathead > .ic { color: var(--channel); }
-.search { background: var(--panel); height: 28px; border-radius: 8px; }
+.chathead > .ic { color: var(--channel); width: 20px; height: 20px; }
+#chanName { font-weight: 500; line-height: 20px; }
+#chanIcon .ic { width: 20px; height: 20px; color: var(--channel); } /* icone do canal no cabecalho: 20px, cor dos canais */
+@media (min-width: 761px) { .search, .search:focus-within { width: 244px; } }
+.search { background: rgba(0, 0, 0, 0.12); height: 32px; border-radius: 8px; border: 1px solid rgba(151, 151, 159, 0.2); box-sizing: border-box; padding: 0 8px 0 7px; }
+.search .ic { order: 2; width: 18px; height: 18px; color: var(--dim); }
+.search input { font-weight: 500; }
+.search input::placeholder { color: #8f9097; }
 /* mensagens: avatar de 40px a 16px da borda, texto a 72px, 17px entre grupos */
 #scroller > .pad { padding-left: 0; padding-right: 0; }
 .line.msg, .line.sysl { margin: 0; padding: 2px 24px 2px 16px; column-gap: 16px; grid-template-columns: 40px minmax(0, 1fr); }
@@ -1350,6 +1356,8 @@ aside { width: 264px; background: #1a1a1e; }
 .chan:hover .cgear, .chan.on .cgear, .chan:focus-visible .cgear { display: inline-flex; }
 .chan:hover .vj { display: none; }
 .chan.evt { margin-top: 4px; }
+.chan.evt, .chan.evt .vn { font-size: 16px; font-weight: 500; color: var(--channel); } /* "Eventos" igual a uma linha de canal (Discord: 16px, cor dos canais) */
+.chan.evt:hover, .chan.evt:hover .vn { color: var(--bright); }
 .vpeople { list-style: none; margin: 0 0 4px; display: flex; flex-direction: column; gap: 1px; }
 .vpeople:empty { display: none; }
 body.dm #textCat, body.dm #textList, body.dm #eventsBtn, body.dm #voiceCat .catadd { display: none; }
