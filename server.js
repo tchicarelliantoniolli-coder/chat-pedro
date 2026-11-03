@@ -277,7 +277,34 @@ function dropMessages(ctx, list) {
   if (!list.length) return;
   const gone = new Set(list);
   ctx.history = ctx.history.filter((m) => !gone.has(m));
+  for (const m of list) if (isMedia(m)) uncacheMedia(ctx, m.id);
   if (ctx.storage) ctx.storage.deleteMedia(list.filter(isMedia).map((m) => m.id));
+}
+
+// Fotos, audios e arquivos ficam no banco, nao na memoria do servidor (o plano gratis tem pouca: 30 fotos
+// grandes num servidor ja gastavam ~60 MB). So as mais recentes ou mais pedidas ficam num cache com limite.
+const MEDIA_CACHE_BYTES = Number(process.env.MEDIA_CACHE_MB ?? 16) * 1024 * 1024;
+const mediaCache = new Map(); // "<servidor>:<id>" -> src (a ordem do Map e a ordem de uso: o primeiro sai antes)
+let mediaCacheBytes = 0;
+function cacheMedia(ctx, id, src) {
+  const k = ctx.id + ":" + id;
+  uncacheMedia(ctx, id);
+  if (!src || src.length > MEDIA_CACHE_BYTES) return;
+  mediaCache.set(k, src); mediaCacheBytes += src.length;
+  for (const [old, s] of mediaCache) { if (mediaCacheBytes <= MEDIA_CACHE_BYTES) break; mediaCache.delete(old); mediaCacheBytes -= s.length; }
+}
+function uncacheMedia(ctx, id) {
+  const k = ctx.id + ":" + id, s = mediaCache.get(k);
+  if (s !== undefined) { mediaCache.delete(k); mediaCacheBytes -= s.length; }
+}
+async function mediaSrc(ctx, m) {
+  if (m.src) return m.src; // sem banco (ou ainda nao saiu da memoria)
+  if (!ctx.storage) return null;
+  const k = ctx.id + ":" + m.id;
+  if (mediaCache.has(k)) { const s = mediaCache.get(k); mediaCache.delete(k); mediaCache.set(k, s); return s; }
+  const src = await ctx.storage.getMedia(m.id).catch(() => null);
+  if (src && ctx.history.includes(m)) cacheMedia(ctx, m.id, src);
+  return src;
 }
 
 function pushMessage(ctx, msg) {
@@ -293,6 +320,8 @@ function pushMessage(ctx, msg) {
   if (media.length > MAX_MEDIA_KEPT) old.push(media[0]);
   dropMessages(ctx, old);
   toRoom(ctx, "message", msg);
+  // ja foi para quem esta online; daqui em diante a midia vem do banco (ou do cache)
+  if (ctx.storage && isMedia(msg) && ctx.history.includes(msg)) { cacheMedia(ctx, msg.id, msg.src); delete msg.src; }
   persist(ctx);
   if (msg.type === "sys") return;
   // topico: conta as respostas e mostra a ultima atividade
@@ -705,6 +734,7 @@ api.delete("/servers/:id", wrap(async (req, res) => {
   if (contexts.has(req.params.id)) {
     const ctx = await contexts.get(req.params.id).catch(() => null);
     contexts.delete(req.params.id);
+    if (ctx) for (const m of ctx.history) if (isMedia(m)) uncacheMedia(ctx, m.id);
     if (ctx) { ctx.dead = true; for (const s of ctx.sockets.values()) { s.emit("server:removed", "O servidor foi apagado pelo dono."); setTimeout(() => s.disconnect(true), 200); } }
   }
   res.json({ ok: true });
@@ -1236,15 +1266,19 @@ io.on("connection", (socket) => {
     const nick = canPost(m.text || "[encaminhada " + Date.now() + "]", ch);
     if (!nick) return;
     const fwd = { nick: m.nick, ch: chOf(m) };
-    if (m.type === "msg") pushMessage(ctx, { type: "msg", nick, uid, text: m.text, ts: Date.now(), ch, fwd });
-    else pushMessage(ctx, { type: m.type, nick, uid, src: m.src, name: m.name, size: m.size, ts: Date.now(), ch, fwd });
+    if (m.type === "msg") return pushMessage(ctx, { type: "msg", nick, uid, text: m.text, ts: Date.now(), ch, fwd });
+    // a foto ou o arquivo vem do banco
+    mediaSrc(ctx, m).then((src) => {
+      if (src && !ctx.dead) pushMessage(ctx, { type: m.type, nick, uid, src, name: m.name, size: m.size, ts: Date.now(), ch, fwd });
+    }).catch((e) => console.error("Encaminhar midia:", e.message));
   });
 
-  // fotos e audios do historico chegam sob demanda (quando aparecem na tela)
+  // fotos e audios do historico chegam sob demanda (quando aparecem na tela), buscados no banco
   socket.on("media", (id, reply) => {
     if (typeof reply !== "function") return;
     const m = ctx.history.find((x) => x.id === Number(id));
-    reply(m && isMedia(m) ? m.src || null : null);
+    if (!m || !isMedia(m)) return reply(null);
+    mediaSrc(ctx, m).then((src) => reply(src || null), () => reply(null));
   });
 
   socket.on("image", (data, replyTo, ch, spoiler) => {

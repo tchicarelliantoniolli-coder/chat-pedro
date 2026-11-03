@@ -17,6 +17,14 @@ async function getMany(keys) {
   return out;
 }
 
+// quais dessas chaves existem e nao venceram (sem trazer o valor, que pode ser uma foto grande)
+async function existing(keys) {
+  if (!keys.length) return new Set();
+  const rows = await db.select(TABLE, { select: "key,expires_at", key: db.inList(keys) });
+  const now = Date.now();
+  return new Set(rows.filter((r) => !r.expires_at || Date.parse(r.expires_at) > now).map((r) => r.key));
+}
+
 // tudo do servidor que nao e mensagem (cada um fica numa chave srv:<id>:<nome>)
 const META_NAMES = ["channels", "automod", "audit", "events", "roles", "memberRoles", "nicks", "emojis", "stickers", "webhooks", "welcome", "banner", "vanity", "mutes"];
 
@@ -31,11 +39,18 @@ function createStorage(serverId) {
       let history = got[p + "history"] ? JSON.parse(got[p + "history"]) : [];
       const media = history.filter(isMedia);
       if (media.length) {
-        const srcs = await getMany(media.map((m) => p + "media:" + m.id));
-        media.forEach((m) => { m.src = srcs[p + "media:" + m.id]; });
-        history = history.filter((m) => !isMedia(m) || m.src); // midia que venceu some da lista
+        // so confere quais ainda existem (sem baixar as fotos): elas ficam no banco, nao na memoria do servidor
+        const have = await existing(media.map((m) => p + "media:" + m.id));
+        history = history.filter((m) => !isMedia(m) || have.has(p + "media:" + m.id)); // midia que venceu some da lista
       }
       return { history, nextId: Number(got[p + "nextid"]) || 1 };
+    },
+
+    // uma foto, audio ou arquivo, buscado no banco quando alguem precisa (null se nao existe mais)
+    async getMedia(id) {
+      await saving; // se ela acabou de chegar, espera terminar de salvar
+      const got = await getMany([p + "media:" + id]);
+      return got[p + "media:" + id] || null;
     },
 
     // Salva a lista de mensagens (sem fotos e audios, que vao em linhas proprias) logo depois de mudar
