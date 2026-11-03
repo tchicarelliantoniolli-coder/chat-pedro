@@ -3075,7 +3075,8 @@ window.setIcon = (btn, name, label, extra) => {
   const $ = (id) => document.getElementById(id);
   const log = $("log"), scroller = $("scroller"), input = $("input"), note = $("note"), ps1 = $("ps1");
   // a conexao so liga depois do login e de escolher o servidor (boot.js); leva o token e o servidor
-  const socket = io({ autoConnect: false, auth: (cb) => cb(window.ChatPedroAuth ? window.ChatPedroAuth.handshake() : {}) });
+  // comeca direto pelo WebSocket (economiza idas e voltas ao abrir); se a rede bloquear, cai no "polling"
+  const socket = io({ autoConnect: false, transports: ["websocket", "polling"], tryAllTransports: true, auth: (cb) => cb(window.ChatPedroAuth ? window.ChatPedroAuth.handshake() : {}) });
   let nick = null, users = [], avatars = {};
 
   const HELP = "ENTER envia | SHIFT+ENTER nova linha | + para foto, arquivo e enquete | :joy: vira emoji | **negrito** *itálico* __sublinhado__ ~~riscado~~ ||spoiler|| `código` > citação # título - lista | comandos: /shrug /tableflip /me /spoiler /tts /enquete /nick /perfil /limpar /atalhos | Ctrl+K troca rápida";

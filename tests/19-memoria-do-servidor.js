@@ -18,7 +18,9 @@ const kv = async () => (await fetch('http://localhost:3330/rest/v1/chat_kv?selec
   const ws = []; P.on('websocket', (w) => { if (w.url().includes('/socket.io/')) ws.push(w); });
   await signup(P, 'p@t.com', 'Pedro');
   await P.fill('#createName', 'Galera'); await P.click('#createForm button[type=submit]'); await P.waitForTimeout(1500);
+  const polls = []; P.on('request', (r) => { if (r.url().includes('transport=polling')) polls.push(r.url()); });
   ws.length = 0; await P.reload(); await P.waitForTimeout(2500);
+  ok(polls.length === 0, 'a conexao comeca direto pelo WebSocket (sem pedidos de "polling" antes): ' + polls.length);
   ok(ws.filter((w) => !w.isClosed()).length === 1, 'uma conexao so com o servidor por pessoa: ' + ws.filter((w) => !w.isClosed()).length + ' abertas');
   // aviso de versao nova continua chegando pelo canal unico: recarrega sozinho e a mensagem escrita volta
   await P.fill('#input', 'rascunho que nao pode sumir');
@@ -47,5 +49,12 @@ const kv = async () => (await fetch('http://localhost:3330/rest/v1/chat_kv?selec
   ok(await loaded(L) === 1, 'foto apagada do banco nao volta da memoria do servidor: ' + await loaded(L) + ' foto na tela');
   ok((await L.textContent('#log')).includes('não está mais guardada'), 'aparece "foto que não está mais guardada"');
   await L.screenshot({ path: SP + '/memoria.png' });
+  // rede que bloqueia WebSocket: cai no "polling" e o chat funciona igual
+  // (o WebSocket da erro ao abrir, como numa rede que barra)
+  const B = await mk();
+  await B.addInitScript(() => { const W = window.WebSocket; window.WebSocket = function (url, p) { if (!String(url).includes('/socket.io/')) return new W(url, p); const f = new EventTarget(); f.readyState = 0; f.send = () => {}; f.close = () => {}; setTimeout(() => { f.readyState = 3; const e = new Event('error'); f.onerror && f.onerror(e); f.dispatchEvent(e); const c = new CloseEvent('close', { code: 1006 }); f.onclose && f.onclose(c); f.dispatchEvent(c); }, 50); return f; }; Object.assign(window.WebSocket, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 }); });
+  await B.goto(URL); await B.waitForTimeout(500); await B.fill('#authEmail', 'l@t.com'); await B.fill('#authPass', 'senha123'); await B.click('#authGo'); await B.waitForTimeout(4000);
+  await B.fill('#input', 'mensagem sem websocket'); await B.press('#input', 'Enter'); await P.waitForTimeout(1500);
+  ok(await P.locator('#log .txt', { hasText: 'mensagem sem websocket' }).count() === 1, 'sem WebSocket o chat funciona pelo polling');
   console.log('erros:', errs); await b.close();
 })().catch(e => { console.error(e); process.exit(1); });
