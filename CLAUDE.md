@@ -164,6 +164,11 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
 - O servidor nunca pode cair por um pedido malfeito: todo `socket.on` passa pelo `guardSocket` (erro vira registro) e há
   `process.on("uncaughtException")`. Silenciados ficam salvos (`mutes` no `chat_kv`). Teste `13-correcoes`.
 
+## Plugins do Claude Code (pedidos pelo dono)
+- `.claude/settings.json` instala em toda sessão o **caveman** (JuliusBrussee/caveman: respostas curtas, sem enrolação) e o
+  **superpowers** (obra/superpowers: habilidades de planejar, depurar, testar e revisar). Mesmo com o caveman, as respostas
+  para o dono continuam em português simples, explicando o que mudou no site. Desligar o caveman na conversa: "stop caveman".
+
 ## Commits
 Mensagens de commit em português. Não escreva nome/versão de modelo de IA em código, commits ou PR.
 
