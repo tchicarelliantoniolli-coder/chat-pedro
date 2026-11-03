@@ -102,16 +102,27 @@ const INDEX = path.join(__dirname, "public", "index.html");
 app.set("trust proxy", true); // o Render fica na frente do servidor
 app.use(compression()); // texto do site vai compactado (gzip): carrega varias vezes mais rapido
 app.use(express.json({ limit: "200kb" }));
-// os arquivos do site sao conferidos a cada visita (ETag): se nao mudaram, o navegador usa o que ja tem
-app.use(express.static(path.join(__dirname, "public"), { cacheControl: true, maxAge: 0 }));
-// bibliotecas com versao fixa: o navegador guarda por 7 dias sem perguntar de novo
-const vendor = (dir) => express.static(dir, { maxAge: "7d" });
+// A pagina leva a versao do site no endereco de cada script (/boot.js?v=<versao>). A pagina em si e sempre
+// conferida (ETag); os scripts com versao ficam guardados no navegador sem perguntar de novo, e quando sai
+// versao nova o endereco muda. Antes eram ~15 perguntas ao servidor a cada visita antes de o chat aparecer.
+let indexHtml = null;
+function sendIndex(req, res) {
+  if (!indexHtml) indexHtml = fs.readFileSync(INDEX, "utf8").replace(/(<script src="\/[^"?]+\.js)"/g, "$1?v=" + SITE_VERSION + '"');
+  res.set("Cache-Control", "no-cache").type("html").send(indexHtml);
+}
+app.get(["/", "/index.html", "/s/:id", "/convite/:code"], sendIndex);
+const LONG_CACHE = "public, max-age=31536000, immutable";
+// so a versao atual: um endereco de versao antiga (pagina aberta durante a atualizacao) nao guarda o arquivo novo
+const versioned = (res) => { if (res.req.query.v === SITE_VERSION) res.setHeader("Cache-Control", LONG_CACHE); };
+// os outros arquivos do site sao conferidos a cada visita (ETag): se nao mudaram, o navegador usa o que ja tem
+app.use(express.static(path.join(__dirname, "public"), { cacheControl: true, maxAge: 0, index: false, setHeaders: versioned }));
+// bibliotecas com versao fixa: o navegador guarda por 7 dias sem perguntar de novo (com ?v=, para sempre)
+const vendor = (dir) => express.static(dir, { maxAge: "7d", setHeaders: versioned });
 app.use("/vendor/supabase", vendor(path.join(__dirname, "node_modules", "@supabase", "supabase-js", "dist", "umd")));
 app.use("/vendor/socket.io", vendor(path.join(__dirname, "node_modules", "socket.io", "client-dist")));
 // 3D da Mesa do Blefe: so e baixado quando alguem abre a mesa
 app.use("/vendor/three", vendor(path.join(__dirname, "node_modules", "three", "build")));
 app.use("/vendor/ruido", vendor(path.join(__dirname, "node_modules", "@sapphi-red", "web-noise-suppressor", "dist"))); // supressao de ruido com IA (GTCRN e RNNoise)
-app.get(["/s/:id", "/convite/:code"], (req, res) => res.sendFile(INDEX));
 
 const keyOf = (nick) => String(nick || "").toLowerCase();
 const isMedia = (m) => m.type === "img" || m.type === "audio" || m.type === "file";

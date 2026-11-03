@@ -22,6 +22,14 @@ const kv = async () => (await fetch('http://localhost:3330/rest/v1/chat_kv?selec
   ws.length = 0; await P.reload(); await P.waitForTimeout(2500);
   ok(polls.length === 0, 'a conexao comeca direto pelo WebSocket (sem pedidos de "polling" antes): ' + polls.length);
   ok(ws.filter((w) => !w.isClosed()).length === 1, 'uma conexao so com o servidor por pessoa: ' + ws.filter((w) => !w.isClosed()).length + ' abertas');
+  // arquivos do site com a versao no endereco: o navegador guarda e nao pergunta de novo a cada visita
+  const scripts = await P.evaluate(() => [...document.scripts].map((s) => s.getAttribute('src')).filter((s) => s && s.startsWith('/')));
+  ok(scripts.length >= 12 && scripts.every((s) => /\?v=[0-9a-f]{12}$/.test(s)), 'scripts com a versao no endereco: ' + scripts.slice(0, 3).join(' '));
+  const cc = (await fetch(URL + (scripts.find((s) => s.startsWith('/boot.js')) || '/boot.js'))).headers.get('cache-control') || '';
+  ok(/immutable/.test(cc) && /max-age=31536000/.test(cc), 'script com versao fica guardado no navegador: ' + cc);
+  const page = await fetch(URL + '/s/qualquer'); const pcc = page.headers.get('cache-control') || '';
+  ok(/no-cache/.test(pcc) && (await page.text()).includes('/boot.js?v='), 'a pagina em si e sempre conferida (para pegar versao nova): ' + pcc);
+  ok((await fetch(URL + '/sw.js')).headers.get('cache-control') !== cc, 'arquivo sem versao continua sendo conferido');
   // aviso de versao nova continua chegando pelo canal unico: recarrega sozinho e a mensagem escrita volta
   await P.fill('#input', 'rascunho que nao pode sumir');
   const reloaded = P.waitForEvent('load', { timeout: 8000 }).then(() => true, () => false);
