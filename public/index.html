@@ -3077,6 +3077,8 @@ window.setIcon = (btn, name, label, extra) => {
   // a conexao so liga depois do login e de escolher o servidor (boot.js); leva o token e o servidor
   // comeca direto pelo WebSocket (economiza idas e voltas ao abrir); se a rede bloquear, cai no "polling"
   const socket = io({ autoConnect: false, transports: ["websocket", "polling"], tryAllTransports: true, auth: (cb) => cb(window.ChatPedroAuth ? window.ChatPedroAuth.handshake() : {}) });
+  // rede que segura o WebSocket sem abrir nem dar erro: depois do tempo limite passa a comecar pelo polling
+  socket.on("connect_error", (err) => { if (err && (err.message === "timeout" || err.type === "TransportError")) socket.io.opts.transports = ["polling", "websocket"]; });
   let nick = null, users = [], avatars = {};
 
   const HELP = "ENTER envia | SHIFT+ENTER nova linha | + para foto, arquivo e enquete | :joy: vira emoji | **negrito** *itálico* __sublinhado__ ~~riscado~~ ||spoiler|| `código` > citação # título - lista | comandos: /shrug /tableflip /me /spoiler /tts /enquete /nick /perfil /limpar /atalhos | Ctrl+K troca rápida";
@@ -3518,7 +3520,10 @@ window.setIcon = (btn, name, label, extra) => {
   }, { root: scroller, rootMargin: "800px 0px" }) : null;
   function lazyMedia(el, m, set, missing) {
     if (m.src) return set(m.src);
-    el._load = () => socket.emit("media", m.id, (src) => { if (src) { m.src = src; set(src); } else missing(); });
+    // false = o banco falhou agora: tenta de novo daqui a pouco (null = a midia nao existe mais)
+    el._load = (n = 0) => socket.emit("media", m.id, (src) => {
+      if (src) { m.src = src; set(src); } else if (src === false) { if (n < 5) setTimeout(() => el._load(n + 1), 3000 * (n + 1)); } else missing();
+    });
     if (mediaObs) mediaObs.observe(el); else el._load();
   }
 

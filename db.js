@@ -17,6 +17,8 @@ async function call(path, { method = "GET", body, headers = {}, key = SECRET_KEY
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
+    // pedido travado no banco desiste em 60 s (sem isso ficava ate 5 min segurando a fila de salvamentos)
+    signal: AbortSignal.timeout(60000),
   });
   const text = await r.text();
   let data = null;

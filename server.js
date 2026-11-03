@@ -308,14 +308,30 @@ function uncacheMedia(ctx, id) {
   const k = ctx.id + ":" + id, s = mediaCache.get(k);
   if (s !== undefined) { mediaCache.delete(k); mediaCacheBytes -= s.length; }
 }
+// Varias pessoas pedindo a mesma foto ao mesmo tempo dividem uma busca so, e no maximo MEDIA_FETCHES buscas
+// rodam juntas (cada uma segura a foto inteira na memoria enquanto chega do banco).
+const MEDIA_FETCHES = 4;
+const mediaInflight = new Map(); // "<servidor>:<id>" -> Promise<src>
+let mediaActive = 0;
+const mediaWaiting = [];
+async function mediaSlot(fn) {
+  if (mediaActive >= MEDIA_FETCHES) await new Promise((r) => mediaWaiting.push(r));
+  mediaActive++;
+  try { return await fn(); } finally { mediaActive--; const next = mediaWaiting.shift(); if (next) next(); }
+}
+// null = nao existe mais; erro do banco vira excecao (quem chama decide: tentar de novo ou avisar)
 async function mediaSrc(ctx, m) {
   if (m.src) return m.src; // sem banco (ou ainda nao saiu da memoria)
   if (!ctx.storage) return null;
   const k = ctx.id + ":" + m.id;
   if (mediaCache.has(k)) { const s = mediaCache.get(k); mediaCache.delete(k); mediaCache.set(k, s); return s; }
-  const src = await ctx.storage.getMedia(m.id).catch(() => null);
-  if (src && ctx.history.includes(m)) cacheMedia(ctx, m.id, src);
-  return src;
+  if (mediaInflight.has(k)) return mediaInflight.get(k);
+  const p = mediaSlot(() => ctx.storage.getMedia(m.id)).then((src) => {
+    if (src && !ctx.dead && ctx.history.includes(m)) cacheMedia(ctx, m.id, src);
+    return src;
+  }).finally(() => mediaInflight.delete(k));
+  mediaInflight.set(k, p);
+  return p;
 }
 
 function pushMessage(ctx, msg) {
@@ -1280,8 +1296,9 @@ io.on("connection", (socket) => {
     if (m.type === "msg") return pushMessage(ctx, { type: "msg", nick, uid, text: m.text, ts: Date.now(), ch, fwd });
     // a foto ou o arquivo vem do banco
     mediaSrc(ctx, m).then((src) => {
-      if (src && !ctx.dead) pushMessage(ctx, { type: m.type, nick, uid, src, name: m.name, size: m.size, ts: Date.now(), ch, fwd });
-    }).catch((e) => console.error("Encaminhar midia:", e.message));
+      if (!src) return notice("Essa mídia não está mais guardada.");
+      if (!ctx.dead) pushMessage(ctx, { type: m.type, nick, uid, src, name: m.name, size: m.size, ts: Date.now(), ch, fwd });
+    }).catch((e) => { console.error("Encaminhar midia:", e.message); notice("Não deu para encaminhar agora. Tente de novo."); });
   });
 
   // fotos e audios do historico chegam sob demanda (quando aparecem na tela), buscados no banco
@@ -1289,7 +1306,8 @@ io.on("connection", (socket) => {
     if (typeof reply !== "function") return;
     const m = ctx.history.find((x) => x.id === Number(id));
     if (!m || !isMedia(m)) return reply(null);
-    mediaSrc(ctx, m).then((src) => reply(src || null), () => reply(null));
+    // false = o banco falhou agora (o navegador tenta de novo); null = nao existe mais
+    mediaSrc(ctx, m).then((src) => reply(src || null), () => reply(false));
   });
 
   socket.on("image", (data, replyTo, ch, spoiler) => {
@@ -1944,6 +1962,8 @@ const SITE_VERSION = (() => {
   try {
     walk(path.join(__dirname, "public"));
     for (const f of ["server.js", "db.js", "storage.js", "poker.js", "truco.js", "blefe.js"]) h.update(fs.readFileSync(path.join(__dirname, f)));
+    // versoes das bibliotecas (socket.io, supabase...): os scripts delas tambem levam ?v= e ficam guardados no navegador
+    try { h.update(fs.readFileSync(path.join(__dirname, "package-lock.json"))); } catch { h.update(fs.readFileSync(path.join(__dirname, "package.json"))); }
   } catch (e) { console.error("Versao do site:", e.message); h.update(String(Date.now())); }
   return h.digest("hex").slice(0, 12);
 })();

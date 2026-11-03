@@ -57,6 +57,30 @@ const kv = async () => (await fetch('http://localhost:3330/rest/v1/chat_kv?selec
   ok(await loaded(L) === 1, 'foto apagada do banco nao volta da memoria do servidor: ' + await loaded(L) + ' foto na tela');
   ok((await L.textContent('#log')).includes('não está mais guardada'), 'aparece "foto que não está mais guardada"');
   await L.screenshot({ path: SP + '/memoria.png' });
+  // controles do Supabase falso (so para os testes)
+  const fake = async (q) => (await fetch('http://localhost:3330/__test' + (q ? '?' + q : ''), { headers: H })).json();
+  const id2 = Number((await kv()).find((r) => /:media:\d+$/.test(r.key)).key.split(':').pop());
+  const ask = (p, id) => p.evaluate((id) => new Promise((r) => { const t0 = performance.now(); window.ChatPedro.socket.emit('media', id, (src) => r({ ms: performance.now() - t0, ok: typeof src === 'string', src: src === false ? 'false' : src === null ? 'null' : 'texto' })); }), id);
+  // 6 pedidos da mesma foto ao mesmo tempo: uma leitura so no banco
+  await fake('leiturasMidia=0&leituraLentaMs=500');
+  await L.evaluate((id) => Promise.all([1, 2, 3, 4, 5, 6].map(() => new Promise((r) => window.ChatPedro.socket.emit('media', id, r)))), id2);
+  await fake('leituraLentaMs=0');
+  ok((await fake()).leiturasMidia === 1, 'a mesma foto pedida 6 vezes juntas vira 1 leitura no banco: ' + (await fake()).leiturasMidia);
+  // gravacao lenta no banco (foto nova grande chegando): as fotos que ja estao salvas nao ficam esperando ela
+  await fake('gravacaoLentaMs=3000');
+  await P.evaluate((d) => window.ChatPedro.socket.emit('image', d, undefined, 'chat'), photo); await P.waitForTimeout(300);
+  const slow = await ask(L, id2);
+  ok(slow.ok && slow.ms < 1500, 'foto antiga chega sem esperar a gravacao lenta de outra: ' + Math.round(slow.ms) + ' ms');
+  await fake('gravacaoLentaMs=0'); await P.waitForTimeout(3500);
+  // o banco falha na hora: a foto NAO vira "nao esta mais guardada"; o navegador tenta de novo e ela aparece
+  await fake('falhaMidia=1');
+  ok((await ask(L, id2)).src === 'false', 'falha do banco responde diferente de "foto apagada"');
+  await L.reload(); await L.waitForTimeout(2500);
+  ok(!(await L.textContent('#log')).includes('não está mais guardada') && await loaded(L) === 0, 'com o banco falhando a foto espera (nao diz que sumiu)');
+  await P.evaluate((id) => window.ChatPedro.socket.emit('forward', { id, to: 'chat' }), id2); await P.waitForTimeout(1500);
+  ok((await P.textContent('body')).includes('Não deu para encaminhar agora'), 'encaminhar com o banco falhando avisa quem encaminhou');
+  await fake('falhaMidia=0'); await L.waitForTimeout(5000);
+  ok(await loaded(L) >= 1, 'quando o banco volta a foto aparece sozinha: ' + await loaded(L) + ' na tela');
   // banido nao entra, mesmo que ainda conste como membro (as checagens da conexao agora vao juntas ao banco)
   const sid = await P.evaluate(() => location.pathname.split('/').pop());
   const lid = await L.evaluate(() => window.ChatPedroAuth.api('/api/me').then((r) => r.user.id));
@@ -72,5 +96,12 @@ const kv = async () => (await fetch('http://localhost:3330/rest/v1/chat_kv?selec
   await B.goto(URL); await B.waitForTimeout(500); await B.fill('#authEmail', 'l@t.com'); await B.fill('#authPass', 'senha123'); await B.click('#authGo'); await B.waitForTimeout(4000);
   await B.fill('#input', 'mensagem sem websocket'); await B.press('#input', 'Enter'); await P.waitForTimeout(1500);
   ok(await P.locator('#log .txt', { hasText: 'mensagem sem websocket' }).count() === 1, 'sem WebSocket o chat funciona pelo polling');
+  // rede que segura o WebSocket (nem abre nem da erro): depois do tempo limite cai no polling
+  const Z = await mk();
+  await Z.addInitScript(() => { const W = window.WebSocket; window.WebSocket = function (url, p) { if (!String(url).includes('/socket.io/')) return new W(url, p); const f = new EventTarget(); f.readyState = 0; f.send = () => {}; f.close = () => {}; return f; }; Object.assign(window.WebSocket, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 }); });
+  await Z.goto(URL); await Z.waitForTimeout(500); await Z.fill('#authEmail', 'l@t.com'); await Z.fill('#authPass', 'senha123'); await Z.click('#authGo');
+  await Z.waitForFunction(() => window.ChatPedro.socket.connected, null, { timeout: 45000 }).catch(() => {});
+  await Z.fill('#input', 'mensagem com websocket travado'); await Z.press('#input', 'Enter'); await P.waitForTimeout(1500);
+  ok(await P.locator('#log .txt', { hasText: 'mensagem com websocket travado' }).count() === 1, 'WebSocket travado: o chat conecta pelo polling');
   console.log('erros:', errs); await b.close();
 })().catch(e => { console.error(e); process.exit(1); });

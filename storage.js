@@ -6,7 +6,8 @@ const TABLE = "chat_kv";
 const MEDIA_TTL_DAYS = 30; // fotos e audios ficam guardados por 30 dias
 const isMedia = (m) => m.type === "img" || m.type === "audio" || m.type === "file"; // igual ao server.js
 let saving = Promise.resolve();
-const queue = (fn, what) => { saving = saving.then(fn).catch((e) => console.error("Nao deu para " + what + ":", e.message)); };
+const queue = (fn, what) => (saving = saving.then(fn).catch((e) => console.error("Nao deu para " + what + ":", e.message)));
+const savingMedia = new Map(); // "srv:<id>:media:<n>" -> Promise do salvamento (so enquanto nao terminou)
 
 async function getMany(keys) {
   if (!keys.length) return {};
@@ -48,7 +49,7 @@ function createStorage(serverId) {
 
     // uma foto, audio ou arquivo, buscado no banco quando alguem precisa (null se nao existe mais)
     async getMedia(id) {
-      await saving; // se ela acabou de chegar, espera terminar de salvar
+      await savingMedia.get(p + "media:" + id); // se ela acabou de chegar, espera so ela terminar de salvar
       const got = await getMany([p + "media:" + id]);
       return got[p + "media:" + id] || null;
     },
@@ -81,7 +82,10 @@ function createStorage(serverId) {
 
     saveMedia(id, src) {
       const expires = new Date(Date.now() + MEDIA_TTL_DAYS * 86400000).toISOString();
-      queue(() => db.upsert(TABLE, [{ key: p + "media:" + id, value: src, expires_at: expires }], "key"), "salvar a midia");
+      const k = p + "media:" + id;
+      const done = queue(() => db.upsert(TABLE, [{ key: k, value: src, expires_at: expires }], "key"), "salvar a midia");
+      savingMedia.set(k, done);
+      done.then(() => { if (savingMedia.get(k) === done) savingMedia.delete(k); });
     },
 
     deleteMedia(ids) {

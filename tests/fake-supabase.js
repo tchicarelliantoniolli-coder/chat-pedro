@@ -69,12 +69,31 @@ function cascadeDelete(table, rows) {
   if (table === "servers") for (const s of rows) for (const t of ["server_members", "server_invites", "server_bans"]) T[t] = T[t].filter((r) => r.server_id !== s.id);
 }
 
-http.createServer((req, res) => {
+const srv = http.createServer((req, res) => {
   const u = new URL(req.url, "http://x");
   let body = "";
   req.on("data", (d) => (body += d));
   req.on("end", () => {
     if (req.method === "OPTIONS") return send(res, 204);
+    // controles so para os testes: /__test?falhaMidia=1&gravacaoLentaMs=3000&leituraLentaMs=500 muda; /__test mostra quantas
+    // vezes uma midia (srv:...:media:N) foi lida
+    if (u.pathname === "/__test") {
+      for (const [k, v] of u.searchParams) TEST[k] = Number(v);
+      return send(res, 200, TEST);
+    }
+    const mediaRead = req.method === "GET" && u.pathname === "/rest/v1/chat_kv" && /:media:\d+"/.test(u.searchParams.get("key") || "") && /value/.test(u.searchParams.get("select") || "*");
+    if (mediaRead) {
+      TEST.leiturasMidia++;
+      if (TEST.falhaMidia) return send(res, 500, { message: "falha de teste" });
+      if (TEST.leituraLentaMs) return setTimeout(() => handle(req, res, u, body), TEST.leituraLentaMs);
+    }
+    if (TEST.gravacaoLentaMs && req.method === "POST" && u.pathname === "/rest/v1/chat_kv") return setTimeout(() => handle(req, res, u, body), TEST.gravacaoLentaMs);
+    handle(req, res, u, body);
+  });
+});
+const TEST = { leiturasMidia: 0, falhaMidia: 0, gravacaoLentaMs: 0, leituraLentaMs: 0 };
+function handle(req, res, u, body) {
+  {
     const data = body ? JSON.parse(body) : null;
     const apikey = req.headers.apikey;
     if (apikey !== SECRET && apikey !== PUB) return send(res, 401, { message: "Invalid API key" });
@@ -173,5 +192,6 @@ http.createServer((req, res) => {
       }
     } catch (e) { return send(res, 400, { message: e.message }); }
     send(res, 405, {});
-  });
-}).listen(PORT, () => console.log("supabase falso na porta " + PORT));
+  }
+}
+srv.listen(PORT, () => console.log("supabase falso na porta " + PORT));
