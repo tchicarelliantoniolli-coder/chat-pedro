@@ -151,10 +151,18 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   uma vez no primeiro clique) e o título da aba pisca; some quando a pessoa volta ou o adm para.
   Teste `10-painel-adm` (a senha de teste está no `run.sh`). O mesmo arquivo recarrega o site sozinho quando sai
   versão nova: o servidor manda `site:version` (hash dos arquivos) no `/adm`; o texto da caixa de mensagem volta.
+  Os dois usam UM só `io("/adm")` (`window.ChatPedroAdmSocket`): um segundo `io("/adm")` abriria outra conexão inteira.
 - Leveza (medida com Playwright + CDP `Performance.getMetrics`): a barrinha de ações de cada mensagem só é montada
   quando o mouse/dedo chega nela (`ensureActs`; nos testes, passe o mouse na linha antes de clicar nos botões); o chat
   aberto guarda no máximo ~320 linhas (volta para 220); a animação da tela de carregamento só roda enquanto carrega
   (`body.booted` esconde); brilhos que pulsam usam transform/opacity num `::after` (nunca animar `box-shadow` sem parar).
+- Leveza no servidor e na rede (teste `19-memoria-do-servidor`): fotos/áudios/arquivos NÃO ficam na memória do servidor;
+  depois de enviados para quem está online, saem do histórico em memória e vêm do banco (`mediaSrc`, `storage.getMedia`)
+  com um cache de no máximo `MEDIA_CACHE_MB` (16) para o site inteiro; ao ligar, o `load()` só confere quais existem.
+  A página é servida pelo `sendIndex` com `?v=<SITE_VERSION>` em cada `<script src="/...">` (cache de 1 ano, só para a
+  versão atual); a página em si vai com `no-cache`. Script novo no `index.html`: só escrever `<script src="/x.js">`.
+  O socket começa pelo WebSocket (`transports: ["websocket", "polling"], tryAllTransports: true`) e cai no polling se a
+  rede bloquear. O handshake (`io.use`) faz as consultas ao banco juntas (`Promise.all`).
 - Painel do usuário (embaixo à esquerda): se estica por baixo da barra de servidores como no Discord atual;
   microfone e fone com setinha (`.agrp`), vermelho quando mudo (`.off`); mostra "Em uma chamada" na call.
 
