@@ -208,11 +208,14 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   confere a última release do GitHub a cada 30 min). Ícones: `desktop/tools/icons.js` (desenho próprio: balão branco no
   quadrado azul). Teste `21-app-windows` (abre o Electron numa tela virtual Xvfb; teclas globais e bandeja de mentira por
   `global.__cp` com `CHATPEDRO_TEST=1`; pulado se não houver `desktop/node_modules`).
-  **Montar e publicar o instalador** (`dist/ChatPedroSetup.exe`, ~110 MB, sem assinatura: o Windows avisa "programa
-  desconhecido", é só clicar em "Mais informações > Executar assim mesmo"): `cd desktop && npm install`; precisa do wine
-  (`dpkg --add-architecture i386 && apt-get update && apt-get install -y wine64 wine32:i386`); suba a `version` do
-  `desktop/package.json`; `npm run dist`; crie a release `app-v<versão>` pela API do GitHub e mande `ChatPedroSetup.exe`,
-  `ChatPedroSetup.exe.blockmap` e `latest.yml` (o programa instalado acha a versão nova sozinho pelo `latest.yml`).
+  **Publicar o instalador** (`ChatPedroSetup.exe`, ~110 MB, sem assinatura: o Windows avisa "programa desconhecido", é só
+  clicar em "Mais informações > Executar assim mesmo"): a sessão do Claude NÃO pode criar releases no GitHub. Quem publica
+  é o dono, num clique: aba Actions > "App do Windows" > "Run workflow" (`.github/workflows/app-windows.yml`: monta
+  num Windows do GitHub e publica a release `app-v<versão>` com `ChatPedroSetup.exe`, `.blockmap` e `latest.yml`; o
+  programa instalado acha a versão nova sozinho pelo `latest.yml`). Antes, suba a `version` do `desktop/package.json`.
+  Para montar aqui só para conferir: `cd desktop && npm install && npm run dist` (precisa do wine:
+  `dpkg --add-architecture i386 && apt-get update && apt-get install -y wine64 wine32:i386`). Erros do programa
+  instalado ficam em `%APPDATA%/Chat Pedro/chat-pedro.log`. O wine NÃO serve para abrir o programa (a janela trava lá).
 
 ## Permissões
 Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `members`, `ban`, `server`,

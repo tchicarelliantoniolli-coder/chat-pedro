@@ -1,0 +1,34 @@
+# Monta o instalador do Chat Pedro para Windows num Windows de verdade e publica na pagina de versoes do projeto.
+# Como usar: aba "Actions" do GitHub > "App do Windows" > botao "Run workflow".
+# Antes de rodar de novo, suba a "version" em desktop/package.json (o programa instalado procura versao maior).
+name: App do Windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-windows
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Instalar o que o programa usa
+        working-directory: desktop
+        run: npm ci
+      - name: Montar o instalador e publicar a versao
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis --x64 --publish always
