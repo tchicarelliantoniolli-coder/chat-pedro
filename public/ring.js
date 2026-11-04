@@ -168,7 +168,11 @@
     const el = here ? inline(p) : app.myStatus === "ocupado" ? null : popup(p);
     rings.set(p.server, { p, el });
     sync();
-    if (!old && document.hidden && app.myStatus !== "ocupado" && store.get("chatpedro-notif") === "on" && "Notification" in window && Notification.permission === "granted") {
+    // "longe": aba escondida ou, no programa do Windows, a janela sem foco (la os avisos vem ligados)
+    const away = window.ChatPedroAway ? window.ChatPedroAway() : document.hidden;
+    const notif = store.get("chatpedro-notif") === "on" || (!!window.ChatPedroDesktop && store.get("chatpedro-notif") !== "off");
+    if (!old && app.myStatus !== "ocupado" && app.onRing) app.onRing(p);
+    if (!old && away && app.myStatus !== "ocupado" && notif && "Notification" in window && Notification.permission === "granted") {
       try { new Notification(p.title, { body: p.video ? "Chamada de vídeo recebida..." : "Chamada recebida...", tag: "chatpedro-ring-" + p.server, icon: p.avatar || undefined }); } catch {}
     }
   }

@@ -78,6 +78,7 @@
     $("vpNoise").classList.toggle("on", prefs.noise === "ia");
     setIcon($("vpNoise"), "wave", prefs.noise === "ia" ? "Supressão de ruído ativada" : "Supressão de ruído desativada");
     if (app.renderMe) app.renderMe();
+    if (app.onVoice) app.onVoice({ inCall, micOn, deaf }); // programa do Windows: menu do icone perto do relogio
     // conversa privada: alguem ja esta na chamada -> o telefone do topo fica verde
     const ringing = !here() && allMembers.length > 0;
     $("dmCallBtn").classList.toggle("ring", ringing);
@@ -707,6 +708,10 @@
     },
     setRange(id, v) { const r = $(id); r.value = v; r.dispatchEvent(new Event("input")); },
     setNoise, micTest,
+    // programa do Windows: mutar pelo icone perto do relogio e atalhos que funcionam dentro de jogos
+    toggleMic: () => toggleMic(), toggleDeaf: () => toggleDeaf(),
+    ptt: (held) => { if (inCall && prefs.ptt) setPtt(!!held); else if (!held) setPtt(false); },
+    state: () => ({ inCall, micOn, deaf, ptt: prefs.ptt }),
     noiseActive: () => !!denoise,
     micLevel: () => (micAnalyser ? Math.min(1, level(micAnalyser) * (prefs.micGain / 100) * 4) : 0),
   };

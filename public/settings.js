@@ -62,6 +62,8 @@
     else if (c.type === "range") c.addEventListener("input", () => { set(k, Number(c.value)); syncControls(); });
     else if (c.classList.contains("us-radio")) c.addEventListener("change", (e) => set(k, e.target.value === "on"));
   });
+  // o programa do Windows muda o zoom com Ctrl + / Ctrl - / Ctrl 0 (a mesma opcao de Acessibilidade)
+  window.ChatPedroPrefs.set = (k, v) => { set(k, v); syncControls(); };
 
   // ---------- janela ----------
   const modal = $("userSettings");

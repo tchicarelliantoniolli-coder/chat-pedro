@@ -179,6 +179,39 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   rede bloquear. O handshake (`io.use`) faz as consultas ao banco juntas (`Promise.all`).
 - Painel do usuário (embaixo à esquerda): se estica por baixo da barra de servidores como no Discord atual;
   microfone e fone com setinha (`.agrp`), vermelho quando mudo (`.off`); mostra "Em uma chamada" na call.
+- **Programa do Windows** (pasta `desktop/`, Electron 45, com `package.json` próprio: o Render NÃO instala). A janela
+  carrega o site de verdade (`CHATPEDRO_URL`, padrão `https://chat-pedro.onrender.com`), então mudança no site aparece
+  no programa sem reinstalar; só mexer em `desktop/` exige versão nova do instalador.
+  `main.js`: janelinha de abertura (`splash.html`, 300x350, "Verificando atualizações", "Acordando o servidor..." enquanto
+  `/api/ping` não responde, "Sem conexão" com nova tentativa); janela sem moldura (`frame: false`, mínimo 940x500, lembra
+  tamanho/posição em `%APPDATA%/Chat Pedro/config.json`); o X esconde perto do relógio (bandeja: abrir, silenciar
+  microfone, desativar áudio, abrir junto com o Windows, atualizações, sair); número de não lidas no ícone da barra de
+  tarefas (`setOverlayIcon`, desenhado pelo site) e bolinha vermelha no da bandeja; links de fora abrem no navegador
+  (`setWindowOpenHandler`/`will-navigate`); F5/Ctrl+R não recarregam; Ctrl +/-/0 = zoom de Acessibilidade; F12 só com o
+  modo desenvolvedor; menu do botão direito em português só em campos de texto, seleção, links e imagens; botões
+  voltar/avançar do mouse; uma instância só; atualização pelo GitHub Releases (`electron-updater`, seta verde na barra
+  quando baixou). Atalhos globais (funcionam com jogo na frente) com `uiohook-napi`: segurar para falar (tecla ou
+  MOUSE4/5, ignora CTRL/SHIFT apertados), mutar e desativar áudio (com CTRL/SHIFT/ALT exatos). "Jogando ...": `tasklist`
+  a cada 15 s comparado com `games.js` (nome do .exe em minúsculas) e com os jogos que a pessoa adicionou.
+  Compartilhar tela: `setDisplayMediaRequestHandler` manda a lista de telas/janelas para o site escolher (`#pickModal`);
+  som do computador com `loopback` (o Electron 45+ respeita o `restrictOwnAudio` do site: sem o som da própria call).
+  `preload.js` expõe `window.ChatPedroDesktop` só para a página do Chat Pedro; o main confere a origem de cada pedido.
+  No site: `public/desktop.js` (para na 1ª linha fora do programa) põe os botões da janela na barra de cima
+  (`html.desktop`, `-webkit-app-region: drag`, botões 32x32 medidos no Discord, telas cheias começam em `top: 32px`),
+  `app.onAlert`/`app.onRing` (menção/DM com a janela sem foco: número no ícone e pisca), `app.onVoice` + `app.audio.toggleMic/
+  toggleDeaf/ptt`, `app.setGame` (evento `profile` com `game`; o servidor manda `game` nos `profiles`, some com `hideAct`;
+  `activityOf` mostra "Jogando X"), e as páginas "Configurações do Windows", "Jogos registrados" e os atalhos globais
+  no começo de "Atalhos do teclado". "Longe" para avisos: `window.ChatPedroAway()` (no programa = janela sem foco ou
+  escondida, informado pelo main). No programa os avisos do Windows vêm ligados (`chatpedro-notif` só desliga com "off").
+  No site aberto no Windows (navegador) aparece o botão `#railDl` "Baixar o app" (link fixo
+  `releases/latest/download/ChatPedroSetup.exe`). Ícones: `desktop/tools/icons.js` (desenho próprio: balão branco no
+  quadrado azul). Teste `21-app-windows` (abre o Electron numa tela virtual Xvfb; teclas globais e bandeja de mentira por
+  `global.__cp` com `CHATPEDRO_TEST=1`; pulado se não houver `desktop/node_modules`).
+  **Montar e publicar o instalador** (`dist/ChatPedroSetup.exe`, ~110 MB, sem assinatura: o Windows avisa "programa
+  desconhecido", é só clicar em "Mais informações > Executar assim mesmo"): `cd desktop && npm install`; precisa do wine
+  (`dpkg --add-architecture i386 && apt-get update && apt-get install -y wine64 wine32:i386`); suba a `version` do
+  `desktop/package.json`; `npm run dist`; crie a release `app-v<versão>` pela API do GitHub e mande `ChatPedroSetup.exe`,
+  `ChatPedroSetup.exe.blockmap` e `latest.yml` (o programa instalado acha a versão nova sozinho pelo `latest.yml`).
 
 ## Permissões
 Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `members`, `ban`, `server`,
@@ -190,6 +223,7 @@ Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `memb
 - Usa um Supabase falso (`tests/fake-supabase.js`, porta 3330) e o site na porta 3331, com Playwright
   e Chromium (já instalados na nuvem). Fotos de tela em `tests/out/` (fora do git).
 - Cada teste imprime `OK`/`FALHA` por item e `erros: []` quando a página não deu erro de JavaScript.
+- `21-app-windows` precisa do `desktop/node_modules` (rode `npm install` em `desktop/`) e do `Xvfb` (já instalado).
 - `08-configuracoes` (painel, cartão da conta, Configurações, excluir conta) e `09-call-e-dm` (call e DM novas).
 - Se mudar um id ou classe do HTML, atualize os testes. Teste novo: copie o estilo de `07-recursos-discord.js`.
   Em testes, procure classes das Configurações dentro da janela certa (`#guildModal .gs-toggle`), porque as
@@ -214,8 +248,10 @@ o Krisp (pago e licenciado só para o Discord; no lugar está o RNNoise, livre);
 momentos, com melodias próprias; o toque de chamada tem o mesmo ritmo e duração); GIFs e soundboard (pedido do dono; por isso o painel "Voz conectada" tem 3 botões e não 4); Nitro, impulsos,
 loja, presentes, missões e super reações (sistema pago); bots com comandos e apps (rodar código de terceiros);
 conexões verificadas (precisa de conta de desenvolvedor em cada site; hoje a pessoa digita o usuário); clipes e
-fundo de vídeo (pesado demais para o plano grátis); temas claros (o dono pediu só o do Discord); atalhos de
-teclado personalizáveis, jogos registrados e sobreposição de jogo (o navegador não deixa); trocar o e-mail
+fundo de vídeo (pesado demais para o plano grátis); temas claros (o dono pediu só o do Discord); no navegador,
+atalhos globais e jogos registrados (o navegador não deixa; no programa do Windows existem); sobreposição dentro do jogo
+(antitrapaça de alguns jogos bloqueia ou pune programas que desenham por cima); app de Mac/Linux e assinatura do
+instalador (certificado pago); trocar o e-mail
 (o e-mail de confirmação grátis do Supabase não chega); Central da Família e outros idiomas; pedidos de
 mensagem de desconhecidos (DM só com amigos ou quem divide servidor); "servidores mútuos" na DM e "Copiar ID"
 de servidor (ainda não feitos). "Online" vale por servidor, não pelo site inteiro.

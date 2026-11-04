@@ -1,0 +1,93 @@
+{
+  "name": "chat-pedro-desktop",
+  "productName": "Chat Pedro",
+  "version": "1.0.0",
+  "description": "Chat Pedro para Windows",
+  "author": "Chat Pedro",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "icons": "node tools/icons.js",
+    "dist": "electron-builder --win nsis --x64 --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron": "^45.2.2",
+    "electron-builder": "^26.18.0"
+  },
+  "homepage": "https://chat-pedro.onrender.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tchicarelliantoniolli-coder/chat-pedro"
+  },
+  "build": {
+    "appId": "com.chatpedro.desktop",
+    "productName": "Chat Pedro",
+    "executableName": "Chat Pedro",
+    "copyright": "Chat Pedro",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "games.js",
+      "assets/**",
+      "package.json",
+      "!node_modules/**/{README.md,readme.md,CHANGELOG.md,*.d.ts,*.map,test,tests,example,examples,docs}",
+      "!node_modules/uiohook-napi/{libuiohook,src}/**",
+      "!node_modules/uiohook-napi/prebuilds/{darwin-*,linux-*,win32-arm64}/**"
+    ],
+    "npmRebuild": false,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/uiohook-napi/prebuilds/win32-x64/**"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tchicarelliantoniolli-coder",
+        "repo": "chat-pedro",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "ChatPedroSetup.${ext}",
+      "legalTrademarks": "Chat Pedro"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Chat Pedro",
+      "uninstallDisplayName": "Chat Pedro",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "ChatPedroSetup.${ext}"
+    },
+    "electronLanguages": [
+      "pt-BR",
+      "en-US"
+    ],
+    "compression": "maximum"
+  }
+}

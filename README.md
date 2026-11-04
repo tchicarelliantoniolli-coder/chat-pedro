@@ -2,6 +2,17 @@
 
 Chat para os amigos no estilo do Discord: servidores, canais de texto e voz, mensagens diretas, call, poker e truco.
 
+## App para Windows
+
+Baixe o instalador: https://github.com/tchicarelliantoniolli-coder/chat-pedro/releases/latest/download/ChatPedroSetup.exe
+(no site aberto pelo Windows também aparece o botão "Baixar o app", com a setinha, na barra de servidores).
+
+- O Windows avisa "o Windows protegeu o computador" porque o instalador não tem assinatura paga:
+  clique em **Mais informações** e depois em **Executar assim mesmo**.
+- É o mesmo Chat Pedro do site, numa janela própria. Fica perto do relógio ao fechar, mostra as não lidas no ícone,
+  tem atalhos do microfone que funcionam dentro de jogos e mostra "Jogando ..." para os amigos.
+- O código fica na pasta `desktop/` (Electron). Para montar o instalador, veja o `CLAUDE.md`.
+
 ## Rodar no seu computador (opcional)
 
 Precisa do [Node.js](https://nodejs.org) 18 ou mais novo.

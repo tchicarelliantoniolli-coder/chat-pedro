@@ -111,6 +111,8 @@ function sendIndex(req, res) {
   res.set("Cache-Control", "no-cache").type("html").send(indexHtml);
 }
 app.get(["/", "/index.html", "/s/:id", "/convite/:code"], sendIndex);
+// o programa do Windows pergunta aqui se o servidor ja acordou antes de abrir a janela (resposta pequena, sem banco)
+app.get("/api/ping", (req, res) => { res.set("Cache-Control", "no-store").json({ ok: true, v: SITE_VERSION }); });
 const LONG_CACHE = "public, max-age=31536000, immutable";
 // so a versao atual: um endereco de versao antiga (pagina aberta durante a atualizacao) nao guarda o arquivo novo
 const versioned = (res) => { if (res.req.query.v === SITE_VERSION) res.setHeader("Cache-Control", LONG_CACHE); };
@@ -474,7 +476,7 @@ function sendUsers(ctx, withAvatars) {
   for (const m of ctx.members) profiles[keyOf(m.nick)] = { color: m.color || undefined, status: "offline", text: m.status_text || undefined, bio: m.bio || undefined, id: m.id, banner: m.banner || undefined, deco: m.decoration || undefined, conn: m.connections || undefined };
   for (const [id, nick] of visible) {
     const s = ctx.sockets.get(id);
-    profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online", noact: (s && s.data.hideAct) || undefined };
+    profiles[keyOf(nick)] = { ...(profiles[keyOf(nick)] || {}), status: ctx.statuses.get(id) || "online", noact: (s && s.data.hideAct) || undefined, game: (s && !s.data.hideAct && s.data.game) || undefined };
   }
   if (withAvatars) toRoom(ctx, "avatars", avatarsOf(ctx));
   toRoom(ctx, "profiles", profiles);
@@ -1413,6 +1415,8 @@ io.on("connection", (socket) => {
     if (!p || typeof p !== "object") return;
     if (STATUSES.includes(p.status)) ctx.statuses.set(socket.id, p.status);
     if (typeof p.hideAct === "boolean") socket.data.hideAct = p.hideAct; // nao mostrar "jogando poker", "na call"...
+    // jogo aberto no computador (programa do Windows): "Jogando VALORANT"
+    if (typeof p.game === "string") socket.data.game = p.game.replace(/[\u0000-\u001f\u007f<>]/g, "").trim().slice(0, 60);
     sendUsers(ctx);
   });
 
