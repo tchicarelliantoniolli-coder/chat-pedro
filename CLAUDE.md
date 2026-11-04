@@ -204,7 +204,8 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   no começo de "Atalhos do teclado". "Longe" para avisos: `window.ChatPedroAway()` (no programa = janela sem foco ou
   escondida, informado pelo main). No programa os avisos do Windows vêm ligados (`chatpedro-notif` só desliga com "off").
   No site aberto no Windows (navegador) aparece o botão `#railDl` "Baixar o app" (link fixo
-  `releases/latest/download/ChatPedroSetup.exe`). Ícones: `desktop/tools/icons.js` (desenho próprio: balão branco no
+  `releases/latest/download/ChatPedroSetup.exe`), só quando `/api/app` diz que há instalador publicado (o servidor
+  confere a última release do GitHub a cada 30 min). Ícones: `desktop/tools/icons.js` (desenho próprio: balão branco no
   quadrado azul). Teste `21-app-windows` (abre o Electron numa tela virtual Xvfb; teclas globais e bandeja de mentira por
   `global.__cp` com `CHATPEDRO_TEST=1`; pulado se não houver `desktop/node_modules`).
   **Montar e publicar o instalador** (`dist/ChatPedroSetup.exe`, ~110 MB, sem assinatura: o Windows avisa "programa

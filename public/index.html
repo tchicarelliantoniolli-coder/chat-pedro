@@ -2288,7 +2288,7 @@ button.ib.rpb.yes, button.ib.rpb.yes:hover { background: #3d9e60; }
    dois cliques maximizam; botoes de 32x32 com 4px entre eles e uma divisoria antes; o fechar fica vermelho. */
 .winbtns, #railDl { display: none; }
 /* site aberto no navegador do Windows: botao "Baixar o app" na barra de servidores, como o "Baixar apps" do Discord */
-html.win-web #railDl { display: flex; text-decoration: none; }
+html.win-web.app-ok #railDl { display: flex; text-decoration: none; }
 #railDl .ic { width: 22px; height: 22px; }
 html.desktop body > header { -webkit-app-region: drag; padding-right: 0; user-select: none; }
 html.desktop body > header :is(button, a, input, select, [role=button]) { -webkit-app-region: no-drag; }
@@ -2368,7 +2368,11 @@ html.desktop body > header { z-index: 70; }
 <script>
   // dentro do programa do Windows a pagina ja sabe desde o comeco (sem piscar o botao "Baixar o app")
   if (window.ChatPedroDesktop) document.documentElement.classList.add("desktop");
-  else if (/Windows/.test(navigator.userAgent) && !/Mobile|Phone/.test(navigator.userAgent)) document.documentElement.classList.add("win-web");
+  else if (/Windows/.test(navigator.userAgent) && !/Mobile|Phone/.test(navigator.userAgent)) {
+    document.documentElement.classList.add("win-web");
+    // o botao "Baixar o app" so aparece quando o instalador ja esta publicado
+    fetch("/api/app").then((r) => r.json()).then((a) => { if (a && a.url) document.documentElement.classList.add("app-ok"); }).catch(() => {});
+  }
 </script>
 </head>
 <body>

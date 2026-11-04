@@ -113,6 +113,28 @@ function sendIndex(req, res) {
 app.get(["/", "/index.html", "/s/:id", "/convite/:code"], sendIndex);
 // o programa do Windows pergunta aqui se o servidor ja acordou antes de abrir a janela (resposta pequena, sem banco)
 app.get("/api/ping", (req, res) => { res.set("Cache-Control", "no-store").json({ ok: true, v: SITE_VERSION }); });
+// botao "Baixar o app" do site: so aparece quando ha instalador publicado no GitHub (confere a cada 30 min)
+const APP_REPO = "tchicarelliantoniolli-coder/chat-pedro";
+const appRelease = { at: 0, data: null, busy: null };
+async function latestApp() {
+  if (Date.now() - appRelease.at < 30 * 60000) return appRelease.data;
+  if (appRelease.busy) return appRelease.busy;
+  appRelease.busy = (async () => {
+    try {
+      const r = await fetch("https://api.github.com/repos/" + APP_REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json", "User-Agent": "chat-pedro-site" }, signal: AbortSignal.timeout(8000) });
+      if (r.ok) {
+        const j = await r.json();
+        const a = (j.assets || []).find((x) => x.name === "ChatPedroSetup.exe");
+        appRelease.data = a ? { url: a.browser_download_url, version: String(j.tag_name || "").replace(/^app-v/, "") } : null;
+      } else if (r.status === 404) appRelease.data = null;
+      appRelease.at = Date.now();
+    } catch {}
+    appRelease.busy = null;
+    return appRelease.data;
+  })();
+  return appRelease.busy;
+}
+app.get("/api/app", async (req, res) => { res.set("Cache-Control", "public, max-age=600").json((await latestApp()) || { url: null }); });
 const LONG_CACHE = "public, max-age=31536000, immutable";
 // so a versao atual: um endereco de versao antiga (pagina aberta durante a atualizacao) nao guarda o arquivo novo
 const versioned = (res) => { if (res.req.query.v === SITE_VERSION) res.setHeader("Cache-Control", LONG_CACHE); };
