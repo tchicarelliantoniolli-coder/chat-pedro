@@ -38,7 +38,7 @@ jobs:
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis --x64 --publish always -c.publish.releaseType=draft
+        run: npx electron-builder --win nsis --x64 --publish always
       - name: Publicar a versao
         shell: bash
         env:
