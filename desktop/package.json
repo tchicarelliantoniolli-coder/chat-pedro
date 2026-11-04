@@ -55,7 +55,7 @@
         "provider": "github",
         "owner": "tchicarelliantoniolli-coder",
         "repo": "chat-pedro",
-        "releaseType": "draft",
+        "releaseType": "release",
         "tagNamePrefix": "app-v"
       }
     ],

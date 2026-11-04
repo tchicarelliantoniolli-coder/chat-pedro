@@ -27,20 +27,20 @@ jobs:
       - name: Instalar o que o programa usa
         working-directory: desktop
         run: npm ci
-      - name: Criar a etiqueta da versao (o GitHub recusa versao publicada sem etiqueta)
+      - name: Montar o instalador
+        working-directory: desktop
+        run: npx electron-builder --win nsis --x64 --publish never
+      - name: Publicar a versao (cria ou substitui os arquivos)
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           V=$(node -p "require('./desktop/package.json').version")
-          echo "TAG=app-v$V" >> $GITHUB_ENV
-          git tag -f "app-v$V"
-          git push -f origin "refs/tags/app-v$V"
-      - name: Montar o instalador e enviar como rascunho
-        working-directory: desktop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis --x64 --publish always
-      - name: Publicar a versao
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "$TAG" --draft=false --latest --repo "$GITHUB_REPOSITORY"
+          TAG="app-v$V"
+          cd desktop/dist
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" ChatPedroSetup.exe ChatPedroSetup.exe.blockmap latest.yml --clobber
+            gh release edit "$TAG" --draft=false --latest
+          else
+            gh release create "$TAG" ChatPedroSetup.exe ChatPedroSetup.exe.blockmap latest.yml --target "$GITHUB_SHA" --title "Chat Pedro $V" --notes "Instalador do Chat Pedro para Windows." --latest
+          fi
