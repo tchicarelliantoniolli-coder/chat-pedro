@@ -581,6 +581,16 @@
 
   // ---------- camera e cliques ----------
   const view = { yaw: 0, pitch: 0, orbit: 0, drag: null, shake: 0 };
+  // Para onde cada jogador olha (a camera dele): a cabeca do boneco dele vira junto na tela dos outros.
+  // gazes: lugar -> { nick, yaw, pitch }; o meu vai para o servidor ate ~10 vezes por segundo enquanto mexo.
+  const gazes = new Map();
+  const sentGaze = { yaw: 0, pitch: 0, at: 0 };
+  function sendGaze(now) {
+    if (!seated() || myDead() || now - sentGaze.at < 100) return;
+    if (Math.abs(view.yaw - sentGaze.yaw) < 0.02 && Math.abs(view.pitch - sentGaze.pitch) < 0.02) return;
+    sentGaze.yaw = view.yaw; sentGaze.pitch = view.pitch; sentGaze.at = now;
+    socket.emit("blefe:gaze", { yaw: view.yaw, pitch: view.pitch });
+  }
   let hover = null;
   function bindPointer() {
     const cv = R.renderer.domElement;
@@ -650,6 +660,7 @@
       camera.position.set(p.x, 1.62, p.z);
       camera.rotation.y = a + view.yaw;
       camera.rotation.x = -0.42 + view.pitch;
+      sendGaze(now);
     } else {
       if (!view.drag) view.orbit += dt * 0.05;
       const a = view.orbit + (seated() ? seatAngle(st.me) : 0);
@@ -677,13 +688,16 @@
       d.head.position.y = 1.36 + breath * 0.5 + (now < d.laughUntil ? Math.abs(Math.sin(t * 22)) * 0.04 : 0);
       d.head.rotation.z = now < d.laughUntil ? Math.sin(t * 11) * 0.12 : 0;
       const focus = st.stage === "trigger" && st.shot ? st.shot.seat : st.toPlay;
-      let yaw = 0;
-      if (alive && focus >= 0 && focus !== d.seat) {
+      const gz = gazes.get(d.seat);
+      let yaw = 0, pitch = 0;
+      if (alive && gz && gz.nick === d.nick) { yaw = clamp(gz.yaw, -1.1, 1.1); pitch = clamp(-gz.pitch * 0.9, -0.45, 0.5); }
+      else if (alive && focus >= 0 && focus !== d.seat) {
         const fp = focus === st.me && seated() ? camera.position : dolls[focus].root.position;
         const lp = d.root.worldToLocal(fp.clone());
         yaw = clamp(Math.atan2(lp.x, lp.z), -1.1, 1.1);
       }
-      d.head.rotation.y += (yaw - d.head.rotation.y) * Math.min(1, dt * 4);
+      d.head.rotation.y += (yaw - d.head.rotation.y) * Math.min(1, dt * 6);
+      d.head.rotation.x += (pitch - d.head.rotation.x) * Math.min(1, dt * 6);
       d.personG.position.x = now < d.shakeUntil ? Math.sin(t * 60) * 0.012 : 0;
       // boca mexe quando a pessoa fala na call
       const talk = alive && d.nick && speaking.has(d.nick);
@@ -1043,7 +1057,13 @@
     if (e.type === "start") { if (R) R.dolls.forEach((d) => { d.fall = d.fallTarget = 0; d.dying = false; }); return; }
   });
 
+  socket.on("blefe:gaze", (g) => {
+    if (!g || !st || g.seat === st.me || !st.seats[g.seat]) return;
+    gazes.set(g.seat, { nick: st.seats[g.seat].nick, yaw: Number(g.yaw) || 0, pitch: Number(g.pitch) || 0 });
+  });
   socket.on("blefe:state", (s) => {
+    // olhar guardado no servidor (quem abriu a mesa depois ve as cabecas certas)
+    s.seats.forEach((x, i) => { if (x && x.gaze && i !== s.me && !(gazes.get(i) && gazes.get(i).nick === x.nick)) gazes.set(i, { nick: x.nick, ...x.gaze }); });
     const wasMine = st && st.stage === "playing" && st.toPlay === st.me;
     if (st && (st.roundNo !== s.roundNo || s.stage !== "playing")) selected.clear();
     st = s;
@@ -1091,5 +1111,10 @@
     // o 3D e montado de novo com a qualidade nova
     if (R) { loop(false); R.renderer.dispose(); R.renderer.domElement.remove(); R = null; loading = null; texCache.clear(); faceCache.clear(); if (open()) show(); }
   });
-  app.blefe = { get state() { return st; }, get ready() { return !!R; }, get failed() { return failed; }, pick: toggleCard };
+  app.blefe = {
+    get state() { return st; }, get ready() { return !!R; }, get failed() { return failed; }, pick: toggleCard,
+    // para os testes: para onde a cabeca de um boneco esta virada e para onde a minha camera olha
+    headOf: (seat) => (R && R.dolls[seat] ? { y: R.dolls[seat].head.rotation.y, x: R.dolls[seat].head.rotation.x } : null),
+    get myView() { return { yaw: view.yaw, pitch: view.pitch }; },
+  };
 })();

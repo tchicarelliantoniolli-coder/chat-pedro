@@ -233,7 +233,7 @@ function createBlefe(io, helpers, timing) {
       hostNick: g.host ? (g.seats.find((s) => s && s.key === g.host) || {}).nick || null : null,
       seats: g.seats.map((s, i) => s && {
         nick: s.nick, online: !!(s.key && isOnline(s.key)), inGame: !!s.inGame, alive: s.alive !== false,
-        cards: s.hand ? s.hand.length : 0, pulls: s.pulls || 0, look: s.look, wins: (s.key && g.wins[s.key]) || 0,
+        cards: s.hand ? s.hand.length : 0, pulls: s.pulls || 0, look: s.look, wins: (s.key && g.wins[s.key]) || 0, gaze: s.gaze || null,
       }),
       me, hand: mine && mine.inGame && mine.hand ? mine.hand : [],
       suit: g.suit, pile: g.pile, last: g.last && { seat: g.last.seat, count: g.last.cards.length },
@@ -345,6 +345,22 @@ function createBlefe(io, helpers, timing) {
     socket.on("blefe:pull", (cb) => {
       const i = mySeat(); if (i < 0) return reply(cb, "Você não está na mesa.");
       reply(cb, pull(i));
+    });
+
+    // para onde a pessoa esta olhando (a camera dela): os outros veem a cabeca do boneco virar junto.
+    // Chega ate ~12 vezes por segundo enquanto ela mexe; o ultimo fica guardado para quem abrir a mesa depois.
+    let lastGaze = 0;
+    socket.on("blefe:gaze", (msg) => {
+      const i = mySeat();
+      if (i < 0 || !msg) return;
+      const now = Date.now();
+      if (now - lastGaze < 80) return;
+      const yaw = Number(msg.yaw), pitch = Number(msg.pitch);
+      if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return;
+      lastGaze = now;
+      const gaze = { yaw: Math.round(Math.max(-1.3, Math.min(1.3, yaw)) * 100) / 100, pitch: Math.round(Math.max(-0.6, Math.min(0.5, pitch)) * 100) / 100 };
+      g.seats[i].gaze = gaze;
+      io.emit("blefe:gaze", { seat: i, ...gaze });
     });
 
     // reacoes do boneco (apontar, rir, bater na mesa...): todo mundo ve

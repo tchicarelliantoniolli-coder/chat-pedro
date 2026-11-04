@@ -80,6 +80,8 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   sorteia um naipe, joga 1 a 3 viradas ou grita DUVIDO; quem perde puxa o gatilho (6 espaços, 1 bala que só o
   servidor sabe). Porão com lâmpada; bonecos feitos no código com a foto de perfil no rosto, cor e chapéu
   (`chatpedro-blefe-look`), reações, boca mexe com a voz da call (`app.speakingNicks`, vem do `call.js`).
+  A cabeça de cada boneco segue a câmera do jogador (`blefe:gaze`, até ~10/s, guardado em `seat.gaze`); quem nunca
+  mexeu a câmera vira a cabeça para quem está jogando.
   three.js fica no `node_modules` e é servido em `/vendor/three` só quando abre a mesa; "modo leve" sem sombras.
   Testes `11-mesa-do-blefe` e `fuzz-blefe.js`.
 - Tela cheia nos jogos: botão `.gfull` (`#actFull`, `#trFull`, `#blFull`) no topo de cada jogo; usa a tela cheia do

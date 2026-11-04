@@ -34,6 +34,17 @@ const ok = (c, msg) => console.log((c ? 'OK   ' : 'FALHA') + ' ' + msg);
   const st = (p) => p.evaluate(() => window.ChatPedro.blefe.state);
   ok((await st(P)).stage === 'playing' && (await st(L)).hand.length === 5, 'partida comecou e cada um tem 5 cartas');
   ok(await M.evaluate(() => window.ChatPedro.memberActivity ? true : true), 'celular entrou');
+  // mexer a camera: os outros veem a cabeca do boneco virar para onde a pessoa olha
+  const cv = await P.locator('#blefe canvas').boundingBox();
+  await P.mouse.move(cv.x + cv.width / 2, cv.y + cv.height / 2); await P.mouse.down();
+  await P.mouse.move(cv.x + cv.width / 2 - 200, cv.y + cv.height / 2 - 60, { steps: 12 }); await P.mouse.up();
+  await P.waitForTimeout(1500);
+  const pv = await P.evaluate(() => window.ChatPedro.blefe.myView);
+  const hL = await L.evaluate(() => window.ChatPedro.blefe.headOf(0)), hM = await M.evaluate(() => window.ChatPedro.blefe.headOf(0));
+  ok(pv.yaw > 0.5 && Math.abs(hL.y - Math.min(1.1, pv.yaw)) < 0.15 && Math.abs(hM.y - Math.min(1.1, pv.yaw)) < 0.15, 'mexer a camera: os outros veem a cabeca virar junto (camera ' + pv.yaw.toFixed(2) + ', cabeca ' + hL.y.toFixed(2) + ')');
+  ok(pv.pitch > 0.1 && hL.x < -0.05, 'olhar para cima: a cabeca levanta para os outros (' + hL.x.toFixed(2) + ')');
+  await P.dblclick('#blefe canvas', { position: { x: 30, y: 30 } }).catch(() => {}); await P.waitForTimeout(1500);
+  ok(Math.abs((await L.evaluate(() => window.ChatPedro.blefe.headOf(0))).y) < 0.15, 'duplo clique volta a camera e a cabeca volta para a mesa');
   await P.waitForTimeout(800);
   await P.screenshot({ path: SP + '/bl-jogo.png' });
   await L.screenshot({ path: SP + '/bl-jogo-lucas.png' });
