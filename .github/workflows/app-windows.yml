@@ -27,8 +27,20 @@ jobs:
       - name: Instalar o que o programa usa
         working-directory: desktop
         run: npm ci
-      - name: Montar o instalador e publicar a versao
+      - name: Criar a etiqueta da versao (o GitHub recusa versao publicada sem etiqueta)
+        shell: bash
+        run: |
+          V=$(node -p "require('./desktop/package.json').version")
+          echo "TAG=app-v$V" >> $GITHUB_ENV
+          git tag -f "app-v$V"
+          git push -f origin "refs/tags/app-v$V"
+      - name: Montar o instalador e enviar como rascunho
         working-directory: desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis --x64 --publish always
+        run: npx electron-builder --win nsis --x64 --publish always -c.publish.releaseType=draft
+      - name: Publicar a versao
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$TAG" --draft=false --latest --repo "$GITHUB_REPOSITORY"
