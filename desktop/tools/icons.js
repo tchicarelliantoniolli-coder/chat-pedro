@@ -1,5 +1,5 @@
 // Gera os icones do programa (assets/icon.png, assets/tray*.ico e build/icon.ico, o do instalador e do .exe)
-// a partir do desenho abaixo.
+// e os do app instalavel do site (public/icons/: Chromebook, Android, iPhone) a partir do desenho abaixo.
 // Rodar: node tools/icons.js  (precisa do Playwright com Chromium e do Python com PIL)
 const { chromium } = require("playwright");
 const { execFileSync } = require("child_process");
@@ -14,6 +14,16 @@ const logo = (dot) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 6
   <g fill="#5865f2"><circle cx="23" cy="26" r="3"/><circle cx="32" cy="26" r="3"/><circle cx="41" cy="26" r="3"/></g>
   ${dot ? '<circle cx="50" cy="50" r="15" fill="#121214"/><circle cx="50" cy="50" r="11" fill="#d22d39"/>' : ""}
 </svg>`;
+// versao "mascaravel" do app do site: o sistema recorta o icone (circulo, gota...), entao o fundo vai ate a borda
+// e o balao fica dentro da zona segura (80% do meio)
+const maskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#5865f2"/>
+  <g transform="translate(32 32) scale(.88) translate(-32 -30)">
+    <path d="M14 17a5 5 0 0 1 5-5h26a5 5 0 0 1 5 5v18a5 5 0 0 1-5 5H29l-10 8v-8a5 5 0 0 1-5-5z" fill="#fff"/>
+    <g fill="#5865f2"><circle cx="23" cy="26" r="3"/><circle cx="32" cy="26" r="3"/><circle cx="41" cy="26" r="3"/></g>
+  </g>
+</svg>`;
+const WEB = path.join(__dirname, "..", "..", "public", "icons");
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage({ deviceScaleFactor: 1 });
@@ -26,6 +36,11 @@ const logo = (dot) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 6
     await shot(logo(false), s, path.join(TMP, `i${s}.png`));
     if (s <= 64) await shot(logo(true), s, path.join(TMP, `d${s}.png`));
   }
+  fs.mkdirSync(WEB, { recursive: true });
+  await shot(logo(false), 192, path.join(WEB, "app-192.png"));
+  await shot(logo(false), 512, path.join(WEB, "app-512.png"));
+  await shot(maskable, 512, path.join(WEB, "app-maskable-512.png"));
+  await shot(maskable, 180, path.join(WEB, "apple-touch-icon.png")); // iPhone nao aceita transparencia
   await b.close();
   fs.copyFileSync(path.join(TMP, "i512.png"), path.join(OUT, "icon.png"));
   fs.copyFileSync(path.join(TMP, "i32.png"), path.join(OUT, "tray.png"));

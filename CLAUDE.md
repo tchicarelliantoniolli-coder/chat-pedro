@@ -217,6 +217,16 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   `dpkg --add-architecture i386 && apt-get update && apt-get install -y wine64 wine32:i386`). Erros do programa
   instalado ficam em `%APPDATA%/Chat Pedro/chat-pedro.log`. O wine NÃO serve para abrir o programa (a janela trava lá).
 
+- **App instalável (Chromebook, Android, Chrome/Edge no computador; no iPhone "Adicionar à Tela de Início")**: é o próprio
+  site instalado como app (PWA), sem loja e sem instalador. `public/manifest.webmanifest` (nome, janela própria, cor `#121214`),
+  ícones em `public/icons/` (gerados por `desktop/tools/icons.js`, mesmo desenho do programa do Windows; o "maskable" tem o
+  fundo até a borda para o sistema recortar). `public/pwa.js`: botão `#railInstall` "Instalar o app" na barra de servidores
+  quando o navegador oferece (`beforeinstallprompt`, classe `html.can-install`; não aparece no programa do Windows nem onde
+  aparece o `#railDl`); app aberto instalado = `html.pwa`, com número de não lidas no ícone (`navigator.setAppBadge`, mesmas
+  regras do `desktop.js`). `public/sw.js` mostra a tela "Sem conexão" (tenta de novo sozinha) quando abre sem internet; não
+  guarda nada em cache. No Chromebook: abrir o site no Chrome e clicar no botão (ou no ícone de instalar na barra de
+  endereço). Teste `22-app-chromebook`.
+
 ## Permissões
 Dono e ADM têm todas. Cargos personalizados dão: `channels`, `messages`, `members`, `ban`, `server`,
 `roles`, `everyone`. No servidor use `can(perm)`; no navegador `can(perm)` / `app.can(perm)`.
@@ -254,7 +264,7 @@ loja, presentes, missões e super reações (sistema pago); bots com comandos e 
 conexões verificadas (precisa de conta de desenvolvedor em cada site; hoje a pessoa digita o usuário); clipes e
 fundo de vídeo (pesado demais para o plano grátis); temas claros (o dono pediu só o do Discord); no navegador,
 atalhos globais e jogos registrados (o navegador não deixa; no programa do Windows existem); sobreposição dentro do jogo
-(antitrapaça de alguns jogos bloqueia ou pune programas que desenham por cima); app de Mac/Linux e assinatura do
+(antitrapaça de alguns jogos bloqueia ou pune programas que desenham por cima); programa próprio de Mac/Linux (no lugar, o app instalável do site, que também é o do Chromebook) e assinatura do
 instalador (certificado pago); trocar o e-mail
 (o e-mail de confirmação grátis do Supabase não chega); Central da Família e outros idiomas; pedidos de
 mensagem de desconhecidos (DM só com amigos ou quem divide servidor); "servidores mútuos" na DM e "Copiar ID"

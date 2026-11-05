@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chat Pedro</title>
+<!-- app instalavel (Chromebook, Android, computador; no iPhone "Adicionar a Tela de Inicio"): public/pwa.js -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#121214">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Chat Pedro">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%2333ff66'/%3E%3Cpath d='M5 5h14v10H10l-5 4z' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2286,10 +2291,12 @@ button.ib.rpb.yes, button.ib.rpb.yes:hover { background: #3d9e60; }
 /* ===== Programa do Windows (pasta desktop/, html.desktop) =====
    A barra de cima vira a barra da janela, como no Discord (bar_c38106/winButton_c38106): arrastar move a janela,
    dois cliques maximizam; botoes de 32x32 com 4px entre eles e uma divisoria antes; o fechar fica vermelho. */
-.winbtns, #railDl { display: none; }
+.winbtns, #railDl, #railInstall { display: none; }
 /* site aberto no navegador do Windows: botao "Baixar o app" na barra de servidores, como o "Baixar apps" do Discord */
 html.win-web.app-ok #railDl { display: flex; text-decoration: none; }
-#railDl .ic { width: 22px; height: 22px; }
+/* Chromebook e outros (Chrome/Edge que deixam instalar o site como app): botao "Instalar o app" (public/pwa.js) */
+html.can-install:not(.win-web.app-ok):not(.desktop) #railInstall { display: flex; }
+:is(#railDl, #railInstall) .ic { width: 22px; height: 22px; }
 html.desktop body > header { -webkit-app-region: drag; padding-right: 0; user-select: none; }
 html.desktop body > header :is(button, a, input, select, [role=button]) { -webkit-app-region: no-drag; }
 html.desktop .winbtns { display: flex; align-items: center; gap: 4px; height: 32px; color: #abacb2; -webkit-app-region: no-drag; }
@@ -2397,6 +2404,7 @@ html.desktop body > header { z-index: 70; }
     <button type="button" class="srv add" id="railAdd" title="Criar servidor ou entrar com convite">+</button>
     <button type="button" class="srv add disc" id="railDisc" title="Explorar servidores públicos" aria-label="Explorar servidores públicos"><svg class="ic" aria-hidden="true"><use href="#i-compass"/></svg></button>
     <a class="srv add dl" id="railDl" href="https://github.com/tchicarelliantoniolli-coder/chat-pedro/releases/latest/download/ChatPedroSetup.exe" title="Baixar o app para Windows" aria-label="Baixar o app para Windows"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></a>
+    <button type="button" class="srv add dl" id="railInstall" title="Instalar o app" aria-label="Instalar o app"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></button>
   </nav>
   <section id="homeView" hidden>
     <nav class="hside" aria-label="Mensagens diretas">
@@ -5481,5 +5489,6 @@ window.setIcon = (btn, name, label, extra) => {
 <script src="/home.js"></script>
 <script src="/siteadm.js"></script>
 <script src="/desktop.js"></script>
+<script src="/pwa.js"></script>
 </body>
 </html>
