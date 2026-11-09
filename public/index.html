@@ -2196,6 +2196,10 @@ button.ib.rpb.yes, button.ib.rpb.yes:hover { background: #3d9e60; }
 .seat .ch::before { content: ""; width: 0.7em; height: 0.7em; border-radius: 50%; background: radial-gradient(circle, #f6d365 0 35%, #c99a2e 36% 60%, #f6d365 61%); flex: none; }
 .seat .ch.allin { color: #ff6b6b; }
 .seat .ch.allin::before { display: none; }
+.seat button.ch.chbtn { background: none; border: 0; padding: 1px 4px; margin: -1px -4px; border-radius: 4px; font-family: inherit; cursor: pointer; }
+.seat button.ch.chbtn:hover, .seat button.ch.chbtn:focus-visible { background: rgba(240, 178, 50, 0.16); outline: none; }
+.seat input.ch.chedit { width: 7em; max-width: 100%; background: var(--box); color: #f0b232; border: 1px solid #f0b232; border-radius: 4px; padding: 1px 4px; font: inherit; font-weight: 800; font-size: 0.78em; }
+.seat input.ch.chedit::before { display: none; }
 .seat.turn .box, .tr-seat.turn .box { border-color: #f0b232; box-shadow: 0 0 0 3px rgba(240, 178, 50, 0.35), 0 0 18px rgba(240, 178, 50, 0.45); animation: seatPulse 1.4s ease-in-out infinite; }
 @keyframes seatPulse { 50% { box-shadow: 0 0 0 5px rgba(240, 178, 50, 0.18), 0 0 26px rgba(240, 178, 50, 0.6); } }
 @media (prefers-reduced-motion: reduce) { .seat.turn .box, .tr-seat.turn .box { animation: none; } }

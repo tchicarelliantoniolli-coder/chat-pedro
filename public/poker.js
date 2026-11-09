@@ -7,6 +7,7 @@
   let st = null;          // estado mais recente
   let clockSkew = 0;      // diferenca entre o relogio do servidor e o daqui
   let raiseTo = 0;
+  let editing = null;     // ADM mudando as fichas de alguem: { seat, value } (sobrevive aos redesenhos da mesa)
   let lastTurnKey = "";
 
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -86,7 +87,7 @@
       const nm = el("div", "nm", s.nick);
       if (i === st.mySeat) nm.title = "você";
       if (s.admin) { const c = el("span", "crown", "\u2605 "); c.title = "ADM"; nm.prepend(c); }
-      info.append(nm, el("div", "ch" + (s.allIn && s.chips === 0 ? " allin" : ""), s.allIn && s.chips === 0 ? "ALL-IN" : s.chips.toLocaleString("pt-BR")));
+      info.append(nm, chipsEl(s, i));
       box.append(avatar(s.nick), info);
       // botao do dealer dentro da caixa do lugar: nunca cai em cima das cartas
       if (st.button === i && st.stage !== "waiting") { const d = el("span", "dchip", "D"); d.title = "dealer (botão)"; box.append(d); }
@@ -156,6 +157,37 @@
       if (me.minTo >= me.maxTo) sizing.hidden = true;
       box.append(main, sizing);
     }
+  }
+
+  // fichas do lugar; para o ADM viram um botao: clicar abre um campo para escrever o valor novo
+  function chipsEl(s, i) {
+    if (editing && editing.seat === i && st.isAdmin) {
+      const inp = el("input", "ch chedit");
+      inp.type = "number"; inp.min = "0"; inp.step = "1"; inp.inputMode = "numeric";
+      inp.value = editing.value; inp.setAttribute("aria-label", "Fichas de " + s.nick);
+      inp.addEventListener("input", () => { if (editing) editing.value = inp.value; });
+      const save = () => {
+        if (!editing || editing.seat !== i) return;
+        const v = inp.value.trim(); editing = null;
+        if (v === "" || Number(v) === s.chips) { render(); return; }
+        socket.emit("poker:setchips", { seat: i, chips: Number(v) }, (r) => { done(r); if (r && r.ok) setNote("Fichas de " + s.nick + " mudadas para " + Number(v).toLocaleString("pt-BR") + "."); });
+        render();
+      };
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); save(); }
+        else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); editing = null; render(); }
+      });
+      inp.addEventListener("blur", save);
+      setTimeout(() => { if (inp.isConnected) { inp.focus(); if (editing && editing.fresh) { inp.select(); editing.fresh = false; } } }, 0);
+      return inp;
+    }
+    const allin = s.allIn && s.chips === 0;
+    const text = allin ? "ALL-IN" : s.chips.toLocaleString("pt-BR") + (s.setTo != null ? " \u2192 " + s.setTo.toLocaleString("pt-BR") : "");
+    if (!st.isAdmin) return el("div", "ch" + (allin ? " allin" : ""), text);
+    const b = el("button", "ch chbtn" + (allin ? " allin" : ""), text);
+    b.type = "button"; b.title = "Mudar as fichas de " + s.nick;
+    b.addEventListener("click", (e) => { e.stopPropagation(); editing = { seat: i, value: String(s.setTo != null ? s.setTo : s.chips), fresh: true }; render(); });
+    return b;
   }
 
   function renderBar() {

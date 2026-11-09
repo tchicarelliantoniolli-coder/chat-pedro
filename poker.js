@@ -7,6 +7,7 @@ const SEATS = 9;
 const SMALL_BLIND = 10;
 const BIG_BLIND = 20;
 const START_CHIPS = 1000;
+const MAX_SET_CHIPS = 10000000; // limite do ADM ao mudar as fichas de alguem
 let TURN_MS = 30000;           // tempo para agir
 let AWAY_TURN_MS = 8000;       // tempo para quem caiu da conexao
 let NEXT_HAND_MS = 6000;       // pausa mostrando o resultado
@@ -395,6 +396,7 @@ function createPoker(io, helpers, timing) {
     broadcast();
     timer = setTimeout(() => {
       timer = null;
+      for (const p of t.seats) if (p && p.setTo != null) { p.chips = p.setTo; p.setTo = null; } // fichas que o ADM mudou durante a mao
       for (let s = 0; s < SEATS; s++) {
         const p = t.seats[s];
         if (p && (p.leaving || !isOnline(p.key))) { bank.set(p.key, p.chips); t.seats[s] = null; }
@@ -419,7 +421,7 @@ function createPoker(io, helpers, timing) {
     const view = {
       seats: t.seats.map((p, i) => p && {
         seat: i, nick: p.nick, chips: p.chips, bet: p.bet, folded: p.folded, allIn: p.allIn, inHand: p.inHand,
-        sittingOut: p.sittingOut, leaving: p.leaving, lastAction: p.lastAction,
+        sittingOut: p.sittingOut, leaving: p.leaving, lastAction: p.lastAction, setTo: p.setTo == null ? null : p.setTo,
         cards: p.inHand ? (p.key === key || p.shown ? p.hole : p.folded ? [] : ["??", "??"]) : [],
         best: p.shown && p.best ? p.best.cards : null, admin: admins.has(p.key),
       }),
@@ -540,6 +542,24 @@ function createPoker(io, helpers, timing) {
       say(t.seats[s].nick + (away ? " ficou ausente" : " voltou"));
       reply(cb);
       maybeStart();
+      broadcast();
+    });
+
+    // So o ADM: muda as fichas de quem esta sentado (clicar nas fichas do lugar). No meio de uma mao vale
+    // quando ela acabar, para nao baguncar as apostas e o pote.
+    socket.on("poker:setchips", (msg, cb) => {
+      if (!isAdmin(socket.id)) return reply(cb, "Só o ADM pode mudar as fichas.");
+      const seat = Number(msg && msg.seat), chips = Math.floor(Number(msg && msg.chips));
+      const p = seat >= 0 && seat < SEATS ? t.seats[seat] : null;
+      if (!p) return reply(cb, "Ninguém neste lugar.");
+      if (!Number.isFinite(chips) || chips < 0 || chips > MAX_SET_CHIPS) return reply(cb, "Escreva um número de 0 a " + MAX_SET_CHIPS.toLocaleString("pt-BR") + ".");
+      const later = p.inHand && t.stage !== "waiting" && t.stage !== "showdown";
+      if (later) p.setTo = chips;
+      else { p.chips = chips; p.setTo = null; if (chips > 0) { p.allIn = false; p.sittingOut = false; } }
+      if (chips >= BIG_BLIND) { const r = t.requests.get(p.key); if (r && r.type === "rebuy") t.requests.delete(p.key); }
+      say("O ADM mudou as fichas de " + p.nick + " para " + chips.toLocaleString("pt-BR") + (later ? " (vale no fim desta mão)" : ""));
+      reply(cb);
+      if (!later) maybeStart();
       broadcast();
     });
 
