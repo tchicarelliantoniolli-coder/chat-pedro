@@ -170,7 +170,7 @@
         if (!editing || editing.seat !== i) return;
         const v = inp.value.trim(); editing = null;
         if (v === "" || Number(v) === s.chips) { render(); return; }
-        socket.emit("poker:setchips", { seat: i, chips: Number(v) }, (r) => { done(r); if (r && r.ok) setNote("Fichas de " + s.nick + " mudadas para " + Number(v).toLocaleString("pt-BR") + "."); });
+        socket.emit("poker:setchips", { seat: i, chips: Number(v) }, done);
         render();
       };
       inp.addEventListener("keydown", (e) => {
@@ -182,7 +182,7 @@
       return inp;
     }
     const allin = s.allIn && s.chips === 0;
-    const text = allin ? "ALL-IN" : s.chips.toLocaleString("pt-BR") + (s.setTo != null ? " \u2192 " + s.setTo.toLocaleString("pt-BR") : "");
+    const text = allin ? "ALL-IN" : s.chips.toLocaleString("pt-BR");
     if (!st.isAdmin) return el("div", "ch" + (allin ? " allin" : ""), text);
     const b = el("button", "ch chbtn" + (allin ? " allin" : ""), text);
     b.type = "button"; b.title = "Mudar as fichas de " + s.nick;

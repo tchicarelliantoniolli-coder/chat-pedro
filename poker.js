@@ -421,7 +421,7 @@ function createPoker(io, helpers, timing) {
     const view = {
       seats: t.seats.map((p, i) => p && {
         seat: i, nick: p.nick, chips: p.chips, bet: p.bet, folded: p.folded, allIn: p.allIn, inHand: p.inHand,
-        sittingOut: p.sittingOut, leaving: p.leaving, lastAction: p.lastAction, setTo: p.setTo == null ? null : p.setTo,
+        sittingOut: p.sittingOut, leaving: p.leaving, lastAction: p.lastAction, setTo: amAdmin && p.setTo != null ? p.setTo : null,
         cards: p.inHand ? (p.key === key || p.shown ? p.hole : p.folded ? [] : ["??", "??"]) : [],
         best: p.shown && p.best ? p.best.cards : null, admin: admins.has(p.key),
       }),
@@ -557,7 +557,6 @@ function createPoker(io, helpers, timing) {
       if (later) p.setTo = chips;
       else { p.chips = chips; p.setTo = null; if (chips > 0) { p.allIn = false; p.sittingOut = false; } }
       if (chips >= BIG_BLIND) { const r = t.requests.get(p.key); if (r && r.type === "rebuy") t.requests.delete(p.key); }
-      say("O ADM mudou as fichas de " + p.nick + " para " + chips.toLocaleString("pt-BR") + (later ? " (vale no fim desta mão)" : ""));
       reply(cb);
       if (!later) maybeStart();
       broadcast();
