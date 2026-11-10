@@ -545,20 +545,26 @@ function createPoker(io, helpers, timing) {
       broadcast();
     });
 
-    // So o ADM: muda as fichas de quem esta sentado (clicar nas fichas do lugar). No meio de uma mao vale
-    // quando ela acabar, para nao baguncar as apostas e o pote.
+    // So o ADM: atualiza imediatamente as fichas disponiveis, sem alterar apostas ja feitas.
     socket.on("poker:setchips", (msg, cb) => {
       if (!isAdmin(socket.id)) return reply(cb, "Só o ADM pode mudar as fichas.");
       const seat = Number(msg && msg.seat), chips = Math.floor(Number(msg && msg.chips));
       const p = seat >= 0 && seat < SEATS ? t.seats[seat] : null;
       if (!p) return reply(cb, "Ninguém neste lugar.");
       if (!Number.isFinite(chips) || chips < 0 || chips > MAX_SET_CHIPS) return reply(cb, "Escreva um número de 0 a " + MAX_SET_CHIPS.toLocaleString("pt-BR") + ".");
-      const later = p.inHand && t.stage !== "waiting" && t.stage !== "showdown";
-      if (later) p.setTo = chips;
-      else { p.chips = chips; p.setTo = null; if (chips > 0) { p.allIn = false; p.sittingOut = false; } }
+      p.chips = chips;
+      p.setTo = null;
+      p.allIn = p.inHand && chips === 0;
+      if (chips > 0) p.sittingOut = false;
       if (chips >= BIG_BLIND) { const r = t.requests.get(p.key); if (r && r.type === "rebuy") t.requests.delete(p.key); }
       reply(cb);
-      if (!later) maybeStart();
+      maybeStart();
+      // Se o jogador da vez ficou sem fichas, avance sem deixar o temporizador travado.
+      if (t.toAct >= 0 && !canAct(t.seats[t.toAct])) {
+        const next = nextSeat(t.toAct, (o) => canAct(o) && (!o.acted || o.bet < t.currentBet));
+        if (!needsAction() || next === -1) endBettingRound();
+        else setTurn(next);
+      }
       broadcast();
     });
 
