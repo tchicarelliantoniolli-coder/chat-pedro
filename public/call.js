@@ -223,8 +223,28 @@
       sender.setParameters(ps).catch(() => {});
     } catch {}
   }
+  // Video (camera e tela) com limite e sem travar: com a internet fraca o navegador baixa a resolucao em vez de
+  // mandar 1 quadro por segundo (antes a tela ficava parada/preta para quem assistia). Tela ate 2,5 Mbps e
+  // camera ate 1 Mbps, como no Discord (720p 30 quadros).
+  function tuneVideo(sender) {
+    try {
+      const t = sender.track;
+      if (!t || t.kind !== "video") return;
+      const ps = sender.getParameters();
+      if (!ps.encodings || !ps.encodings.length) return; // ainda negociando: aplica quando terminar
+      const isScreen = !!(screenStream && screenStream.getVideoTracks().includes(t));
+      const max = isScreen ? 2500000 : 1000000;
+      const e0 = ps.encodings[0];
+      if (e0.maxBitrate === max && ps.degradationPreference === "balanced") return;
+      for (const e of ps.encodings) { e.maxBitrate = max; e.maxFramerate = 30; e.priority = "low"; e.networkPriority = "low"; }
+      ps.degradationPreference = "balanced";
+      sender.setParameters(ps).catch(() => {});
+    } catch {}
+  }
+  const tuneAll = (pc) => { for (const sd of pc.getSenders()) tuneVideo(sd); };
   function level(analyser) {
-    const buf = new Uint8Array(analyser.fftSize);
+    // o mesmo buffer a cada leitura (antes criava um novo para cada pessoa ~8 vezes por segundo)
+    const buf = analyser._buf || (analyser._buf = new Uint8Array(analyser.fftSize));
     analyser.getByteTimeDomainData(buf);
     let sum = 0;
     for (const v of buf) sum += (v - 128) * (v - 128);
@@ -261,11 +281,12 @@
         socket.emit("call:signal", { to: id, description: pc.localDescription });
       } catch (e) { console.warn(e); } finally { p.makingOffer = false; }
     };
+    pc.onsignalingstatechange = () => { if (pc.signalingState === "stable") tuneAll(pc); };
     pc.onicecandidate = ({ candidate }) => { if (candidate) socket.emit("call:signal", { to: id, candidate }); };
     // caiu: tenta de novo (ate 3 vezes); se nao voltar, avisa (a internet de alguem bloqueia a ligacao direta)
     p.fails = 0;
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === "connected") { p.fails = 0; for (const sd of pc.getSenders()) if (sd.track && sd.track.kind === "audio") voicePriority(sd); }
+      if (pc.connectionState === "connected") { p.fails = 0; for (const sd of pc.getSenders()) if (sd.track && sd.track.kind === "audio") voicePriority(sd); tuneAll(pc); }
       if (pc.connectionState !== "failed") return;
       if (++p.fails <= 3) { pc.restartIce(); return; }
       const m = members.find((x) => x.id === id);
@@ -274,6 +295,8 @@
     pc.ontrack = ({ track, streams }) => {
       const stream = streams[0] || new MediaStream([track]);
       p.streams[stream.id] = stream;
+      // imagem nova da mesma camera/tela (reenvio): tira a antiga, senao o video continua mostrando a velha (preta)
+      if (track.kind === "video") for (const o of stream.getVideoTracks()) if (o !== track) stream.removeTrack(o);
       if (track.kind === "audio") {
         const m = callAll.find((x) => x.id === id);
         if (stream.getVideoTracks().length || (m && m.screen === stream.id)) attachScreenAudio(id, p, stream);
@@ -380,8 +403,9 @@
       return "a=fmtp:" + pt + " " + [...kv].map(([k, v]) => (v === "" ? k : k + "=" + v)).join(";");
     });
   }
-  const onSignal = async ({ from, description, candidate }) => {
+  const onSignal = async ({ from, description, candidate, resend }) => {
     if (!inCall) return;
+    if (resend) { resendScreen(from); return; }
     const p = getPeer(from), pc = p.pc;
     try {
       if (description) {
@@ -401,6 +425,22 @@
 
   function addTrackToAll(track, stream) {
     for (const p of peers.values()) p.senders.set(track.id, p.pc.addTrack(track, stream));
+  }
+  // quem assiste nao recebeu imagem da tela: manda de novo so para essa pessoa (uma conexao nova de video
+  // comeca com uma imagem inteira, o que destrava a tela preta)
+  function resendScreen(id) {
+    const p = peers.get(id);
+    if (!p || !screenStream) return;
+    for (const t of screenTracks()) {
+      const s = p.senders.get(t.id);
+      if (s) {
+        try { p.pc.removeTrack(s); } catch {}
+        // removeTrack nao faz nada se o envio ja estava vazio: desliga esse canal na mao
+        const tr = p.pc.getTransceivers().find((x) => x.sender === s);
+        if (tr && tr.direction !== "inactive" && tr.direction !== "stopped") { try { tr.direction = "inactive"; } catch {} }
+      }
+      p.senders.set(t.id, p.pc.addTrack(t, screenStream));
+    }
   }
   function removeTrackFromAll(track) {
     for (const p of peers.values()) {
@@ -536,7 +576,8 @@
     if (stageBlocked()) return;
     try {
       screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { frameRate: { ideal: 30, max: 30 }, width: { max: 1920 }, height: { max: 1080 } },
+        // 720p a 30 quadros, como no Discord (1080p travava quem tem internet ou computador mais fraco)
+        video: { frameRate: { ideal: 30, max: 30 }, width: { ideal: 1280, max: 1280 }, height: { ideal: 720, max: 720 } },
         // com som (como no Discord); o som da propria call nao vai junto (senao os outros ouvem eco)
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, restrictOwnAudio: true },
         systemAudio: "include", selfBrowserSurface: "exclude", surfaceSwitching: "include",
@@ -801,7 +842,8 @@
     if (hasVideo) {
       el.querySelector(".av")?.remove();
       if (!video) { video = document.createElement("video"); video.autoplay = true; video.playsInline = true; video.muted = true; el.prepend(video); }
-      if (video.srcObject !== stream) video.srcObject = stream;
+      const vt = stream.getVideoTracks().find((t) => t.readyState === "live");
+      if (video.srcObject !== stream || video.dataset.vt !== vt.id) { video.srcObject = null; video.srcObject = stream; video.dataset.vt = vt.id; }
       video.classList.toggle("mirror", !!opts.mirror);
     } else {
       video?.remove();
@@ -1110,6 +1152,31 @@
     document.querySelectorAll("#tiles .tile").forEach((el) => el.classList.toggle("speaking", !el.classList.contains("screen") && speaking.has(el.dataset.member)));
     document.querySelectorAll(".vpeople li").forEach((li) => li.classList.toggle("speaking", speaking.has(li.dataset.member)));
   }, 120);
+
+  // Tela de outra pessoa sem imagem: mostra "Carregando a tela..." (e nao um quadro preto) e, se a imagem nao
+  // chegar em alguns segundos, pede para quem compartilha mandar de novo so para voce (ate 4 vezes).
+  const screenWait = new Map(); // id da pessoa -> { since, asked, last }
+  setInterval(() => {
+    if (!inCall || !here()) { screenWait.clear(); return; }
+    const now = Date.now();
+    for (const m of members) {
+      if (m.id === socket.id || !m.screen) { screenWait.delete(m.id); continue; }
+      const tile = tiles.get(m.id + ":screen"), v = tile && tile.querySelector("video");
+      const vt = v && v.srcObject && v.srcObject.getVideoTracks()[0];
+      // sem imagem nenhuma ainda, ou a imagem parou de chegar (o navegador marca o video como "mudo")
+      const ok = !!(v && v.videoWidth > 0 && vt && !vt.muted);
+      if (tile) tile.classList.toggle("loading", !(v && v.videoWidth > 0));
+      if (ok) { screenWait.delete(m.id); continue; }
+      let w = screenWait.get(m.id);
+      if (!w || w.screen !== m.screen) { w = { screen: m.screen, since: now, asked: 0, last: now }; screenWait.set(m.id, w); }
+      if (v && v.paused) v.play().catch(() => {});
+      if (now - w.last >= 6000 && w.asked < 4) {
+        w.asked++; w.last = now;
+        socket.emit("call:signal", { to: m.id, resend: true });
+        if (!tile) renderTiles();
+      }
+    }
+  }, 1000);
 
   // ---------- apertar para falar ----------
   let pttHeld = false, gateOpen = true, gateUntil = 0;

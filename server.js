@@ -1891,7 +1891,7 @@ io.on("connection", (socket) => {
     if (!msg || !ctx.callMembers.has(socket.id) || !ctx.callMembers.has(msg.to)) return;
     if (ctx.callMembers.get(socket.id).ch !== ctx.callMembers.get(msg.to).ch) return; // so dentro do mesmo canal de voz
     if (JSON.stringify(msg).length > 100 * 1024) return;
-    io.to(msg.to).emit("call:signal", { from: socket.id, description: msg.description, candidate: msg.candidate });
+    io.to(msg.to).emit("call:signal", { from: socket.id, description: msg.description, candidate: msg.candidate, resend: msg.resend === true || undefined });
   });
 
   // Assistir junto: um video do YouTube sincronizado para a call
@@ -2057,3 +2057,10 @@ process.on("uncaughtException", (e) => console.error("Erro sem tratamento:", e &
 process.on("unhandledRejection", (e) => console.error("Promessa sem tratamento:", e && e.message || e));
 
 server.listen(PORT, () => console.log(`Chat Pedro rodando na porta ${PORT}`));
+// Render gratis: o servidor dorme depois de 15 min sem visitas e o proximo a entrar espera ~1 min ele acordar
+// (era o "site lento para entrar"). Ele mesmo se visita pelo endereco publico a cada ~10 min e fica acordado.
+// Uma unica instancia ligada o mes todo cabe nas 750 h gratis. O Render preenche RENDER_EXTERNAL_URL sozinho.
+if (process.env.RENDER_EXTERNAL_URL && process.env.KEEP_AWAKE !== "0") {
+  const ping = () => fetch(process.env.RENDER_EXTERNAL_URL.replace(/\/$/, "") + "/api/ping", { signal: AbortSignal.timeout(15000) }).catch(() => {});
+  setInterval(ping, 10 * 60000).unref();
+}

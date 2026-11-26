@@ -8,6 +8,7 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
 - Código no GitHub `tchicarelliantoniolli-coder/chat-pedro`, branch `main`. Pode commitar e dar push
   direto na `main` (o Render publica sozinho em alguns minutos): https://chat-pedro.onrender.com
 - Render plano grátis: o servidor dorme depois de ~15 min parado e tem pouca memória e CPU.
+  Para não dormir, o `server.js` visita o próprio `RENDER_EXTERNAL_URL` (`/api/ping`) a cada 10 min (`KEEP_AWAKE=0` desliga).
   Mantenha o site leve (nada de bibliotecas grandes, imagens reduzidas no navegador antes de enviar).
 - Supabase: projeto `yvdlkwdmhlvpjmesmkye` (região São Paulo). Tabelas: `profiles`, `servers`,
   `server_members`, `server_invites`, `server_bans`, `friendships` e `chat_kv` (chave/valor com o
@@ -119,6 +120,13 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   `m.screen` da pessoa, por isso o vídeo da tela é enviado antes do som). Tela nova de outra pessoa vira o quadro em
   destaque sozinha (`.tile.focus`, um por vez; clicar escolhe/volta para a grade; "AO VIVO" na lista também foca); com
   destaque a call cresce e os outros viram miniaturas de 64px embaixo. Teste `16-compartilhar-tela` (3 pessoas).
+  Tela e câmera sem travar (medido com a rede limitada por `tc ... tbf` no `lo` e uma tela falsa pesada num canvas):
+  tela em 720p30 como no Discord (1080p travava em 1–2 quadros/s com internet fraca), `tuneVideo` põe `maxBitrate`
+  (tela 2,5 Mbps, câmera 1 Mbps) e `degradationPreference = "balanced"` (baixa a resolução em vez de congelar) quando a
+  negociação termina. Tela sem imagem para quem assiste: `.tile.screen.loading` ("Carregando a tela...") e, depois de 6 s
+  sem imagem (ou com o vídeo "mudo"), pede `call:signal { resend: true }` (até 4 vezes); quem compartilha refaz o envio
+  só para essa pessoa (`resendScreen`) e quem recebe tira a imagem velha do stream (senão o `<video>` mostra a morta).
+  Teste `24-tela-sem-imagem`.
   Supressão de ruído no lugar do Krisp (o Discord usa o Krisp JS, pago e licenciado só para ele): RNNoise, rede neural de
   código aberto (BSD) do pacote `@sapphi-red/web-noise-suppressor`, servido em `/vendor/ruido`; roda no navegador num
   AudioWorklet (`makeDenoise`, 48 kHz de verdade, ~10 ms de atraso) entre o microfone e o que vai para a call.
