@@ -46,6 +46,21 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { console.log('
     ok(!(await screen(L)).loading, 'o aviso some quando a imagem chega');
   });
 
+  await step('tela sem imagem no computador de quem compartilha', async () => {
+    await P.click('#screenBtn'); await P.waitForTimeout(800); // para
+    // a proxima tela nao gera nenhuma imagem (como janela minimizada ou jogo em tela cheia)
+    await P.evaluate(() => { navigator.mediaDevices.getDisplayMedia = async () => { const c = document.createElement('canvas'); c.width = 1280; c.height = 720; return c.captureStream(0); }; });
+    await P.click('#screenBtn');
+    let msg = '';
+    for (let i = 0; i < 40; i++) { msg = await L.evaluate(() => { const t = document.querySelector('#tiles .tile.screen.loading'); return t ? t.dataset.msg : ''; }); if (/sem imagem no próprio computador/.test(msg)) break; await L.waitForTimeout(500); }
+    ok(/sem imagem no próprio computador/.test(msg), 'quem assiste ve o motivo: ' + msg);
+    await L.screenshot({ path: SP + '/24-motivo.png' });
+    ok(await P.locator('text=Sua tela não está gerando imagem').count() > 0, 'quem compartilha recebe o aviso');
+    await P.click('#screenBtn'); await P.waitForTimeout(500);
+    await P.evaluate(() => { delete navigator.mediaDevices.getDisplayMedia; });
+    await P.click('#screenBtn'); await P.waitForTimeout(2500); // volta ao normal para o proximo passo
+  });
+
   await step('limite do video', async () => {
     const enc = await P.evaluate(async () => {
       const pc = window.__pcs.find((x) => x.connectionState === 'connected');

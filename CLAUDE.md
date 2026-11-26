@@ -77,8 +77,9 @@ Quando pedir "igual ao Discord", faça igual de verdade e no fim diga o que não
   do próprio teste, que o `run.sh` lê, para limites pequenos).
 - `poker.js` e `truco.js` (servidor) e `public/poker.js`, `public/truco.js` (tela dos jogos).
   Poker: só o ADM (dono/ADM do servidor, `isAdmin`) muda as fichas de quem está sentado: clicar nas fichas do lugar
-  (`button.ch`) abre um campo, Enter salva, Esc cancela (`poker:setchips`, de 0 a `MAX_SET_CHIPS`); no meio de uma mão vale
-  no fim dela (`seat.setTo`, mostra "1.000 → 5.000"). Na DM de duas pessoas ninguém é ADM. Teste `23-fichas-do-adm`.
+  (`button.ch`) abre um campo, Enter salva, Esc cancela (`poker:setchips`, de 0 a `MAX_SET_CHIPS`); vale na hora, até
+  no meio da mão (sem mexer nas apostas feitas), e sem aviso no histórico da mesa. Na DM de duas pessoas ninguém é ADM.
+  Teste `23-fichas-do-adm`.
 - `blefe.js` (servidor) e `public/blefe.js` (tela): Mesa do Blefe, jogo NOSSO de blefe em 3D (estilo "Duvido" com
   revólver; não é cópia de nenhum jogo). De 2 a 6, baralho de 36 (8 por naipe + 4 coringas), 5 cartas, a mesa
   sorteia um naipe, joga 1 a 3 viradas ou grita DUVIDO; quem perde puxa o gatilho (6 espaços, 1 bala que só o

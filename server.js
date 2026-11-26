@@ -1891,7 +1891,7 @@ io.on("connection", (socket) => {
     if (!msg || !ctx.callMembers.has(socket.id) || !ctx.callMembers.has(msg.to)) return;
     if (ctx.callMembers.get(socket.id).ch !== ctx.callMembers.get(msg.to).ch) return; // so dentro do mesmo canal de voz
     if (JSON.stringify(msg).length > 100 * 1024) return;
-    io.to(msg.to).emit("call:signal", { from: socket.id, description: msg.description, candidate: msg.candidate, resend: msg.resend === true || undefined });
+    io.to(msg.to).emit("call:signal", { from: socket.id, description: msg.description, candidate: msg.candidate, resend: msg.resend === true || undefined, diagReq: msg.diagReq === true || undefined, diag: msg.diag && typeof msg.diag === "object" ? msg.diag : undefined });
   });
 
   // Assistir junto: um video do YouTube sincronizado para a call

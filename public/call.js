@@ -403,9 +403,11 @@
       return "a=fmtp:" + pt + " " + [...kv].map(([k, v]) => (v === "" ? k : k + "=" + v)).join(";");
     });
   }
-  const onSignal = async ({ from, description, candidate, resend }) => {
+  const onSignal = async ({ from, description, candidate, resend, diagReq, diag }) => {
     if (!inCall) return;
     if (resend) { resendScreen(from); return; }
+    if (diagReq) { screenDiag().then((d) => { if (d) socket.emit("call:signal", { to: from, diag: d }); }); return; }
+    if (diag) { const w = screenWait.get(from); if (w) { w.diag = diag; w.diagAt = Date.now(); } return; }
     const p = getPeer(from), pc = p.pc;
     try {
       if (description) {
@@ -425,6 +427,32 @@
 
   function addTrackToAll(track, stream) {
     for (const p of peers.values()) p.senders.set(track.id, p.pc.addTrack(track, stream));
+  }
+  // Diagnostico da tela de quem compartilha (pedido por quem nao recebe imagem): a imagem sai daqui?
+  async function screenDiag() {
+    if (!screenStream) return null;
+    const t = screenStream.getVideoTracks()[0];
+    if (!t) return null;
+    const st = t.getSettings ? t.getSettings() : {};
+    const own = tiles.get(socket.id + ":screen"), v = own && own.querySelector("video");
+    let encoded = 0, sent = 0, why = "";
+    for (const p of peers.values()) {
+      for (const sd of p.pc.getSenders()) {
+        if (sd.track !== t) continue;
+        try { for (const r of (await sd.getStats()).values()) if (r.type === "outbound-rtp") { encoded += r.framesEncoded || 0; sent += r.framesSent || 0; if (r.qualityLimitationReason && r.qualityLimitationReason !== "none") why = r.qualityLimitationReason; } } catch {}
+      }
+    }
+    return { live: t.readyState === "live", muted: !!t.muted, w: st.width || 0, h: st.height || 0, surface: st.displaySurface || "", local: v ? v.videoWidth : -1, encoded, sent, why };
+  }
+  // quanto chegou aqui da tela de outra pessoa
+  async function screenRecv(id, stream) {
+    const p = peers.get(id), vt = stream && stream.getVideoTracks().find((x) => x.readyState === "live");
+    if (!p || !vt) return { bytes: 0, frames: 0 };
+    for (const rc of p.pc.getReceivers()) {
+      if (rc.track !== vt) continue;
+      try { for (const r of (await rc.getStats()).values()) if (r.type === "inbound-rtp") return { bytes: r.bytesReceived || 0, frames: r.framesDecoded || 0 }; } catch {}
+    }
+    return { bytes: 0, frames: 0 };
   }
   // quem assiste nao recebeu imagem da tela: manda de novo so para essa pessoa (uma conexao nova de video
   // comeca com uma imagem inteira, o que destrava a tela preta)
@@ -590,6 +618,13 @@
     for (const t of screenTracks()) addTrackToAll(t, screenStream);
     sfx("streamStart");
     sendState(); refreshButtons(); renderTiles();
+    // a propria tela sem imagem depois de 6 s: avisa quem compartilha (os outros veriam preto)
+    const mine = screenStream;
+    setTimeout(async () => {
+      if (screenStream !== mine) return;
+      const d = await screenDiag();
+      if (d && d.live && d.local === 0) setNote("Sua tela não está gerando imagem: os outros não conseguem ver. Pare e compartilhe a \"Tela inteira\" (janela minimizada ou jogo em tela cheia fica preto).", true);
+    }, 6000);
   }
   function stopScreen() {
     if (!screenStream) return;
@@ -834,6 +869,7 @@
       tiles.set(key, el);
     }
     el.classList.toggle("screen", !!opts.screen);
+    if (opts.screen && !el.dataset.msg) el.dataset.msg = "Carregando a tela...";
     el.classList.toggle("focus", focused.has(key));
     el.dataset.member = opts.id;
     // midia: video se tiver, senao o avatar grande
@@ -1166,9 +1202,16 @@
       // sem imagem nenhuma ainda, ou a imagem parou de chegar (o navegador marca o video como "mudo")
       const ok = !!(v && v.videoWidth > 0 && vt && !vt.muted);
       if (tile) tile.classList.toggle("loading", !(v && v.videoWidth > 0));
-      if (ok) { screenWait.delete(m.id); continue; }
+      if (ok) { screenWait.delete(m.id); if (tile) tile.dataset.msg = "Carregando a tela..."; continue; }
       let w = screenWait.get(m.id);
       if (!w || w.screen !== m.screen) { w = { screen: m.screen, since: now, asked: 0, last: now }; screenWait.set(m.id, w); }
+      // depois de 8 s sem imagem pergunta para quem compartilha se a imagem esta saindo de la (a cada 8 s)
+      if (now - w.since >= 8000 && (!w.diagReqAt || now - w.diagReqAt >= 8000)) {
+        w.diagReqAt = now;
+        socket.emit("call:signal", { to: m.id, diagReq: true });
+        screenRecv(m.id, v && v.srcObject).then((r) => { w.recv = r; });
+      }
+      if (tile) tile.dataset.msg = screenMsg(m, w);
       if (v && v.paused) v.play().catch(() => {});
       if (now - w.last >= 6000 && w.asked < 4) {
         w.asked++; w.last = now;
@@ -1177,6 +1220,16 @@
       }
     }
   }, 1000);
+
+  // o que aparece no lugar da tela enquanto a imagem nao chega
+  function screenMsg(m, w) {
+    const d = w.diag, r = w.recv, who = app.dispName ? app.dispName(m.nick) : m.nick;
+    if (!d || Date.now() - w.since < 8000) return "Carregando a tela...";
+    if (!d.live) return "A tela de " + who + " parou. Peça para compartilhar de novo.";
+    if (d.local === 0 || (!d.encoded && (d.muted || !d.w))) return "A tela de " + who + " está sem imagem no próprio computador. Peça para parar e compartilhar a \"Tela inteira\" (janela minimizada ou jogo em tela cheia fica preto).";
+    if (d.sent > 0 && r && !r.frames) return "A imagem sai do computador de " + who + ", mas não chega aqui: a internet de um de vocês está segurando o vídeo. Saiam e entrem de novo na call.";
+    return "Carregando a tela... (" + (d.sent || 0) + " imagens enviadas, " + (r ? r.frames : 0) + " recebidas)";
+  }
 
   // ---------- apertar para falar ----------
   let pttHeld = false, gateOpen = true, gateUntil = 0;

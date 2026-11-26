@@ -33,7 +33,7 @@ const step = async (name, fn) => { try { await fn(); } catch (e) { console.log('
     await P.screenshot({ path: SP + '/23-editando.png' });
     await inp.fill('5000'); await inp.press('Enter'); await P.waitForTimeout(500);
     ok((await seatOf(L, 'Lucas').locator('.ch').textContent()).replace(/\D/g, '') === '5000', 'Enter salva: Lucas ve 5.000 fichas');
-    ok(await L.locator('#dealerlog', { hasText: 'O ADM mudou as fichas de Lucas para 5.000' }).count() === 1, 'historico avisa a mudanca');
+    ok(await L.locator('#dealerlog', { hasText: 'O ADM mudou' }).count() === 0, 'a mudanca nao aparece no historico da mesa (pedido do dono)');
     await seatOf(P, 'Lucas').locator('button.ch').click();
     await seatOf(P, 'Lucas').locator('input.ch').fill('1'); await seatOf(P, 'Lucas').locator('input.ch').press('Escape'); await P.waitForTimeout(400);
     ok((await seatOf(L, 'Lucas').locator('.ch').textContent()).replace(/\D/g, '') === '5000', 'Esc cancela sem mudar');
